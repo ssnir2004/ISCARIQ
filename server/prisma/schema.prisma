@@ -1,0 +1,220 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Auth ----------
+
+model User {
+  id           String @id @default(cuid())
+  email        String @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+}
+
+// ---------- Org reference data ----------
+
+model Branch {
+  id      String @id @default(cuid())
+  name    String @unique
+  rfqs    Rfq[]
+}
+
+model Department {
+  id    String @id @default(cuid())
+  code  String @unique
+  name  String
+  teams Team[]
+}
+
+model Team {
+  id           String     @id @default(cuid())
+  code         String     @unique
+  description  String
+  isManager    Boolean    @default(false)
+  department   Department @relation(fields: [departmentId], references: [id])
+  departmentId String
+  projects     Project[]
+}
+
+// ---------- RFQ -> Project -> Order -> Production pipeline ----------
+
+enum RfqStatus {
+  NEW
+  UNDER_REVIEW
+  SOLUTION_PROPOSED
+  DRAWING_SENT
+  CUSTOMER_SIGNED
+  REJECTED
+  CLOSED
+}
+
+model Rfq {
+  id                  String    @id @default(cuid())
+  rfqNumber           String    @unique
+  branch              Branch    @relation(fields: [branchId], references: [id])
+  branchId            String
+  customer            String    @default("Schaeffler")
+  title               String
+  materialDescription String?
+  problemDescription  String?
+  status              RfqStatus @default(NEW)
+  notes               String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  projects            Project[]
+}
+
+enum ProjectStatus {
+  ASSIGNED
+  IN_PROGRESS
+  DRAWING_READY
+  SENT_TO_BRANCH
+  CUSTOMER_SIGNED
+  PRODUCTION_PACKAGE_IN_PROGRESS
+  PRODUCTION_PACKAGE_READY
+  CLOSED
+}
+
+model Project {
+  id              String          @id @default(cuid())
+  projectNumber   String          @unique
+  rfq             Rfq             @relation(fields: [rfqId], references: [id])
+  rfqId           String
+  team            Team            @relation(fields: [teamId], references: [id])
+  teamId          String
+  status          ProjectStatus   @default(ASSIGNED)
+  notes           String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  drawings        Drawing[]
+  order           Order?
+  productionOrder ProductionOrder?
+}
+
+model Drawing {
+  id        String   @id @default(cuid())
+  project   Project  @relation(fields: [projectId], references: [id])
+  projectId String
+  version   Int
+  fileRef   String?
+  sentDate  DateTime?
+  status    String   @default("DRAFT")
+  createdAt DateTime @default(now())
+}
+
+model Order {
+  id                 String    @id @default(cuid())
+  orderNumber        String    @unique
+  project            Project   @relation(fields: [projectId], references: [id])
+  projectId          String    @unique
+  customerSignedDate DateTime?
+  status             String    @default("OPEN")
+  createdAt          DateTime  @default(now())
+}
+
+model ProductionOrder {
+  id        String   @id @default(cuid())
+  poNumber  String   @unique
+  project   Project  @relation(fields: [projectId], references: [id])
+  projectId String   @unique
+  status    String   @default("OPEN")
+  createdAt DateTime @default(now())
+}
+
+// ---------- Insert Advisor ----------
+
+enum Iso513Group {
+  P
+  M
+  K
+  N
+  S
+  H
+}
+
+model Material {
+  id          String      @id @default(cuid())
+  iso513Group Iso513Group
+  name        String
+  description String?
+  cuttingConditions CuttingCondition[]
+  insertMatches     InsertProblemMatch[]
+}
+
+enum CoolantPreference {
+  REQUIRED
+  OPTIONAL
+  AVOID
+}
+
+model Insert {
+  id                String            @id @default(cuid())
+  designation       String            @unique
+  shape             String
+  size              String
+  chipbreaker       String
+  grade             String
+  coatingType       String?
+  substrate         String?
+  coolantPreference CoolantPreference @default(OPTIONAL)
+  notes             String?
+  cuttingConditions CuttingCondition[]
+  problemMatches    InsertProblemMatch[]
+}
+
+enum OperationType {
+  TURNING
+  MILLING
+  DRILLING
+  GROOVING
+  THREADING
+  BORING
+}
+
+enum CoolantUsage {
+  REQUIRED
+  OPTIONAL
+  AVOID
+}
+
+model CuttingCondition {
+  id            String        @id @default(cuid())
+  insert        Insert        @relation(fields: [insertId], references: [id])
+  insertId      String
+  material      Material      @relation(fields: [materialId], references: [id])
+  materialId    String
+  operationType OperationType
+  apMin         Float?
+  apMax         Float?
+  vcMin         Float?
+  vcMax         Float?
+  feedMin       Float?
+  feedMax       Float?
+  coolant       CoolantUsage  @default(OPTIONAL)
+  notes         String?
+}
+
+model ProblemTag {
+  id       String @id @default(cuid())
+  name     String @unique
+  matches  InsertProblemMatch[]
+}
+
+model InsertProblemMatch {
+  id           String      @id @default(cuid())
+  insert       Insert      @relation(fields: [insertId], references: [id])
+  insertId     String
+  problemTag   ProblemTag  @relation(fields: [problemTagId], references: [id])
+  problemTagId String
+  material     Material?   @relation(fields: [materialId], references: [id])
+  materialId   String?
+  priority     Int         @default(0)
+  notes        String?
+
+  @@unique([insertId, problemTagId, materialId])
+}

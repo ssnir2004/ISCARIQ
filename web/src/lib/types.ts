@@ -1,0 +1,159 @@
+export type RfqStatus =
+  | "NEW"
+  | "UNDER_REVIEW"
+  | "SOLUTION_PROPOSED"
+  | "DRAWING_SENT"
+  | "CUSTOMER_SIGNED"
+  | "REJECTED"
+  | "CLOSED";
+
+export type ProjectStatus =
+  | "ASSIGNED"
+  | "IN_PROGRESS"
+  | "DRAWING_READY"
+  | "SENT_TO_BRANCH"
+  | "CUSTOMER_SIGNED"
+  | "PRODUCTION_PACKAGE_IN_PROGRESS"
+  | "PRODUCTION_PACKAGE_READY"
+  | "CLOSED";
+
+export type OperationType = "TURNING" | "MILLING" | "DRILLING" | "GROOVING" | "THREADING" | "BORING";
+export type Iso513Group = "P" | "M" | "K" | "N" | "S" | "H";
+export type CoolantPreference = "REQUIRED" | "OPTIONAL" | "AVOID";
+
+export interface Branch {
+  id: string;
+  name: string;
+}
+
+export interface Department {
+  id: string;
+  code: string;
+  name: string;
+  teams?: Team[];
+}
+
+export interface Team {
+  id: string;
+  code: string;
+  description: string;
+  isManager: boolean;
+  departmentId: string;
+  department?: Department;
+}
+
+export interface Drawing {
+  id: string;
+  projectId: string;
+  version: number;
+  fileRef?: string | null;
+  sentDate?: string | null;
+  status: string;
+}
+
+export interface Order {
+  id: string;
+  orderNumber: string;
+  projectId: string;
+  customerSignedDate?: string | null;
+  status: string;
+}
+
+export interface ProductionOrder {
+  id: string;
+  poNumber: string;
+  projectId: string;
+  status: string;
+}
+
+export interface Project {
+  id: string;
+  projectNumber: string;
+  rfqId: string;
+  teamId: string;
+  status: ProjectStatus;
+  notes?: string | null;
+  rfq?: Rfq;
+  team?: Team;
+  drawings?: Drawing[];
+  order?: Order | null;
+  productionOrder?: ProductionOrder | null;
+}
+
+export interface Rfq {
+  id: string;
+  rfqNumber: string;
+  branchId: string;
+  customer: string;
+  title: string;
+  materialDescription?: string | null;
+  problemDescription?: string | null;
+  status: RfqStatus;
+  notes?: string | null;
+  createdAt: string;
+  branch?: Branch;
+  projects?: Project[];
+}
+
+export interface Material {
+  id: string;
+  iso513Group: Iso513Group;
+  name: string;
+  description?: string | null;
+}
+
+export interface ProblemTag {
+  id: string;
+  name: string;
+}
+
+export interface Insert {
+  id: string;
+  designation: string;
+  shape: string;
+  size: string;
+  chipbreaker: string;
+  grade: string;
+  coatingType?: string | null;
+  substrate?: string | null;
+  coolantPreference: CoolantPreference;
+  notes?: string | null;
+}
+
+export interface CuttingCondition {
+  id: string;
+  insertId: string;
+  materialId: string;
+  operationType: OperationType;
+  apMin?: number | null;
+  apMax?: number | null;
+  vcMin?: number | null;
+  vcMax?: number | null;
+  feedMin?: number | null;
+  feedMax?: number | null;
+  coolant: CoolantPreference;
+  notes?: string | null;
+  insert?: Insert;
+  material?: Material;
+}
+
+export interface InsertProblemMatch {
+  id: string;
+  insertId: string;
+  problemTagId: string;
+  materialId?: string | null;
+  priority: number;
+  notes?: string | null;
+  insert?: Insert;
+  problemTag?: ProblemTag;
+  material?: Material | null;
+}
+
+export interface AdvisorRecommendation {
+  insert: Insert & { problemMatches: (InsertProblemMatch & { problemTag: ProblemTag })[] };
+  cuttingCondition: Omit<CuttingCondition, "insert" | "material" | "insertId" | "materialId">;
+  material: Material;
+  matchedProblems: string[];
+  score: number;
+  apFit: boolean;
+}
