@@ -147,12 +147,12 @@ export function RfqDetail() {
             <div className="text-neutral-900 dark:text-neutral-100">{rfq.customer}</div>
           </div>
           <div>
-            <div className="text-xs text-neutral-500 dark:text-neutral-400">Material</div>
-            <div className="text-neutral-900 dark:text-neutral-100">{rfq.materialDescription || "—"}</div>
+            <div className="text-xs text-neutral-500 dark:text-neutral-400">Date</div>
+            <div className="text-neutral-900 dark:text-neutral-100">{new Date(rfq.rfqDate).toLocaleDateString()}</div>
           </div>
           <div>
-            <div className="text-xs text-neutral-500 dark:text-neutral-400">Problem</div>
-            <div className="text-neutral-900 dark:text-neutral-100">{rfq.problemDescription || "—"}</div>
+            <div className="text-xs text-neutral-500 dark:text-neutral-400">Contact Person</div>
+            <div className="text-neutral-900 dark:text-neutral-100">{rfq.contactPerson || "—"}</div>
           </div>
           <div>
             <Label>Status</Label>

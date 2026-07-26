@@ -5,14 +5,18 @@ import { api, ApiError } from "../lib/api";
 import type { Branch, Rfq } from "../lib/types";
 import { Button, Card, Input, Label, PageHeader, Select, StatusBadge } from "../components/ui";
 
+function todayIsoDate() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 function NewRfqForm({ branches, onCreated }: { branches: Branch[]; onCreated: () => void }) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     rfqNumber: "",
     branchId: branches[0]?.id ?? "",
     title: "",
-    materialDescription: "",
-    problemDescription: "",
+    rfqDate: todayIsoDate(),
+    contactPerson: "",
   });
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -23,7 +27,7 @@ function NewRfqForm({ branches, onCreated }: { branches: Branch[]; onCreated: ()
     setSubmitting(true);
     try {
       await api.post("/rfqs", form);
-      setForm({ rfqNumber: "", branchId: branches[0]?.id ?? "", title: "", materialDescription: "", problemDescription: "" });
+      setForm({ rfqNumber: "", branchId: branches[0]?.id ?? "", title: "", rfqDate: todayIsoDate(), contactPerson: "" });
       setOpen(false);
       onCreated();
     } catch (err) {
@@ -65,17 +69,20 @@ function NewRfqForm({ branches, onCreated }: { branches: Branch[]; onCreated: ()
           <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
         </div>
         <div>
-          <Label>Material</Label>
+          <Label>Date</Label>
           <Input
-            value={form.materialDescription}
-            onChange={(e) => setForm({ ...form, materialDescription: e.target.value })}
+            type="date"
+            value={form.rfqDate}
+            onChange={(e) => setForm({ ...form, rfqDate: e.target.value })}
+            required
           />
         </div>
         <div>
-          <Label>Problem</Label>
+          <Label>Contact Person</Label>
           <Input
-            value={form.problemDescription}
-            onChange={(e) => setForm({ ...form, problemDescription: e.target.value })}
+            value={form.contactPerson}
+            onChange={(e) => setForm({ ...form, contactPerson: e.target.value })}
+            placeholder="Who opened this RFQ at the branch"
           />
         </div>
         {error && <p className="col-span-2 text-sm text-red-600 dark:text-red-400">{error}</p>}
@@ -114,8 +121,8 @@ export function Pipeline() {
                     <span className="font-medium text-neutral-900 dark:text-neutral-100">{rfq.title}</span>
                   </div>
                   <div className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                    {rfq.branch?.name} · {rfq.customer}
-                    {rfq.problemDescription ? ` · ${rfq.problemDescription}` : ""}
+                    {rfq.branch?.name} · {rfq.customer} · {new Date(rfq.rfqDate).toLocaleDateString()}
+                    {rfq.contactPerson ? ` · ${rfq.contactPerson}` : ""}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">

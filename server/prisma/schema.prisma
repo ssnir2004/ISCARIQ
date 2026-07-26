@@ -62,6 +62,8 @@ model Rfq {
   title               String
   materialDescription String?
   problemDescription  String?
+  rfqDate             DateTime  @default(now())
+  contactPerson       String?
   status              RfqStatus @default(NEW)
   notes               String?
   createdAt           DateTime  @default(now())

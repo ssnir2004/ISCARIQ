@@ -88,6 +88,8 @@ export interface Rfq {
   title: string;
   materialDescription?: string | null;
   problemDescription?: string | null;
+  rfqDate: string;
+  contactPerson?: string | null;
   status: RfqStatus;
   notes?: string | null;
   createdAt: string;

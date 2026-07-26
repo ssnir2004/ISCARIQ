@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Rfq" ADD COLUMN     "contactPerson" TEXT,
+ADD COLUMN     "rfqDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
