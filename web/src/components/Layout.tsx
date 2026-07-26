@@ -41,6 +41,12 @@ export function Layout() {
         </nav>
         <div className="border-t border-neutral-200 p-3 text-xs dark:border-neutral-800">
           <div className="mb-2 truncate text-neutral-500 dark:text-neutral-400">{user?.email}</div>
+          <NavLink
+            to="/change-password"
+            className="block w-full rounded-lg px-3 py-1.5 text-left text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+          >
+            Change Password
+          </NavLink>
           <button
             onClick={() => logout()}
             className="w-full rounded-lg px-3 py-1.5 text-left text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"

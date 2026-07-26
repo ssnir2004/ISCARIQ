@@ -6,6 +6,7 @@ import { Pipeline } from "./pages/Pipeline";
 import { RfqDetail } from "./pages/RfqDetail";
 import { ProjectDetail } from "./pages/ProjectDetail";
 import { Advisor } from "./pages/Advisor";
+import { ChangePassword } from "./pages/ChangePassword";
 import { Materials } from "./pages/catalog/Materials";
 import { ProblemTags } from "./pages/catalog/ProblemTags";
 import { Teams } from "./pages/catalog/Teams";
@@ -34,6 +35,7 @@ function AppRoutes() {
         <Route path="/rfqs/:id" element={<RfqDetail />} />
         <Route path="/projects/:id" element={<ProjectDetail />} />
         <Route path="/advisor" element={<Advisor />} />
+        <Route path="/change-password" element={<ChangePassword />} />
         <Route path="/catalog/materials" element={<Materials />} />
         <Route path="/catalog/problem-tags" element={<ProblemTags />} />
         <Route path="/catalog/teams" element={<Teams />} />
