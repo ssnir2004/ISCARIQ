@@ -1,4 +1,5 @@
 import "dotenv/config";
+import "express-async-errors";
 import path from "node:path";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -64,6 +65,11 @@ if (fs.existsSync(WEB_DIST)) {
   app.use(express.static(WEB_DIST));
   app.get("*", (_req, res) => res.sendFile(path.join(WEB_DIST, "index.html")));
 }
+
+app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error(err);
+  res.status(500).json({ error: "Internal server error" });
+});
 
 app.listen(PORT, () => {
   console.log(`ISCARIQ API listening on http://localhost:${PORT}`);
