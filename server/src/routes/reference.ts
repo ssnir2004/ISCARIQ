@@ -88,6 +88,31 @@ export const insertRouter = crudRouter({
   orderBy: { designation: "asc" },
 });
 
+export const toolRouter = crudRouter({
+  delegate: prisma.tool,
+  createSchema: z.object({
+    designation: z.string().min(1),
+    item: z.string().optional(),
+    tailConnection: z.string().min(1),
+    tailSize: z.string().min(1),
+    noseConnection: z.string().min(1),
+    noseSize: z.string().min(1),
+    notes: z.string().optional(),
+    image: z.string().optional(),
+  }),
+  updateSchema: z.object({
+    designation: z.string().min(1).optional(),
+    item: z.string().optional(),
+    tailConnection: z.string().min(1).optional(),
+    tailSize: z.string().min(1).optional(),
+    noseConnection: z.string().min(1).optional(),
+    noseSize: z.string().min(1).optional(),
+    notes: z.string().optional(),
+    image: z.string().nullable().optional(),
+  }),
+  orderBy: { designation: "asc" },
+});
+
 export const cuttingConditionRouter = crudRouter({
   delegate: prisma.cuttingCondition,
   createSchema: z.object({

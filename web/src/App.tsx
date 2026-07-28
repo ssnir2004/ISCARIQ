@@ -11,6 +11,7 @@ import { Materials } from "./pages/catalog/Materials";
 import { ProblemTags } from "./pages/catalog/ProblemTags";
 import { Teams } from "./pages/catalog/Teams";
 import { Inserts } from "./pages/catalog/Inserts";
+import { Tools } from "./pages/catalog/Tools";
 import { CuttingConditions } from "./pages/catalog/CuttingConditions";
 import { Shapes } from "./pages/catalog/Shapes";
 import { Chipbreakers } from "./pages/catalog/Chipbreakers";
@@ -44,6 +45,7 @@ function AppRoutes() {
         <Route path="/catalog/problem-tags" element={<ProblemTags />} />
         <Route path="/catalog/teams" element={<Teams />} />
         <Route path="/catalog/inserts" element={<Inserts />} />
+        <Route path="/catalog/tools" element={<Tools />} />
         <Route path="/catalog/cutting-conditions" element={<CuttingConditions />} />
         <Route path="/catalog/shapes" element={<Shapes />} />
         <Route path="/catalog/chipbreakers" element={<Chipbreakers />} />

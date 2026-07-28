@@ -121,6 +121,18 @@ export type Chipbreaker = GlossaryEntry;
 export type Grade = GlossaryEntry;
 export type Coating = GlossaryEntry;
 
+export interface Tool {
+  id: string;
+  designation: string;
+  item?: string | null;
+  tailConnection: string;
+  tailSize: string;
+  noseConnection: string;
+  noseSize: string;
+  notes?: string | null;
+  image?: string | null;
+}
+
 export interface Insert {
   id: string;
   designation: string;

@@ -27,6 +27,7 @@ import {
   chipbreakerRouter,
   gradeRouter,
   coatingRouter,
+  toolRouter,
 } from "./routes/reference.js";
 
 const app = express();
@@ -55,6 +56,7 @@ app.use("/api/shapes", shapeRouter);
 app.use("/api/chipbreakers", chipbreakerRouter);
 app.use("/api/grades", gradeRouter);
 app.use("/api/coatings", coatingRouter);
+app.use("/api/tools", toolRouter);
 
 app.use("/api/rfqs", rfqRouter);
 app.use("/api/projects", projectRouter);

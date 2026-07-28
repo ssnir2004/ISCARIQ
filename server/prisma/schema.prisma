@@ -171,6 +171,20 @@ model Insert {
   problemMatches    InsertProblemMatch[]
 }
 
+// ---------- Tools (toolholders) ----------
+
+model Tool {
+  id             String  @id @default(cuid())
+  designation    String  @unique
+  item           String?
+  tailConnection String
+  tailSize       String
+  noseConnection String
+  noseSize       String
+  notes          String?
+  image          String?
+}
+
 enum OperationType {
   TURNING
   MILLING
