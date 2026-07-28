@@ -121,6 +121,7 @@ export interface Insert {
   substrate?: string | null;
   coolantPreference: CoolantPreference;
   notes?: string | null;
+  image?: string | null;
 }
 
 export interface CuttingCondition {

@@ -70,6 +70,7 @@ export const insertRouter = crudRouter({
     substrate: z.string().optional(),
     coolantPreference: z.enum(["REQUIRED", "OPTIONAL", "AVOID"]).optional(),
     notes: z.string().optional(),
+    image: z.string().optional(),
   }),
   updateSchema: z.object({
     designation: z.string().min(1).optional(),
@@ -82,6 +83,7 @@ export const insertRouter = crudRouter({
     substrate: z.string().optional(),
     coolantPreference: z.enum(["REQUIRED", "OPTIONAL", "AVOID"]).optional(),
     notes: z.string().optional(),
+    image: z.string().nullable().optional(),
   }),
   orderBy: { designation: "asc" },
 });

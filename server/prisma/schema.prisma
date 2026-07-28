@@ -166,6 +166,7 @@ model Insert {
   substrate         String?
   coolantPreference CoolantPreference @default(OPTIONAL)
   notes             String?
+  image             String?
   cuttingConditions CuttingCondition[]
   problemMatches    InsertProblemMatch[]
 }

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useResource } from "../../lib/useResource";
 import { api, ApiError } from "../../lib/api";
 import type { CoolantPreference, Insert } from "../../lib/types";
@@ -7,8 +7,8 @@ import { Button, Card, Input, Label, PageHeader, Select } from "../../components
 const COOLANT_OPTIONS: CoolantPreference[] = ["REQUIRED", "OPTIONAL", "AVOID"];
 
 const EMPTY_FORM = {
-  designation: "",
   item: "",
+  designation: "",
   shape: "",
   size: "",
   chipbreaker: "",
@@ -17,13 +17,30 @@ const EMPTY_FORM = {
   substrate: "",
   coolantPreference: "OPTIONAL" as CoolantPreference,
   notes: "",
+  image: "" as string | null,
 };
+
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
 export function Inserts() {
   const { data, reload } = useResource<Insert>("/inserts");
   const [form, setForm] = useState(EMPTY_FORM);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [fileInputKey, setFileInputKey] = useState(0);
+
+  async function onImageChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setForm({ ...form, image: await readFileAsDataUrl(file) });
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -32,6 +49,7 @@ export function Inserts() {
     try {
       await api.post("/inserts", form);
       setForm(EMPTY_FORM);
+      setFileInputKey((k) => k + 1);
       reload();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to create insert");
@@ -57,12 +75,12 @@ export function Inserts() {
       <Card className="mb-6 p-4">
         <form onSubmit={onSubmit} className="grid grid-cols-4 gap-4">
           <div>
-            <Label>Designation</Label>
-            <Input value={form.designation} onChange={(e) => setForm({ ...form, designation: e.target.value })} placeholder="CNMG120408-MF" required />
-          </div>
-          <div>
             <Label>Item</Label>
             <Input value={form.item} onChange={(e) => setForm({ ...form, item: e.target.value })} placeholder="5506322" />
+          </div>
+          <div>
+            <Label>Designation</Label>
+            <Input value={form.designation} onChange={(e) => setForm({ ...form, designation: e.target.value })} placeholder="CNMG120408-MF" required />
           </div>
           <div>
             <Label>Shape</Label>
@@ -98,6 +116,15 @@ export function Inserts() {
               ))}
             </Select>
           </div>
+          <div className="col-span-2">
+            <Label>Image</Label>
+            <div className="flex items-center gap-3">
+              <Input key={fileInputKey} type="file" accept="image/*" onChange={onImageChange} />
+              {form.image && (
+                <img src={form.image} alt="Preview" className="h-10 w-10 rounded object-cover" />
+              )}
+            </div>
+          </div>
           <div className="col-span-4">
             <Label>Notes</Label>
             <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
@@ -115,8 +142,9 @@ export function Inserts() {
         <table className="w-full text-left text-sm">
           <thead className="bg-neutral-100 text-xs uppercase text-neutral-500 dark:bg-neutral-900 dark:text-neutral-400">
             <tr>
-              <th className="px-3 py-2">Designation</th>
+              <th className="px-3 py-2">Image</th>
               <th className="px-3 py-2">Item</th>
+              <th className="px-3 py-2">Designation</th>
               <th className="px-3 py-2">Shape</th>
               <th className="px-3 py-2">Size</th>
               <th className="px-3 py-2">Chipbreaker</th>
@@ -129,8 +157,15 @@ export function Inserts() {
           <tbody>
             {data.map((i) => (
               <tr key={i.id} className="border-t border-neutral-200 dark:border-neutral-800">
-                <td className="px-3 py-2 font-mono">{i.designation}</td>
+                <td className="px-3 py-2">
+                  {i.image ? (
+                    <img src={i.image} alt={i.designation} className="h-10 w-10 rounded object-cover" />
+                  ) : (
+                    "—"
+                  )}
+                </td>
                 <td className="px-3 py-2">{i.item || "—"}</td>
+                <td className="px-3 py-2 font-mono">{i.designation}</td>
                 <td className="px-3 py-2">{i.shape}</td>
                 <td className="px-3 py-2">{i.size}</td>
                 <td className="px-3 py-2">{i.chipbreaker}</td>
