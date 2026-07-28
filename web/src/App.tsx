@@ -12,6 +12,10 @@ import { ProblemTags } from "./pages/catalog/ProblemTags";
 import { Teams } from "./pages/catalog/Teams";
 import { Inserts } from "./pages/catalog/Inserts";
 import { CuttingConditions } from "./pages/catalog/CuttingConditions";
+import { Shapes } from "./pages/catalog/Shapes";
+import { Chipbreakers } from "./pages/catalog/Chipbreakers";
+import { Grades } from "./pages/catalog/Grades";
+import { Coatings } from "./pages/catalog/Coatings";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -41,6 +45,10 @@ function AppRoutes() {
         <Route path="/catalog/teams" element={<Teams />} />
         <Route path="/catalog/inserts" element={<Inserts />} />
         <Route path="/catalog/cutting-conditions" element={<CuttingConditions />} />
+        <Route path="/catalog/shapes" element={<Shapes />} />
+        <Route path="/catalog/chipbreakers" element={<Chipbreakers />} />
+        <Route path="/catalog/grades" element={<Grades />} />
+        <Route path="/catalog/coatings" element={<Coatings />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

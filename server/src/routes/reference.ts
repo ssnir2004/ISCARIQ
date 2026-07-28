@@ -119,6 +119,28 @@ export const cuttingConditionRouter = crudRouter({
   include: { insert: true, material: true },
 });
 
+function glossaryRouter(delegate: Parameters<typeof crudRouter>[0]["delegate"]) {
+  return crudRouter({
+    delegate,
+    createSchema: z.object({
+      name: z.string().min(1),
+      description: z.string().optional(),
+      image: z.string().optional(),
+    }),
+    updateSchema: z.object({
+      name: z.string().min(1).optional(),
+      description: z.string().optional(),
+      image: z.string().nullable().optional(),
+    }),
+    orderBy: { name: "asc" },
+  });
+}
+
+export const shapeRouter = glossaryRouter(prisma.shape);
+export const chipbreakerRouter = glossaryRouter(prisma.chipbreaker);
+export const gradeRouter = glossaryRouter(prisma.grade);
+export const coatingRouter = glossaryRouter(prisma.coating);
+
 export const insertProblemMatchRouter = crudRouter({
   delegate: prisma.insertProblemMatch,
   createSchema: z.object({

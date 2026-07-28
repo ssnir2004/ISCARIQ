@@ -109,6 +109,18 @@ export interface ProblemTag {
   name: string;
 }
 
+export interface GlossaryEntry {
+  id: string;
+  name: string;
+  description?: string | null;
+  image?: string | null;
+}
+
+export type Shape = GlossaryEntry;
+export type Chipbreaker = GlossaryEntry;
+export type Grade = GlossaryEntry;
+export type Coating = GlossaryEntry;
+
 export interface Insert {
   id: string;
   designation: string;

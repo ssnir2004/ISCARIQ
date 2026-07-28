@@ -1,9 +1,10 @@
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
+import type { ButtonHTMLAttributes, HTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
 
-export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
+export function Card({ children, className = "", ...props }: HTMLAttributes<HTMLDivElement> & { children: ReactNode; className?: string }) {
   return (
     <div
       className={`rounded-xl border border-neutral-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900 ${className}`}
+      {...props}
     >
       {children}
     </div>
@@ -88,6 +89,37 @@ export function PageHeader({ title, action }: { title: string; action?: ReactNod
     <div className="mb-6 flex items-center justify-between">
       <h1 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100">{title}</h1>
       {action}
+    </div>
+  );
+}
+
+export function Modal({
+  title,
+  onClose,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={onClose}
+    >
+      <Card className="max-h-[85vh] w-full max-w-lg overflow-y-auto p-4" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">{title}</h2>
+          <button
+            onClick={onClose}
+            className="rounded p-1 text-neutral-500 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800"
+            aria-label="Close"
+          >
+            ✕
+          </button>
+        </div>
+        {children}
+      </Card>
     </div>
   );
 }

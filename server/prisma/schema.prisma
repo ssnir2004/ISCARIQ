@@ -203,6 +203,38 @@ model CuttingCondition {
   notes         String?
 }
 
+// ---------- Insert parameter glossary ----------
+// Free-text reference entries explaining a Shape/Chipbreaker/Grade/Coating
+// value used on Insert (matched by name, not a foreign key).
+
+model Shape {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String?
+  image       String?
+}
+
+model Chipbreaker {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String?
+  image       String?
+}
+
+model Grade {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String?
+  image       String?
+}
+
+model Coating {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String?
+  image       String?
+}
+
 model ProblemTag {
   id       String @id @default(cuid())
   name     String @unique

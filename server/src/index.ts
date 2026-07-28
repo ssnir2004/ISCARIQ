@@ -23,6 +23,10 @@ import {
   insertRouter,
   cuttingConditionRouter,
   insertProblemMatchRouter,
+  shapeRouter,
+  chipbreakerRouter,
+  gradeRouter,
+  coatingRouter,
 } from "./routes/reference.js";
 
 const app = express();
@@ -47,6 +51,10 @@ app.use("/api/problem-tags", problemTagRouter);
 app.use("/api/inserts", insertRouter);
 app.use("/api/cutting-conditions", cuttingConditionRouter);
 app.use("/api/insert-problem-matches", insertProblemMatchRouter);
+app.use("/api/shapes", shapeRouter);
+app.use("/api/chipbreakers", chipbreakerRouter);
+app.use("/api/grades", gradeRouter);
+app.use("/api/coatings", coatingRouter);
 
 app.use("/api/rfqs", rfqRouter);
 app.use("/api/projects", projectRouter);

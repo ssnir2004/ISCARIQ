@@ -1,8 +1,8 @@
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useResource } from "../../lib/useResource";
 import { api, ApiError } from "../../lib/api";
-import type { CoolantPreference, Insert } from "../../lib/types";
-import { Button, Card, Input, Label, PageHeader, Select } from "../../components/ui";
+import type { CoolantPreference, GlossaryEntry, Insert } from "../../lib/types";
+import { Button, Card, Input, Label, Modal, PageHeader, Select } from "../../components/ui";
 
 const COOLANT_OPTIONS: CoolantPreference[] = ["REQUIRED", "OPTIONAL", "AVOID"];
 
@@ -31,11 +31,21 @@ function readFileAsDataUrl(file: File): Promise<string> {
 
 export function Inserts() {
   const { data, reload } = useResource<Insert>("/inserts");
+  const { data: shapes } = useResource<GlossaryEntry>("/shapes");
+  const { data: chipbreakers } = useResource<GlossaryEntry>("/chipbreakers");
+  const { data: grades } = useResource<GlossaryEntry>("/grades");
+  const { data: coatings } = useResource<GlossaryEntry>("/coatings");
   const [form, setForm] = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [fileInputKey, setFileInputKey] = useState(0);
+  const [detail, setDetail] = useState<{ kind: string; value: string; entry: GlossaryEntry | null } | null>(null);
+
+  function showDetail(list: GlossaryEntry[], kind: string, value: string) {
+    const entry = list.find((e) => e.name.trim().toLowerCase() === value.trim().toLowerCase()) ?? null;
+    setDetail({ kind, value, entry });
+  }
 
   async function onImageChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -203,11 +213,47 @@ export function Inserts() {
                 </td>
                 <td className="px-3 py-2">{i.item || "—"}</td>
                 <td className="px-3 py-2 font-mono">{i.designation}</td>
-                <td className="px-3 py-2">{i.shape}</td>
+                <td className="px-3 py-2">
+                  <button
+                    type="button"
+                    className="underline decoration-dotted underline-offset-2 hover:text-blue-600 dark:hover:text-blue-400"
+                    onClick={() => showDetail(shapes, "Shape", i.shape)}
+                  >
+                    {i.shape}
+                  </button>
+                </td>
                 <td className="px-3 py-2">{i.size}</td>
-                <td className="px-3 py-2">{i.chipbreaker}</td>
-                <td className="px-3 py-2">{i.grade}</td>
-                <td className="px-3 py-2">{i.coatingType || "—"}</td>
+                <td className="px-3 py-2">
+                  <button
+                    type="button"
+                    className="underline decoration-dotted underline-offset-2 hover:text-blue-600 dark:hover:text-blue-400"
+                    onClick={() => showDetail(chipbreakers, "Chipbreaker", i.chipbreaker)}
+                  >
+                    {i.chipbreaker}
+                  </button>
+                </td>
+                <td className="px-3 py-2">
+                  <button
+                    type="button"
+                    className="underline decoration-dotted underline-offset-2 hover:text-blue-600 dark:hover:text-blue-400"
+                    onClick={() => showDetail(grades, "Grade", i.grade)}
+                  >
+                    {i.grade}
+                  </button>
+                </td>
+                <td className="px-3 py-2">
+                  {i.coatingType ? (
+                    <button
+                      type="button"
+                      className="underline decoration-dotted underline-offset-2 hover:text-blue-600 dark:hover:text-blue-400"
+                      onClick={() => showDetail(coatings, "Coating", i.coatingType!)}
+                    >
+                      {i.coatingType}
+                    </button>
+                  ) : (
+                    "—"
+                  )}
+                </td>
                 <td className="px-3 py-2">{i.coolantPreference}</td>
                 <td className="px-3 py-2 text-right">
                   <Button variant="ghost" onClick={() => startEdit(i)}>
@@ -222,6 +268,26 @@ export function Inserts() {
           </tbody>
         </table>
       </div>
+
+      {detail && (
+        <Modal title={`${detail.kind}: ${detail.value}`} onClose={() => setDetail(null)}>
+          {detail.entry ? (
+            <div className="space-y-3">
+              {detail.entry.image && (
+                <img src={detail.entry.image} alt={detail.entry.name} className="max-h-56 rounded object-contain" />
+              )}
+              <p className="whitespace-pre-wrap text-sm text-neutral-700 dark:text-neutral-300">
+                {detail.entry.description || "No description provided."}
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">
+              No {detail.kind.toLowerCase()} entry found for "{detail.value}" yet. Add one on the{" "}
+              {detail.kind} screen.
+            </p>
+          )}
+        </Modal>
+      )}
     </div>
   );
 }
