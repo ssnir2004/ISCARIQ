@@ -140,10 +140,13 @@ enum Iso513Group {
 }
 
 model Material {
-  id          String      @id @default(cuid())
-  iso513Group Iso513Group
-  name        String
-  description String?
+  id             String      @id @default(cuid())
+  iso513Group    Iso513Group
+  name           String
+  description    String?
+  commonUse      String?
+  keyProperties  String?
+  hardness       String?
   cuttingConditions CuttingCondition[]
   insertMatches     InsertProblemMatch[]
 }

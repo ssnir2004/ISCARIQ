@@ -102,6 +102,9 @@ export interface Material {
   iso513Group: Iso513Group;
   name: string;
   description?: string | null;
+  commonUse?: string | null;
+  keyProperties?: string | null;
+  hardness?: string | null;
 }
 
 export interface ProblemTag {

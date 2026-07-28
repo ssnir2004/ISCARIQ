@@ -41,11 +41,17 @@ export const materialRouter = crudRouter({
     iso513Group: z.enum(["P", "M", "K", "N", "S", "H"]),
     name: z.string().min(1),
     description: z.string().optional(),
+    commonUse: z.string().optional(),
+    keyProperties: z.string().optional(),
+    hardness: z.string().optional(),
   }),
   updateSchema: z.object({
     iso513Group: z.enum(["P", "M", "K", "N", "S", "H"]).optional(),
     name: z.string().min(1).optional(),
     description: z.string().optional(),
+    commonUse: z.string().optional(),
+    keyProperties: z.string().optional(),
+    hardness: z.string().optional(),
   }),
   orderBy: { iso513Group: "asc" },
 });
