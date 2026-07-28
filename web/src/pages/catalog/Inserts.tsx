@@ -8,6 +8,7 @@ const COOLANT_OPTIONS: CoolantPreference[] = ["REQUIRED", "OPTIONAL", "AVOID"];
 
 const EMPTY_FORM = {
   designation: "",
+  item: "",
   shape: "",
   size: "",
   chipbreaker: "",
@@ -58,6 +59,10 @@ export function Inserts() {
           <div>
             <Label>Designation</Label>
             <Input value={form.designation} onChange={(e) => setForm({ ...form, designation: e.target.value })} placeholder="CNMG120408-MF" required />
+          </div>
+          <div>
+            <Label>Item</Label>
+            <Input value={form.item} onChange={(e) => setForm({ ...form, item: e.target.value })} placeholder="5506322" />
           </div>
           <div>
             <Label>Shape</Label>
@@ -111,6 +116,7 @@ export function Inserts() {
           <thead className="bg-neutral-100 text-xs uppercase text-neutral-500 dark:bg-neutral-900 dark:text-neutral-400">
             <tr>
               <th className="px-3 py-2">Designation</th>
+              <th className="px-3 py-2">Item</th>
               <th className="px-3 py-2">Shape</th>
               <th className="px-3 py-2">Size</th>
               <th className="px-3 py-2">Chipbreaker</th>
@@ -124,6 +130,7 @@ export function Inserts() {
             {data.map((i) => (
               <tr key={i.id} className="border-t border-neutral-200 dark:border-neutral-800">
                 <td className="px-3 py-2 font-mono">{i.designation}</td>
+                <td className="px-3 py-2">{i.item || "—"}</td>
                 <td className="px-3 py-2">{i.shape}</td>
                 <td className="px-3 py-2">{i.size}</td>
                 <td className="px-3 py-2">{i.chipbreaker}</td>

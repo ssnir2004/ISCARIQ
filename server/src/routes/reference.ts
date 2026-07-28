@@ -61,6 +61,7 @@ export const insertRouter = crudRouter({
   delegate: prisma.insert,
   createSchema: z.object({
     designation: z.string().min(1),
+    item: z.string().optional(),
     shape: z.string().min(1),
     size: z.string().min(1),
     chipbreaker: z.string().min(1),
@@ -72,6 +73,7 @@ export const insertRouter = crudRouter({
   }),
   updateSchema: z.object({
     designation: z.string().min(1).optional(),
+    item: z.string().optional(),
     shape: z.string().min(1).optional(),
     size: z.string().min(1).optional(),
     chipbreaker: z.string().min(1).optional(),

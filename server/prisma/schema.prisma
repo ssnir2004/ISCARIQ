@@ -157,6 +157,7 @@ enum CoolantPreference {
 model Insert {
   id                String            @id @default(cuid())
   designation       String            @unique
+  item              String?
   shape             String
   size              String
   chipbreaker       String

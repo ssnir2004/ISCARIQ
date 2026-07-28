@@ -112,6 +112,7 @@ export interface ProblemTag {
 export interface Insert {
   id: string;
   designation: string;
+  item?: string | null;
   shape: string;
   size: string;
   chipbreaker: string;
