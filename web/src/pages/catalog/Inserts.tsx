@@ -32,6 +32,7 @@ function readFileAsDataUrl(file: File): Promise<string> {
 export function Inserts() {
   const { data, reload } = useResource<Insert>("/inserts");
   const [form, setForm] = useState(EMPTY_FORM);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [fileInputKey, setFileInputKey] = useState(0);
@@ -42,17 +43,47 @@ export function Inserts() {
     setForm({ ...form, image: await readFileAsDataUrl(file) });
   }
 
+  function startEdit(i: Insert) {
+    setForm({
+      item: i.item ?? "",
+      designation: i.designation,
+      shape: i.shape,
+      size: i.size,
+      chipbreaker: i.chipbreaker,
+      grade: i.grade,
+      coatingType: i.coatingType ?? "",
+      substrate: i.substrate ?? "",
+      coolantPreference: i.coolantPreference,
+      notes: i.notes ?? "",
+      image: i.image ?? "",
+    });
+    setEditingId(i.id);
+    setError(null);
+  }
+
+  function cancelEdit() {
+    setForm(EMPTY_FORM);
+    setEditingId(null);
+    setFileInputKey((k) => k + 1);
+    setError(null);
+  }
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
     try {
-      await api.post("/inserts", form);
+      if (editingId) {
+        await api.patch(`/inserts/${editingId}`, form);
+      } else {
+        await api.post("/inserts", form);
+      }
       setForm(EMPTY_FORM);
+      setEditingId(null);
       setFileInputKey((k) => k + 1);
       reload();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to create insert");
+      setError(err instanceof ApiError ? err.message : "Failed to save insert");
     } finally {
       setSubmitting(false);
     }
@@ -63,6 +94,7 @@ export function Inserts() {
     setError(null);
     try {
       await api.delete(`/inserts/${id}`);
+      if (editingId === id) cancelEdit();
       reload();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to delete insert");
@@ -130,10 +162,15 @@ export function Inserts() {
             <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
           </div>
           {error && <p className="col-span-4 text-sm text-red-600 dark:text-red-400">{error}</p>}
-          <div className="col-span-4">
+          <div className="col-span-4 flex gap-2">
             <Button type="submit" disabled={submitting}>
-              Add Insert
+              {editingId ? "Save Changes" : "Add Insert"}
             </Button>
+            {editingId && (
+              <Button type="button" variant="secondary" onClick={cancelEdit}>
+                Cancel
+              </Button>
+            )}
           </div>
         </form>
       </Card>
@@ -173,6 +210,9 @@ export function Inserts() {
                 <td className="px-3 py-2">{i.coatingType || "—"}</td>
                 <td className="px-3 py-2">{i.coolantPreference}</td>
                 <td className="px-3 py-2 text-right">
+                  <Button variant="ghost" onClick={() => startEdit(i)}>
+                    Edit
+                  </Button>
                   <Button variant="ghost" onClick={() => remove(i.id)}>
                     Delete
                   </Button>
