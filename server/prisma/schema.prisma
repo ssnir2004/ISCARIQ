@@ -64,6 +64,9 @@ model Plant {
   // itself. (0, 0) means "not customized yet" — render just below the pin.
   labelDx     Float        @default(0)
   labelDy     Float        @default(0)
+  // Marked true for a plant whose existence/details the user isn't sure
+  // about, so it can be highlighted differently on the map.
+  uncertain   Boolean      @default(false)
   createdAt   DateTime     @default(now())
 }
 

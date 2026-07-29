@@ -12,7 +12,7 @@ const VIEWS: { id: PlantMapView; label: string; aspect: string; containerClass: 
   { id: "GERMANY", label: "Germany", aspect: "aspect-[700/650]", containerClass: "max-w-3xl mx-auto", map: GERMANY_MAP },
 ];
 
-const EMPTY_FORM = { name: "", regionCode: "", specialties: "" };
+const EMPTY_FORM = { name: "", regionCode: "", specialties: "", uncertain: false };
 const AUTO_LABEL_DY = 5; // percent — default "just below the pin" position when not customized
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 4;
@@ -31,6 +31,14 @@ function clientToPercent(clientX: number, clientY: number, rect: DOMRect) {
 function labelOffset(p: Plant) {
   if (p.labelDx === 0 && p.labelDy === 0) return { dx: 0, dy: AUTO_LABEL_DY, auto: true };
   return { dx: p.labelDx, dy: p.labelDy, auto: false };
+}
+
+function pinBg(p: Plant) {
+  return p.uncertain ? "bg-amber-500" : "bg-emerald-600";
+}
+
+function lineStroke(p: Plant) {
+  return p.uncertain ? "stroke-amber-600 dark:stroke-amber-400" : "stroke-emerald-700 dark:stroke-emerald-500";
 }
 
 interface DragState {
@@ -108,7 +116,7 @@ export function PlantsMap() {
   function openDetail(p: Plant) {
     setDetail(p);
     setEditing(false);
-    setEditForm({ name: p.name, regionCode: p.regionCode ?? "", specialties: p.specialties ?? "" });
+    setEditForm({ name: p.name, regionCode: p.regionCode ?? "", specialties: p.specialties ?? "", uncertain: p.uncertain });
     setEditError(null);
   }
 
@@ -204,6 +212,7 @@ export function PlantsMap() {
         mapView: view,
         x: addAt.x,
         y: addAt.y,
+        uncertain: addForm.uncertain,
       });
       setAddAt(null);
       reload();
@@ -223,6 +232,7 @@ export function PlantsMap() {
         name: editForm.name,
         regionCode: editForm.regionCode || undefined,
         specialties: editForm.specialties || undefined,
+        uncertain: editForm.uncertain,
       });
       setDetail(updated);
       setEditing(false);
@@ -343,7 +353,7 @@ export function PlantsMap() {
                   y1={vbY(p.y)}
                   x2={vbX(p.x + dx)}
                   y2={vbY(p.y + dy)}
-                  className="stroke-emerald-700 dark:stroke-emerald-500"
+                  className={lineStroke(p)}
                   strokeWidth={0.6}
                   vectorEffect="non-scaling-stroke"
                 />
@@ -358,7 +368,7 @@ export function PlantsMap() {
               onPointerDown={(e) => startDrag(e, "pin", p)}
               onPointerMove={(e) => handleMove(e, p)}
               onPointerUp={(e) => handleUp(e, p)}
-              className={`absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-emerald-600 shadow outline-none dark:border-neutral-950 ${
+              className={`absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow outline-none dark:border-neutral-950 ${pinBg(p)} ${
                 mode === "edit" ? "cursor-grab active:cursor-grabbing" : ""
               }`}
               style={{ left: `${p.x}%`, top: `${p.y}%` }}
@@ -374,7 +384,7 @@ export function PlantsMap() {
                 onPointerDown={(e) => startDrag(e, "label", p)}
                 onPointerMove={(e) => handleMove(e, p)}
                 onPointerUp={(e) => handleUp(e, p)}
-                className={`absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-emerald-600 px-1.5 py-0.5 text-[11px] font-medium text-white shadow outline-none ${
+                className={`absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded px-1.5 py-0.5 text-[11px] font-medium text-white shadow outline-none ${pinBg(p)} ${
                   mode === "edit" ? "cursor-grab active:cursor-grabbing" : ""
                 }`}
                 style={{ left: `${p.x + dx}%`, top: `${p.y + dy}%` }}
@@ -408,6 +418,11 @@ export function PlantsMap() {
                   >
                     {p.name}
                   </button>
+                  {p.uncertain && (
+                    <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                      Unverified
+                    </span>
+                  )}
                 </td>
                 <td className="px-3 py-2">{p.regionCode || "—"}</td>
                 <td className="px-3 py-2 max-w-md truncate">{(p.specialties ?? "").split("\n").join(", ") || "—"}</td>
@@ -454,6 +469,15 @@ export function PlantsMap() {
                 onChange={(e) => setAddForm({ ...addForm, specialties: e.target.value })}
               />
             </div>
+            <label className="flex items-center gap-2 text-sm text-neutral-700 dark:text-neutral-300">
+              <input
+                type="checkbox"
+                checked={addForm.uncertain}
+                onChange={(e) => setAddForm({ ...addForm, uncertain: e.target.checked })}
+                className="h-4 w-4 rounded border-neutral-300 text-amber-500 focus:ring-amber-500 dark:border-neutral-700"
+              />
+              Not sure this plant still exists
+            </label>
             {addError && <p className="text-sm text-red-600 dark:text-red-400">{addError}</p>}
             <Button type="submit" disabled={submitting}>
               Add Plant
@@ -464,7 +488,11 @@ export function PlantsMap() {
 
       {detail && (
         <Modal
-          title={editing ? `Edit — ${detail.name}` : `${detail.name}${detail.regionCode ? ` (${detail.regionCode})` : ""}`}
+          title={
+            editing
+              ? `Edit — ${detail.name}`
+              : `${detail.name}${detail.regionCode ? ` (${detail.regionCode})` : ""}${detail.uncertain ? " ⚠️ Unverified" : ""}`
+          }
           onClose={() => setDetail(null)}
         >
           {editing ? (
@@ -481,6 +509,15 @@ export function PlantsMap() {
                 <Label>Specialties (one per line)</Label>
                 <Textarea rows={4} value={editForm.specialties} onChange={(e) => setEditForm({ ...editForm, specialties: e.target.value })} />
               </div>
+              <label className="flex items-center gap-2 text-sm text-neutral-700 dark:text-neutral-300">
+                <input
+                  type="checkbox"
+                  checked={editForm.uncertain}
+                  onChange={(e) => setEditForm({ ...editForm, uncertain: e.target.checked })}
+                  className="h-4 w-4 rounded border-neutral-300 text-amber-500 focus:ring-amber-500 dark:border-neutral-700"
+                />
+                Not sure this plant still exists
+              </label>
               {editError && <p className="text-sm text-red-600 dark:text-red-400">{editError}</p>}
               <div className="flex gap-2">
                 <Button type="submit">Save</Button>

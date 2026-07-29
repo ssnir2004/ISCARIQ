@@ -20,6 +20,7 @@ export const plantRouter = crudRouter({
     y: z.number().min(0).max(100),
     labelDx: z.number().min(-100).max(100).optional(),
     labelDy: z.number().min(-100).max(100).optional(),
+    uncertain: z.boolean().optional(),
   }),
   updateSchema: z.object({
     name: z.string().min(1).optional(),
@@ -30,6 +31,7 @@ export const plantRouter = crudRouter({
     y: z.number().min(0).max(100).optional(),
     labelDx: z.number().min(-100).max(100).optional(),
     labelDy: z.number().min(-100).max(100).optional(),
+    uncertain: z.boolean().optional(),
   }),
   orderBy: { name: "asc" },
 });

@@ -32,6 +32,7 @@ export interface Plant {
   y: number;
   labelDx: number;
   labelDy: number;
+  uncertain: boolean;
   createdAt: string;
 }
 
