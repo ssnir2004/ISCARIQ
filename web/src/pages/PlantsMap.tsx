@@ -7,9 +7,9 @@ import { GERMANY_MAP, WORLD_MAP } from "../lib/mapPaths";
 
 type MapData = { viewBoxWidth: number; viewBoxHeight: number; fill: string; borders: string; highlight?: string };
 
-const VIEWS: { id: PlantMapView; label: string; aspect: string; map: MapData }[] = [
-  { id: "WORLD", label: "World", aspect: "aspect-[1000/480]", map: WORLD_MAP },
-  { id: "GERMANY", label: "Germany", aspect: "aspect-[700/650]", map: GERMANY_MAP },
+const VIEWS: { id: PlantMapView; label: string; aspect: string; containerClass: string; map: MapData }[] = [
+  { id: "WORLD", label: "World", aspect: "aspect-[1000/480]", containerClass: "", map: WORLD_MAP },
+  { id: "GERMANY", label: "Germany", aspect: "aspect-[700/650]", containerClass: "max-w-3xl mx-auto", map: GERMANY_MAP },
 ];
 
 const EMPTY_FORM = { name: "", regionCode: "", specialties: "" };
@@ -310,7 +310,7 @@ export function PlantsMap() {
 
       <div
         ref={viewportRef}
-        className={`relative mx-auto w-full max-w-3xl ${viewConfig.aspect} overflow-hidden rounded-xl border border-neutral-200 bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-950`}
+        className={`relative w-full ${viewConfig.aspect} ${viewConfig.containerClass} overflow-hidden rounded-xl border border-neutral-200 bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-950`}
       >
         <div
           ref={canvasRef}
