@@ -20,6 +20,18 @@ export type ProjectStatus =
 export type OperationType = "TURNING" | "MILLING" | "DRILLING" | "GROOVING" | "THREADING" | "BORING";
 export type Iso513Group = "P" | "M" | "K" | "N" | "S" | "H";
 export type CoolantPreference = "REQUIRED" | "OPTIONAL" | "AVOID";
+export type PlantMapView = "WORLD" | "GERMANY";
+
+export interface Plant {
+  id: string;
+  name: string;
+  regionCode?: string | null;
+  specialties?: string | null;
+  mapView: PlantMapView;
+  x: number;
+  y: number;
+  createdAt: string;
+}
 
 export interface Branch {
   id: string;

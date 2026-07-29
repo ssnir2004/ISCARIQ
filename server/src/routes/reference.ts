@@ -9,6 +9,27 @@ export const branchRouter = crudRouter({
   orderBy: { name: "asc" },
 });
 
+export const plantRouter = crudRouter({
+  delegate: prisma.plant,
+  createSchema: z.object({
+    name: z.string().min(1),
+    regionCode: z.string().optional(),
+    specialties: z.string().optional(),
+    mapView: z.enum(["WORLD", "GERMANY"]),
+    x: z.number().min(0).max(100),
+    y: z.number().min(0).max(100),
+  }),
+  updateSchema: z.object({
+    name: z.string().min(1).optional(),
+    regionCode: z.string().optional(),
+    specialties: z.string().optional(),
+    mapView: z.enum(["WORLD", "GERMANY"]).optional(),
+    x: z.number().min(0).max(100).optional(),
+    y: z.number().min(0).max(100).optional(),
+  }),
+  orderBy: { name: "asc" },
+});
+
 export const departmentRouter = crudRouter({
   delegate: prisma.department,
   createSchema: z.object({ code: z.string().min(1), name: z.string().min(1) }),

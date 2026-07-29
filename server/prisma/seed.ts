@@ -99,6 +99,41 @@ const PROBLEM_TAGS = [
   "Flank wear",
 ];
 
+// Schaeffler plants worldwide, from the company's plant map reference.
+// x/y are approximate percentage positions on a schematic (non-geographic)
+// canvas — fine-tune by dragging the pin on the Plants Map screen.
+const PLANTS: {
+  name: string;
+  regionCode: string;
+  specialties: string;
+  mapView: "WORLD" | "GERMANY";
+  x: number;
+  y: number;
+}[] = [
+  { name: "Brasov", regionCode: "RO", specialties: "Large bearings\nBearings\nEngine components\nLinear components", mapView: "WORLD", x: 54, y: 30 },
+  { name: "Haguenau", regionCode: "FR", specialties: "Engine components\nBearings\nLinear components", mapView: "WORLD", x: 46, y: 26 },
+  { name: "Skalica", regionCode: "SK", specialties: "Roller bearings\nLinear components\nEngine components\nCages", mapView: "WORLD", x: 54, y: 18 },
+  { name: "Kysuce", regionCode: "SK", specialties: "Ball bearings\nWheelbearings\nEngine components", mapView: "WORLD", x: 68, y: 34 },
+  { name: "Taicang", regionCode: "CN", specialties: "Clutches\nTransmission components\nEngine components\nWheelbearings\nToolshop", mapView: "WORLD", x: 88, y: 44 },
+  { name: "Nanjing", regionCode: "CN", specialties: "Large bearings\nBearings", mapView: "WORLD", x: 76, y: 28 },
+  { name: "Cheraw & Fort Mill", regionCode: "US", specialties: "Bearings\nEngine components", mapView: "WORLD", x: 20, y: 36 },
+  { name: "Stratford", regionCode: "CN", specialties: "Wheelbearings\nAerospace\nBearings", mapView: "WORLD", x: 92, y: 20 },
+  { name: "Sorocaba", regionCode: "BR", specialties: "Clutches\nTransmission components\nEngine components\nBearings", mapView: "WORLD", x: 32, y: 74 },
+  { name: "Puebla", regionCode: "MX", specialties: "Clutches\nTransmission components", mapView: "WORLD", x: 15, y: 50 },
+  { name: "Irapuato", regionCode: "MX", specialties: "Wheelbearings\nEngine components\nBearings", mapView: "WORLD", x: 10, y: 44 },
+
+  { name: "Wuppertal", regionCode: "NW", specialties: "Roller bearings\nLarge bearings", mapView: "GERMANY", x: 25, y: 25 },
+  { name: "Magdeburg", regionCode: "ST", specialties: "Engine components", mapView: "GERMANY", x: 55, y: 15 },
+  { name: "Schweinfurt", regionCode: "BY", specialties: "Roller bearings\nFAG headquater", mapView: "GERMANY", x: 58, y: 35 },
+  { name: "Hirschaid", regionCode: "BY", specialties: "Engine components", mapView: "GERMANY", x: 75, y: 42 },
+  { name: "Höchstadt", regionCode: "BY", specialties: "Bearings\nPlastics", mapView: "GERMANY", x: 60, y: 52 },
+  { name: "Herzogenaurach", regionCode: "BY", specialties: "Engine components\nSteering components\nBearings\nToolshop\nINA headquater\nCorporate headquater", mapView: "GERMANY", x: 78, y: 58 },
+  { name: "Ingolstadt", regionCode: "BY", specialties: "Engine Components\nBearings", mapView: "GERMANY", x: 55, y: 72 },
+  { name: "Homburg", regionCode: "SL", specialties: "Engine components\nLinear components\nBearings", mapView: "GERMANY", x: 15, y: 60 },
+  { name: "Lahr", regionCode: "BW", specialties: "Engine components\nBearings", mapView: "GERMANY", x: 22, y: 78 },
+  { name: "Bühl", regionCode: "BW", specialties: "Clutches\nTransmission components\nToolshop\nLuK headquater", mapView: "GERMANY", x: 38, y: 75 },
+];
+
 async function main() {
   await prisma.branch.createMany({
     data: BRANCHES.map((name) => ({ name })),
@@ -144,6 +179,14 @@ async function main() {
       where: { name },
       update: {},
       create: { name },
+    });
+  }
+
+  for (const p of PLANTS) {
+    await prisma.plant.upsert({
+      where: { name: p.name },
+      update: { regionCode: p.regionCode, specialties: p.specialties, mapView: p.mapView, x: p.x, y: p.y },
+      create: p,
     });
   }
 

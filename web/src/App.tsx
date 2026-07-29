@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from "./lib/auth";
 import { Layout } from "./components/Layout";
 import { Login } from "./pages/Login";
 import { Pipeline } from "./pages/Pipeline";
+import { PlantsMap } from "./pages/PlantsMap";
 import { RfqDetail } from "./pages/RfqDetail";
 import { ProjectDetail } from "./pages/ProjectDetail";
 import { Advisor } from "./pages/Advisor";
@@ -38,6 +39,7 @@ function AppRoutes() {
         }
       >
         <Route path="/" element={<Pipeline />} />
+        <Route path="/plants" element={<PlantsMap />} />
         <Route path="/rfqs/:id" element={<RfqDetail />} />
         <Route path="/projects/:id" element={<ProjectDetail />} />
         <Route path="/advisor" element={<Advisor />} />

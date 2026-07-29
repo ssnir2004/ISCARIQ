@@ -15,6 +15,7 @@ import { drawingRouter } from "./routes/drawings.js";
 import { orderRouter, productionOrderRouter } from "./routes/orders.js";
 import { advisorRouter } from "./routes/advisor.js";
 import {
+  plantRouter,
   branchRouter,
   departmentRouter,
   teamRouter,
@@ -46,6 +47,7 @@ app.use("/api/auth", authRouter);
 // Everything below requires an authenticated session.
 app.use("/api", requireAuth);
 
+app.use("/api/plants", plantRouter);
 app.use("/api/branches", branchRouter);
 app.use("/api/departments", departmentRouter);
 app.use("/api/teams", teamRouter);

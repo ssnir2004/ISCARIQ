@@ -41,6 +41,27 @@ model Team {
   projects     Project[]
 }
 
+// ---------- Customer plants map ----------
+// Pins on the interactive Schaeffler plants map, placed by clicking on either
+// the world or the Germany-zoom canvas. x/y are percentage coordinates
+// (0-100) within that canvas, not real geographic coordinates.
+
+enum PlantMapView {
+  WORLD
+  GERMANY
+}
+
+model Plant {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  regionCode  String?
+  specialties String?
+  mapView     PlantMapView
+  x           Float
+  y           Float
+  createdAt   DateTime     @default(now())
+}
+
 // ---------- RFQ -> Project -> Order -> Production pipeline ----------
 
 enum RfqStatus {
