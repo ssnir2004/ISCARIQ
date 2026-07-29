@@ -3,10 +3,11 @@ import { useResource } from "../lib/useResource";
 import { api, ApiError } from "../lib/api";
 import type { Plant, PlantMapView } from "../lib/types";
 import { Button, Input, Label, Modal, PageHeader, Textarea } from "../components/ui";
+import { GERMANY_MAP, WORLD_MAP } from "../lib/mapPaths";
 
-const VIEWS: { id: PlantMapView; label: string; height: string }[] = [
-  { id: "WORLD", label: "World", height: "h-[440px]" },
-  { id: "GERMANY", label: "Germany", height: "h-[560px]" },
+const VIEWS: { id: PlantMapView; label: string; aspect: string; map: typeof WORLD_MAP }[] = [
+  { id: "WORLD", label: "World", aspect: "aspect-[1000/480]", map: WORLD_MAP },
+  { id: "GERMANY", label: "Germany", aspect: "aspect-[500/620]", map: GERMANY_MAP },
 ];
 
 const EMPTY_FORM = { name: "", regionCode: "", specialties: "" };
@@ -181,13 +182,16 @@ export function PlantsMap() {
       <div
         ref={canvasRef}
         onClick={onCanvasClick}
-        className={`relative w-full ${viewConfig.height} cursor-crosshair overflow-hidden rounded-xl border border-neutral-200 bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900`}
-        style={{
-          backgroundImage:
-            "linear-gradient(to right, rgba(120,120,120,0.12) 1px, transparent 1px), linear-gradient(to bottom, rgba(120,120,120,0.12) 1px, transparent 1px)",
-          backgroundSize: "5% 10%",
-        }}
+        className={`relative w-full ${viewConfig.aspect} cursor-crosshair overflow-hidden rounded-xl border border-neutral-200 bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-950`}
       >
+        <svg
+          viewBox={`0 0 ${viewConfig.map.viewBoxWidth} ${viewConfig.map.viewBoxHeight}`}
+          preserveAspectRatio="xMidYMid meet"
+          className="pointer-events-none absolute inset-0 h-full w-full"
+        >
+          <path d={viewConfig.map.path} className="fill-neutral-300 dark:fill-neutral-800" />
+        </svg>
+
         {visible.map((p) => (
           <button
             key={p.id}
