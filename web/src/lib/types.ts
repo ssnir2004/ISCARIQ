@@ -151,6 +151,31 @@ export interface Insert {
   image?: string | null;
 }
 
+export interface CaseStudyFile {
+  id: string;
+  caseStudyId: string;
+  fileName: string;
+  fileData: string;
+  description?: string | null;
+  fileDate?: string | null;
+  notes?: string | null;
+  createdAt: string;
+}
+
+export interface CaseStudy {
+  id: string;
+  insertId: string;
+  testNo: string;
+  testDate: string;
+  result: string;
+  country?: string | null;
+  customer?: string | null;
+  performer?: string | null;
+  createdAt: string;
+  insert?: Insert;
+  files?: CaseStudyFile[];
+}
+
 export interface CuttingCondition {
   id: string;
   insertId: string;

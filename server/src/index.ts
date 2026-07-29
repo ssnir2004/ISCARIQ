@@ -28,6 +28,8 @@ import {
   gradeRouter,
   coatingRouter,
   toolRouter,
+  caseStudyRouter,
+  caseStudyFileRouter,
 } from "./routes/reference.js";
 
 const app = express();
@@ -57,6 +59,8 @@ app.use("/api/chipbreakers", chipbreakerRouter);
 app.use("/api/grades", gradeRouter);
 app.use("/api/coatings", coatingRouter);
 app.use("/api/tools", toolRouter);
+app.use("/api/case-studies", caseStudyRouter);
+app.use("/api/case-study-files", caseStudyFileRouter);
 
 app.use("/api/rfqs", rfqRouter);
 app.use("/api/projects", projectRouter);

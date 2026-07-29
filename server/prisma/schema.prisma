@@ -172,6 +172,37 @@ model Insert {
   image             String?
   cuttingConditions CuttingCondition[]
   problemMatches    InsertProblemMatch[]
+  caseStudies       CaseStudy[]
+}
+
+// ---------- Case studies ----------
+// Real-world trial records for a specific Insert, with attached files
+// (photos, reports, etc.) documenting how it performed.
+
+model CaseStudy {
+  id        String          @id @default(cuid())
+  insert    Insert          @relation(fields: [insertId], references: [id])
+  insertId  String
+  testNo    String
+  testDate  DateTime
+  result    String
+  country   String?
+  customer  String?
+  performer String?
+  createdAt DateTime        @default(now())
+  files     CaseStudyFile[]
+}
+
+model CaseStudyFile {
+  id          String    @id @default(cuid())
+  caseStudy   CaseStudy @relation(fields: [caseStudyId], references: [id])
+  caseStudyId String
+  fileName    String
+  fileData    String
+  description String?
+  fileDate    DateTime?
+  notes       String?
+  createdAt   DateTime  @default(now())
 }
 
 // ---------- Tools (toolholders) ----------

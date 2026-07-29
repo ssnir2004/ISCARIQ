@@ -172,6 +172,50 @@ export const chipbreakerRouter = glossaryRouter(prisma.chipbreaker);
 export const gradeRouter = glossaryRouter(prisma.grade);
 export const coatingRouter = glossaryRouter(prisma.coating);
 
+export const caseStudyRouter = crudRouter({
+  delegate: prisma.caseStudy,
+  createSchema: z.object({
+    insertId: z.string().min(1),
+    testNo: z.string().min(1),
+    testDate: z.coerce.date(),
+    result: z.string().min(1),
+    country: z.string().optional(),
+    customer: z.string().optional(),
+    performer: z.string().optional(),
+  }),
+  updateSchema: z.object({
+    insertId: z.string().min(1).optional(),
+    testNo: z.string().min(1).optional(),
+    testDate: z.coerce.date().optional(),
+    result: z.string().min(1).optional(),
+    country: z.string().optional(),
+    customer: z.string().optional(),
+    performer: z.string().optional(),
+  }),
+  include: { insert: true, files: true },
+  orderBy: { testDate: "desc" },
+});
+
+export const caseStudyFileRouter = crudRouter({
+  delegate: prisma.caseStudyFile,
+  createSchema: z.object({
+    caseStudyId: z.string().min(1),
+    fileName: z.string().min(1),
+    fileData: z.string().min(1),
+    description: z.string().optional(),
+    fileDate: z.coerce.date().optional(),
+    notes: z.string().optional(),
+  }),
+  updateSchema: z.object({
+    fileName: z.string().min(1).optional(),
+    fileData: z.string().min(1).optional(),
+    description: z.string().optional(),
+    fileDate: z.coerce.date().nullable().optional(),
+    notes: z.string().optional(),
+  }),
+  orderBy: { createdAt: "desc" },
+});
+
 export const insertProblemMatchRouter = crudRouter({
   delegate: prisma.insertProblemMatch,
   createSchema: z.object({
