@@ -310,7 +310,7 @@ export function PlantsMap() {
 
       <div
         ref={viewportRef}
-        className={`relative w-full ${viewConfig.aspect} min-h-[500px] overflow-hidden rounded-xl border border-neutral-200 bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-950`}
+        className={`relative mx-auto w-full max-w-3xl ${viewConfig.aspect} overflow-hidden rounded-xl border border-neutral-200 bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-950`}
       >
         <div
           ref={canvasRef}
