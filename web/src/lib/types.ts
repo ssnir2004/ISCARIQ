@@ -30,6 +30,8 @@ export interface Plant {
   mapView: PlantMapView;
   x: number;
   y: number;
+  labelDx: number;
+  labelDy: number;
   createdAt: string;
 }
 

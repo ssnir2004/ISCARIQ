@@ -18,6 +18,8 @@ export const plantRouter = crudRouter({
     mapView: z.enum(["WORLD", "GERMANY"]),
     x: z.number().min(0).max(100),
     y: z.number().min(0).max(100),
+    labelDx: z.number().min(-100).max(100).optional(),
+    labelDy: z.number().min(-100).max(100).optional(),
   }),
   updateSchema: z.object({
     name: z.string().min(1).optional(),
@@ -26,6 +28,8 @@ export const plantRouter = crudRouter({
     mapView: z.enum(["WORLD", "GERMANY"]).optional(),
     x: z.number().min(0).max(100).optional(),
     y: z.number().min(0).max(100).optional(),
+    labelDx: z.number().min(-100).max(100).optional(),
+    labelDy: z.number().min(-100).max(100).optional(),
   }),
   orderBy: { name: "asc" },
 });

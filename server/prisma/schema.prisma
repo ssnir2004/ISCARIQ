@@ -59,6 +59,11 @@ model Plant {
   mapView     PlantMapView
   x           Float
   y           Float
+  // Offset (in the same percentage units as x/y) of the name label from the
+  // pin, so a label can be dragged clear of the map without moving the pin
+  // itself. (0, 0) means "not customized yet" — render just below the pin.
+  labelDx     Float        @default(0)
+  labelDy     Float        @default(0)
   createdAt   DateTime     @default(now())
 }
 
