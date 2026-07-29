@@ -151,9 +151,9 @@ export interface Insert {
   image?: string | null;
 }
 
-export interface CaseStudyFile {
+export interface TestReportFile {
   id: string;
-  caseStudyId: string;
+  testReportId: string;
   fileName: string;
   fileData: string;
   description?: string | null;
@@ -162,18 +162,19 @@ export interface CaseStudyFile {
   createdAt: string;
 }
 
-export interface CaseStudy {
+export interface TestReport {
   id: string;
   insertId: string;
   testNo: string;
   testDate: string;
+  description?: string | null;
   result: string;
   country?: string | null;
   customer?: string | null;
   performer?: string | null;
   createdAt: string;
   insert?: Insert;
-  files?: CaseStudyFile[];
+  files?: TestReportFile[];
 }
 
 export interface CuttingCondition {

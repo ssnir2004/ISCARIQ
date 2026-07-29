@@ -2,7 +2,7 @@ import { useState, type ChangeEvent, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useResource } from "../../lib/useResource";
 import { api, ApiError } from "../../lib/api";
-import type { CaseStudy, CoolantPreference, GlossaryEntry, Insert } from "../../lib/types";
+import type { CoolantPreference, GlossaryEntry, Insert, TestReport } from "../../lib/types";
 import { Button, Card, Input, Label, Modal, PageHeader, Select } from "../../components/ui";
 
 const COOLANT_OPTIONS: CoolantPreference[] = ["REQUIRED", "OPTIONAL", "AVOID"];
@@ -36,7 +36,7 @@ export function Inserts() {
   const { data: chipbreakers } = useResource<GlossaryEntry>("/chipbreakers");
   const { data: grades } = useResource<GlossaryEntry>("/grades");
   const { data: coatings } = useResource<GlossaryEntry>("/coatings");
-  const { data: caseStudies } = useResource<CaseStudy>("/case-studies");
+  const { data: testReports } = useResource<TestReport>("/test-reports");
   const [form, setForm] = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -200,7 +200,7 @@ export function Inserts() {
               <th className="px-3 py-2">Grade</th>
               <th className="px-3 py-2">Coating</th>
               <th className="px-3 py-2">Coolant</th>
-              <th className="px-3 py-2">Case Study</th>
+              <th className="px-3 py-2">Test Report</th>
               <th className="px-3 py-2"></th>
             </tr>
           </thead>
@@ -260,10 +260,10 @@ export function Inserts() {
                 <td className="px-3 py-2">{i.coolantPreference}</td>
                 <td className="px-3 py-2">
                   {(() => {
-                    const count = caseStudies.filter((c) => c.insertId === i.id).length;
+                    const count = testReports.filter((r) => r.insertId === i.id).length;
                     return (
                       <Link
-                        to={`/catalog/case-studies?insertId=${i.id}`}
+                        to={`/catalog/test-reports?insertId=${i.id}`}
                         className="underline decoration-dotted underline-offset-2 hover:text-blue-600 dark:hover:text-blue-400"
                       >
                         {count > 0 ? `View (${count})` : "Add"}

@@ -5,7 +5,7 @@ const NAV = [
   { to: "/", label: "Pipeline", end: true },
   { to: "/advisor", label: "Insert Advisor" },
   { to: "/catalog/inserts", label: "Inserts" },
-  { to: "/catalog/case-studies", label: "Case Studies" },
+  { to: "/catalog/test-reports", label: "Test Reports" },
   { to: "/catalog/tools", label: "Tools" },
   { to: "/catalog/cutting-conditions", label: "Cutting Conditions" },
   { to: "/catalog/shapes", label: "Shapes" },

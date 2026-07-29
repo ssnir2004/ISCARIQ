@@ -172,12 +172,13 @@ export const chipbreakerRouter = glossaryRouter(prisma.chipbreaker);
 export const gradeRouter = glossaryRouter(prisma.grade);
 export const coatingRouter = glossaryRouter(prisma.coating);
 
-export const caseStudyRouter = crudRouter({
-  delegate: prisma.caseStudy,
+export const testReportRouter = crudRouter({
+  delegate: prisma.testReport,
   createSchema: z.object({
     insertId: z.string().min(1),
     testNo: z.string().min(1),
     testDate: z.coerce.date(),
+    description: z.string().optional(),
     result: z.string().min(1),
     country: z.string().optional(),
     customer: z.string().optional(),
@@ -187,6 +188,7 @@ export const caseStudyRouter = crudRouter({
     insertId: z.string().min(1).optional(),
     testNo: z.string().min(1).optional(),
     testDate: z.coerce.date().optional(),
+    description: z.string().optional(),
     result: z.string().min(1).optional(),
     country: z.string().optional(),
     customer: z.string().optional(),
@@ -196,10 +198,10 @@ export const caseStudyRouter = crudRouter({
   orderBy: { testDate: "desc" },
 });
 
-export const caseStudyFileRouter = crudRouter({
-  delegate: prisma.caseStudyFile,
+export const testReportFileRouter = crudRouter({
+  delegate: prisma.testReportFile,
   createSchema: z.object({
-    caseStudyId: z.string().min(1),
+    testReportId: z.string().min(1),
     fileName: z.string().min(1),
     fileData: z.string().min(1),
     description: z.string().optional(),
