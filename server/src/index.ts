@@ -14,6 +14,7 @@ import { projectRouter } from "./routes/projects.js";
 import { drawingRouter } from "./routes/drawings.js";
 import { orderRouter, productionOrderRouter } from "./routes/orders.js";
 import { advisorRouter } from "./routes/advisor.js";
+import { npaRouter } from "./routes/npa.js";
 import {
   plantRouter,
   branchRouter,
@@ -63,6 +64,7 @@ app.use("/api/coatings", coatingRouter);
 app.use("/api/tools", toolRouter);
 app.use("/api/test-reports", testReportRouter);
 app.use("/api/test-report-files", testReportFileRouter);
+app.use("/api/npas", npaRouter);
 
 app.use("/api/rfqs", rfqRouter);
 app.use("/api/projects", projectRouter);

@@ -221,6 +221,36 @@ export interface InsertProblemMatch {
   material?: Material | null;
 }
 
+export interface NpaAttribute {
+  id: string;
+  npaId: string;
+  label: string;
+  value: string;
+  order: number;
+}
+
+export interface Npa {
+  id: string;
+  npaNumber?: string | null;
+  title: string;
+  category?: string | null;
+  applicationType?: string | null;
+  designation?: string | null;
+  publishDate?: string | null;
+  recommendedApplications?: string | null;
+  innovation?: string | null;
+  keyAdvantages?: string | null;
+  materialsText?: string | null;
+  notes?: string | null;
+  image?: string | null;
+  sourceFileName?: string | null;
+  sourceFileData?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  materials?: Material[];
+  attributes?: NpaAttribute[];
+}
+
 export interface AdvisorRecommendation {
   insert: Insert & { problemMatches: (InsertProblemMatch & { problemTag: ProblemTag })[] };
   cuttingCondition: Omit<CuttingCondition, "insert" | "material" | "insertId" | "materialId">;

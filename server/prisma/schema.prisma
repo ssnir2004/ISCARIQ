@@ -178,6 +178,7 @@ model Material {
   hardness       String?
   cuttingConditions CuttingCondition[]
   insertMatches     InsertProblemMatch[]
+  npas              Npa[]
 }
 
 enum CoolantPreference {
@@ -279,6 +280,43 @@ model CuttingCondition {
   feedMax       Float?
   coolant       CoolantUsage  @default(OPTIONAL)
   notes         String?
+}
+
+// ---------- NPA (New Product Announcement) catalog ----------
+// Mirrors ISCAR's NPA bulletins: a product announcement with a handful of
+// fields that are almost always filled in (recommended applications,
+// innovation, key advantages, applicable materials) plus a free-form list of
+// extra attributes, since not every NPA calls out the same properties.
+
+model Npa {
+  id                      String     @id @default(cuid())
+  npaNumber               String?
+  title                   String
+  category                String?
+  applicationType         String?
+  designation             String?
+  publishDate             DateTime?
+  recommendedApplications String?
+  innovation              String?
+  keyAdvantages           String?
+  materialsText           String?
+  notes                   String?
+  image                   String?
+  sourceFileName          String?
+  sourceFileData          String?
+  createdAt               DateTime   @default(now())
+  updatedAt               DateTime   @updatedAt
+  materials               Material[]
+  attributes              NpaAttribute[]
+}
+
+model NpaAttribute {
+  id    String @id @default(cuid())
+  npa   Npa    @relation(fields: [npaId], references: [id], onDelete: Cascade)
+  npaId String
+  label String
+  value String
+  order Int    @default(0)
 }
 
 // ---------- Insert parameter glossary ----------

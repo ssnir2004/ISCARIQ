@@ -19,6 +19,7 @@ import { Shapes } from "./pages/catalog/Shapes";
 import { Chipbreakers } from "./pages/catalog/Chipbreakers";
 import { Grades } from "./pages/catalog/Grades";
 import { Coatings } from "./pages/catalog/Coatings";
+import { Npas } from "./pages/catalog/Npas";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -55,6 +56,7 @@ function AppRoutes() {
         <Route path="/catalog/chipbreakers" element={<Chipbreakers />} />
         <Route path="/catalog/grades" element={<Grades />} />
         <Route path="/catalog/coatings" element={<Coatings />} />
+        <Route path="/catalog/npas" element={<Npas />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
