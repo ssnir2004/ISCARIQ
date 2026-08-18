@@ -319,6 +319,59 @@ model NpaAttribute {
   order Int    @default(0)
 }
 
+// ---------- NPA Knowledge Base ----------
+// Structured recommendation records distilled from NPA bulletins, used to
+// recommend an insert family by application, ISO 513 material group, and
+// customer problem/goal (see the rule-based scoring in routes/npaKnowledge.ts).
+
+enum NpaApplicationCategory {
+  MILLING
+  TURNING
+  GROOVING
+  PARTING
+  DRILLING
+  THREADING
+  REAMING
+  BORING
+  OTHER
+}
+
+enum NpaAvailability {
+  IN_STOCK
+  COMING_SOON
+  ASK_PRICING
+  NOT_SPECIFIED
+}
+
+model NpaKnowledgeItem {
+  id                  String                 @id @default(cuid())
+  npaNumber           String
+  title               String
+  publicationDate     DateTime?
+  productFamily       String
+  subFamily           String?
+  insertDesignation   String?
+  applicationCategory NpaApplicationCategory
+  subApplications     String[]
+  iso513Groups        Iso513Group[]
+  workpieceMaterials  String[]
+  innovation          String?
+  advantages          String[]
+  recommendedUse      String
+  bestForConditions   String[]
+  avoidWhen           String?
+  keySellingMessage   String?
+  technicalNotes      String?
+  pricingNotes        String?
+  availability        NpaAvailability        @default(NOT_SPECIFIED)
+  npaFileName         String?
+  npaFileData         String?
+  imageData           String?
+  sourceLink          String?
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+}
+
 // ---------- Insert parameter glossary ----------
 // Free-text reference entries explaining a Shape/Chipbreaker/Grade/Coating
 // value used on Insert (matched by name, not a foreign key).

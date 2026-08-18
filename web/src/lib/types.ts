@@ -251,6 +251,54 @@ export interface Npa {
   attributes?: NpaAttribute[];
 }
 
+export type NpaApplicationCategory =
+  | "MILLING"
+  | "TURNING"
+  | "GROOVING"
+  | "PARTING"
+  | "DRILLING"
+  | "THREADING"
+  | "REAMING"
+  | "BORING"
+  | "OTHER";
+
+export type NpaAvailability = "IN_STOCK" | "COMING_SOON" | "ASK_PRICING" | "NOT_SPECIFIED";
+
+export interface NpaKnowledgeItem {
+  id: string;
+  npaNumber: string;
+  title: string;
+  publicationDate?: string | null;
+  productFamily: string;
+  subFamily?: string | null;
+  insertDesignation?: string | null;
+  applicationCategory: NpaApplicationCategory;
+  subApplications: string[];
+  iso513Groups: Iso513Group[];
+  workpieceMaterials: string[];
+  innovation?: string | null;
+  advantages: string[];
+  recommendedUse: string;
+  bestForConditions: string[];
+  avoidWhen?: string | null;
+  keySellingMessage?: string | null;
+  technicalNotes?: string | null;
+  pricingNotes?: string | null;
+  availability: NpaAvailability;
+  npaFileName?: string | null;
+  npaFileData?: string | null;
+  imageData?: string | null;
+  sourceLink?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NpaRecommendationResult {
+  item: NpaKnowledgeItem;
+  score: number;
+  reasons: string[];
+}
+
 export interface AdvisorRecommendation {
   insert: Insert & { problemMatches: (InsertProblemMatch & { problemTag: ProblemTag })[] };
   cuttingCondition: Omit<CuttingCondition, "insert" | "material" | "insertId" | "materialId">;

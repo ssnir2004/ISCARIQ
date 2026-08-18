@@ -190,6 +190,57 @@ async function main() {
     });
   }
 
+  await prisma.npaKnowledgeItem.upsert({
+    where: { id: "npa-knowledge-30-2025" },
+    update: {},
+    create: {
+      id: "npa-knowledge-30-2025",
+      npaNumber: "NPA 30-2025",
+      title: "EXPANSION HELIALU HSM FWP",
+      publicationDate: new Date("2025-09-01"),
+      productFamily: "HELI-ALU",
+      subFamily: "HSM90",
+      insertDesignation: "HSM90S APCR 140520R-FWP",
+      applicationCategory: "MILLING",
+      subApplications: [
+        "Shoulder milling",
+        "Face milling",
+        "Slotting",
+        "Roughing",
+        "Long reach machining",
+        "Thin wall machining",
+        "Unstable setup",
+      ],
+      iso513Groups: ["N"],
+      workpieceMaterials: ["Aluminum alloys", "Non-ferrous materials"],
+      innovation:
+        "New serrated cutting-edge insert for efficient rough milling of aluminum and other non-ferrous materials. The serrated edge splits wide chips into smaller segments.",
+      advantages: [
+        "Better chip evacuation",
+        "Reduced re-cutting",
+        "Lower cutting forces",
+        "Reduced heat generation",
+        "Improved tool stability",
+        "Higher feed rates",
+        "Improved productivity",
+        "Better performance in unstable conditions",
+      ],
+      recommendedUse:
+        "Recommend this insert for rough milling of aluminum and non-ferrous materials, especially where chip evacuation, long reach, thin walls, unstable clamping, or higher productivity are important.",
+      bestForConditions: [
+        "Long overhang",
+        "Thin wall",
+        "Poor workholding",
+        "Rough machining",
+        "Chip control issue",
+        "Productivity improvement",
+      ],
+      keySellingMessage:
+        "Use HELI-ALU HSM FWP when the customer needs productive rough aluminum milling with improved chip evacuation and lower cutting forces.",
+      availability: "IN_STOCK",
+    },
+  });
+
   const adminEmail = process.env.SEED_ADMIN_EMAIL ?? "nirc@iscar.co.il";
   const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? "changeme123";
   await prisma.user.upsert({

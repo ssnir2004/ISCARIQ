@@ -15,6 +15,7 @@ import { drawingRouter } from "./routes/drawings.js";
 import { orderRouter, productionOrderRouter } from "./routes/orders.js";
 import { advisorRouter } from "./routes/advisor.js";
 import { npaRouter } from "./routes/npa.js";
+import { npaKnowledgeRouter } from "./routes/npaKnowledge.js";
 import {
   plantRouter,
   branchRouter,
@@ -39,7 +40,7 @@ const PORT = Number(process.env.PORT ?? 4000);
 const WEB_ORIGIN = process.env.WEB_ORIGIN ?? "http://localhost:5173";
 
 app.use(cors({ origin: WEB_ORIGIN, credentials: true }));
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({ limit: "25mb" }));
 app.use(cookieParser());
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
@@ -65,6 +66,7 @@ app.use("/api/tools", toolRouter);
 app.use("/api/test-reports", testReportRouter);
 app.use("/api/test-report-files", testReportFileRouter);
 app.use("/api/npas", npaRouter);
+app.use("/api/npa-knowledge", npaKnowledgeRouter);
 
 app.use("/api/rfqs", rfqRouter);
 app.use("/api/projects", projectRouter);
