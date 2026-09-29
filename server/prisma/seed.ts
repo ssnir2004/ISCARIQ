@@ -166,12 +166,16 @@ async function main() {
     });
   }
 
+  // One fixed category per ISO 513 group. Match on the group's existing
+  // category (which may not have the seeded id) so re-seeding never
+  // duplicates it or overwrites details edited in the app.
   for (const m of ISO513_MATERIALS) {
-    await prisma.material.upsert({
-      where: { id: `iso513-${m.group}` },
-      update: { iso513Group: m.group, name: m.name, description: m.description },
-      create: { id: `iso513-${m.group}`, iso513Group: m.group, name: m.name, description: m.description },
-    });
+    const existing = await prisma.material.findFirst({ where: { iso513Group: m.group, isCategory: true } });
+    if (!existing) {
+      await prisma.material.create({
+        data: { id: `iso513-${m.group}`, iso513Group: m.group, name: m.name, description: m.description, isCategory: true },
+      });
+    }
   }
 
   for (const name of PROBLEM_TAGS) {
