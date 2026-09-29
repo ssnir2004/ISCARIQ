@@ -177,26 +177,33 @@ export const cuttingConditionRouter = crudRouter({
   include: { insert: true, material: true },
 });
 
-function glossaryRouter(delegate: Parameters<typeof crudRouter>[0]["delegate"]) {
+function glossaryRouter(delegate: Parameters<typeof crudRouter>[0]["delegate"], extraFields: z.ZodRawShape = {}) {
   return crudRouter({
     delegate,
-    createSchema: z.object({
-      name: z.string().min(1),
-      description: z.string().optional(),
-      image: z.string().optional(),
-    }),
-    updateSchema: z.object({
-      name: z.string().min(1).optional(),
-      description: z.string().optional(),
-      image: z.string().nullable().optional(),
-    }),
+    createSchema: z
+      .object({
+        name: z.string().min(1),
+        description: z.string().optional(),
+        image: z.string().optional(),
+      })
+      .extend(extraFields),
+    updateSchema: z
+      .object({
+        name: z.string().min(1).optional(),
+        description: z.string().optional(),
+        image: z.string().nullable().optional(),
+      })
+      .merge(z.object(extraFields).partial()),
     orderBy: { name: "asc" },
   });
 }
 
 export const shapeRouter = glossaryRouter(prisma.shape);
 export const chipbreakerRouter = glossaryRouter(prisma.chipbreaker);
-export const gradeRouter = glossaryRouter(prisma.grade);
+export const gradeRouter = glossaryRouter(prisma.grade, {
+  iso513Groups: z.array(z.enum(["P", "M", "K", "N", "S", "H"])).default([]),
+  applications: z.array(z.enum(["MILLING", "TURNING", "DRILLING", "GROOVING"])).default([]),
+});
 export const coatingRouter = glossaryRouter(prisma.coating);
 
 export const testReportRouter = crudRouter({

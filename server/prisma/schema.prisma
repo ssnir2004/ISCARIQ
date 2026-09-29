@@ -390,11 +390,22 @@ model Chipbreaker {
   image       String?
 }
 
+enum GradeApplication {
+  MILLING
+  TURNING
+  DRILLING
+  GROOVING
+}
+
 model Grade {
-  id          String  @id @default(cuid())
-  name        String  @unique
-  description String?
-  image       String?
+  id           String             @id @default(cuid())
+  name         String             @unique
+  description  String?
+  image        String?
+  // Workpiece material groups and applications this grade is intended for
+  // (a grade can cover several of each).
+  iso513Groups Iso513Group[]
+  applications GradeApplication[]
 }
 
 model Coating {
