@@ -1,6 +1,6 @@
 import type { NpaKnowledgeItem } from "../../lib/types";
-import { applicationLabel, iso513Label } from "../../lib/npaKnowledgeConstants";
-import { Button, Card } from "../ui";
+import { applicationLabel } from "../../lib/npaKnowledgeConstants";
+import { Button, Card, Iso513Badge } from "../ui";
 
 function openNpaFile(item: NpaKnowledgeItem) {
   if (!item.npaFileData) return;
@@ -49,7 +49,11 @@ export function NpaKnowledgeCard({
             <span>{item.productFamily}{item.subFamily ? ` / ${item.subFamily}` : ""}</span>
             {item.insertDesignation && <span className="font-mono">{item.insertDesignation}</span>}
             <span>{applicationLabel(item.applicationCategory)}</span>
-            <span>{item.iso513Groups.map(iso513Label).join(", ")}</span>
+            <span className="flex gap-1">
+              {item.iso513Groups.map((g) => (
+                <Iso513Badge key={g} group={g} />
+              ))}
+            </span>
           </div>
           {item.advantages.length > 0 && (
             <div className="mt-1 flex flex-wrap gap-1">

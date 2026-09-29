@@ -3,7 +3,7 @@ import { useResource } from "../../lib/useResource";
 import { api, ApiError } from "../../lib/api";
 import type { Iso513Group, NpaApplicationCategory, NpaKnowledgeItem } from "../../lib/types";
 import { applicationLabel, availabilityLabel, iso513Label } from "../../lib/npaKnowledgeConstants";
-import { Button, Card, Input, Label, Modal, PageHeader, Select } from "../../components/ui";
+import { Button, Card, Input, Iso513Badge, Label, Modal, PageHeader, Select } from "../../components/ui";
 import { ApplicationSelect } from "../../components/npaKnowledge/ApplicationSelect";
 import {
   EMPTY_NPA_KNOWLEDGE_FORM,
@@ -229,7 +229,11 @@ export function NpaKnowledge() {
             <div className="flex flex-wrap gap-x-4 text-xs text-neutral-500 dark:text-neutral-400">
               <span className="font-mono">{detail.npaNumber}</span>
               <span>{applicationLabel(detail.applicationCategory)}</span>
-              <span>{detail.iso513Groups.map(iso513Label).join(", ")}</span>
+              <span className="flex flex-wrap gap-1">
+                {detail.iso513Groups.map((g) => (
+                  <Iso513Badge key={g} group={g} full />
+                ))}
+              </span>
               <span>{availabilityLabel(detail.availability)}</span>
               {detail.publicationDate && <span>{new Date(detail.publicationDate).toLocaleDateString()}</span>}
             </div>

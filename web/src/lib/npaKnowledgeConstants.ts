@@ -12,13 +12,23 @@ export const APPLICATION_CATEGORIES: { value: NpaApplicationCategory; label: str
   { value: "OTHER", label: "Other" },
 ];
 
-export const ISO513_GROUPS: { value: Iso513Group; label: string }[] = [
-  { value: "P", label: "P — Steel" },
-  { value: "M", label: "M — Stainless Steel" },
-  { value: "K", label: "K — Cast Iron" },
-  { value: "N", label: "N — Non-Ferrous" },
-  { value: "S", label: "S — Superalloys / Titanium" },
-  { value: "H", label: "H — Hardened Materials" },
+// Standard ISO 513 color coding for workpiece material groups.
+export const ISO513_COLORS: Record<Iso513Group, string> = {
+  P: "#00AEEF",
+  M: "#FFE600",
+  K: "#EE4035",
+  N: "#00A859",
+  S: "#F58A4B",
+  H: "#BFBFBF",
+};
+
+export const ISO513_GROUPS: { value: Iso513Group; label: string; color: string }[] = [
+  { value: "P", label: "P — Steel", color: ISO513_COLORS.P },
+  { value: "M", label: "M — Stainless Steel", color: ISO513_COLORS.M },
+  { value: "K", label: "K — Cast Iron", color: ISO513_COLORS.K },
+  { value: "N", label: "N — Non-Ferrous", color: ISO513_COLORS.N },
+  { value: "S", label: "S — Superalloys / Titanium", color: ISO513_COLORS.S },
+  { value: "H", label: "H — Hardened Materials", color: ISO513_COLORS.H },
 ];
 
 export const AVAILABILITIES: { value: NpaAvailability; label: string }[] = [
