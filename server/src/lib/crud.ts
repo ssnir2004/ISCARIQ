@@ -15,7 +15,7 @@ export function crudRouter(opts: {
   createSchema: ZodSchema;
   updateSchema: ZodSchema;
   include?: Record<string, unknown>;
-  orderBy?: Record<string, unknown>;
+  orderBy?: Record<string, unknown> | Record<string, unknown>[];
 }) {
   const router = Router();
   const { delegate, createSchema, updateSchema, include, orderBy } = opts;

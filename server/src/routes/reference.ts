@@ -1,3 +1,4 @@
+import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { crudRouter } from "../lib/crud.js";
@@ -62,7 +63,32 @@ export const teamRouter = crudRouter({
   orderBy: { code: "asc" },
 });
 
-export const materialRouter = crudRouter({
+// The six ISO 513 categories (isCategory) are fixed: they can't be deleted
+// or moved/renamed, only have their descriptive fields edited. Everything
+// else is a subcategory of the category sharing its iso513Group.
+export const materialRouter = Router();
+
+materialRouter.patch("/:id", async (req, res, next) => {
+  const material = await prisma.material.findUnique({ where: { id: req.params.id } });
+  if (
+    material?.isCategory &&
+    ((req.body?.name !== undefined && req.body.name !== material.name) ||
+      (req.body?.iso513Group !== undefined && req.body.iso513Group !== material.iso513Group))
+  ) {
+    return res.status(400).json({ error: "ISO 513 categories are fixed: their name and group can't be changed." });
+  }
+  next();
+});
+
+materialRouter.delete("/:id", async (req, res, next) => {
+  const material = await prisma.material.findUnique({ where: { id: req.params.id } });
+  if (material?.isCategory) {
+    return res.status(409).json({ error: "ISO 513 categories are fixed and can't be deleted." });
+  }
+  next();
+});
+
+materialRouter.use(crudRouter({
   delegate: prisma.material,
   createSchema: z.object({
     iso513Group: z.enum(["P", "M", "K", "N", "S", "H"]),
@@ -80,8 +106,8 @@ export const materialRouter = crudRouter({
     keyProperties: z.string().optional(),
     hardness: z.string().optional(),
   }),
-  orderBy: { iso513Group: "asc" },
-});
+  orderBy: [{ iso513Group: "asc" }, { isCategory: "desc" }, { name: "asc" }],
+}));
 
 export const problemTagRouter = crudRouter({
   delegate: prisma.problemTag,
