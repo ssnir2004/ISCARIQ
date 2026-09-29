@@ -6,6 +6,47 @@ import { Button, Card, Input, Label, PageHeader, Textarea } from "../../componen
 
 const EMPTY_FORM = { name: "", description: "", image: "" as string | null };
 
+// A multi-select field stored as an array of enum values on the entry (e.g.
+// a Grade's ISO 513 material groups). Rendered as toggle chips.
+export interface GlossaryTagField {
+  key: string;
+  label: string;
+  // `short` is shown in the list view (falls back to `label`).
+  options: { value: string; label: string; short?: string }[];
+}
+
+type Entry = GlossaryEntry & Record<string, unknown>;
+type Tags = Record<string, string[]>;
+
+function emptyTags(fields: GlossaryTagField[]): Tags {
+  return Object.fromEntries(fields.map((f) => [f.key, []]));
+}
+
+function TagToggles({ field, value, onChange }: { field: GlossaryTagField; value: string[]; onChange: (v: string[]) => void }) {
+  function toggle(v: string) {
+    onChange(value.includes(v) ? value.filter((x) => x !== v) : [...value, v]);
+  }
+  return (
+    <div className="flex flex-wrap gap-2">
+      {field.options.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          aria-pressed={value.includes(o.value)}
+          onClick={() => toggle(o.value)}
+          className={`rounded-full border px-2.5 py-1 text-xs ${
+            value.includes(o.value)
+              ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+              : "border-neutral-200 text-neutral-600 dark:border-neutral-700 dark:text-neutral-300"
+          }`}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -15,9 +56,20 @@ function readFileAsDataUrl(file: File): Promise<string> {
   });
 }
 
-export function GlossaryPage({ resource, title, singular }: { resource: string; title: string; singular: string }) {
-  const { data, reload } = useResource<GlossaryEntry>(resource);
+export function GlossaryPage({
+  resource,
+  title,
+  singular,
+  tagFields = [],
+}: {
+  resource: string;
+  title: string;
+  singular: string;
+  tagFields?: GlossaryTagField[];
+}) {
+  const { data, reload } = useResource<Entry>(resource);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [tags, setTags] = useState<Tags>(() => emptyTags(tagFields));
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -29,14 +81,16 @@ export function GlossaryPage({ resource, title, singular }: { resource: string; 
     setForm({ ...form, image: await readFileAsDataUrl(file) });
   }
 
-  function startEdit(entry: GlossaryEntry) {
+  function startEdit(entry: Entry) {
     setForm({ name: entry.name, description: entry.description ?? "", image: entry.image ?? "" });
+    setTags(Object.fromEntries(tagFields.map((f) => [f.key, (entry[f.key] as string[] | undefined) ?? []])));
     setEditingId(entry.id);
     setError(null);
   }
 
   function cancelEdit() {
     setForm(EMPTY_FORM);
+    setTags(emptyTags(tagFields));
     setEditingId(null);
     setFileInputKey((k) => k + 1);
     setError(null);
@@ -47,12 +101,14 @@ export function GlossaryPage({ resource, title, singular }: { resource: string; 
     setError(null);
     setSubmitting(true);
     try {
+      const body = { ...form, ...tags };
       if (editingId) {
-        await api.patch(`${resource}/${editingId}`, form);
+        await api.patch(`${resource}/${editingId}`, body);
       } else {
-        await api.post(resource, form);
+        await api.post(resource, body);
       }
       setForm(EMPTY_FORM);
+      setTags(emptyTags(tagFields));
       setEditingId(null);
       setFileInputKey((k) => k + 1);
       reload();
@@ -88,6 +144,12 @@ export function GlossaryPage({ resource, title, singular }: { resource: string; 
             <Label>Description</Label>
             <Textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           </div>
+          {tagFields.map((field) => (
+            <div key={field.key}>
+              <Label>{field.label}</Label>
+              <TagToggles field={field} value={tags[field.key] ?? []} onChange={(v) => setTags({ ...tags, [field.key]: v })} />
+            </div>
+          ))}
           <div>
             <Label>Image (optional)</Label>
             <div className="flex items-center gap-3">
@@ -119,6 +181,25 @@ export function GlossaryPage({ resource, title, singular }: { resource: string; 
                 {entry.description && (
                   <span className="ml-2 text-neutral-500 dark:text-neutral-400">— {entry.description}</span>
                 )}
+                {tagFields.map((field) => {
+                  const values = (entry[field.key] as string[] | undefined) ?? [];
+                  if (values.length === 0) return null;
+                  return (
+                    <div key={field.key} className="mt-1 flex flex-wrap items-center gap-1">
+                      <span className="text-xs text-neutral-500 dark:text-neutral-400">{field.label}:</span>
+                      {field.options
+                        .filter((o) => values.includes(o.value))
+                        .map((o) => (
+                          <span
+                            key={o.value}
+                            className="rounded-full bg-neutral-100 px-2 py-0.5 text-xs text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300"
+                          >
+                            {o.short ?? o.label}
+                          </span>
+                        ))}
+                    </div>
+                  );
+                })}
               </div>
             </div>
             <div className="flex shrink-0 gap-1">
