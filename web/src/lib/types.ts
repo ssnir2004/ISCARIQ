@@ -139,10 +139,10 @@ export interface GlossaryEntry {
 
 export type Shape = GlossaryEntry;
 export type Chipbreaker = GlossaryEntry;
-export type GradeApplication = "MILLING" | "TURNING" | "DRILLING" | "GROOVING";
+export type Application = GlossaryEntry;
 export interface Grade extends GlossaryEntry {
   iso513Groups: Iso513Group[];
-  applications: GradeApplication[];
+  applications: Application[];
 }
 export type Coating = GlossaryEntry;
 

@@ -14,6 +14,7 @@ const NAV = [
   { to: "/catalog/shapes", label: "Shapes" },
   { to: "/catalog/chipbreakers", label: "Chipbreakers" },
   { to: "/catalog/grades", label: "Grades" },
+  { to: "/catalog/applications", label: "Applications" },
   { to: "/catalog/coatings", label: "Coatings" },
   { to: "/catalog/materials", label: "Materials" },
   { to: "/catalog/problem-tags", label: "Problem Tags" },
