@@ -16,9 +16,11 @@ export function crudRouter(opts: {
   updateSchema: ZodSchema;
   include?: Record<string, unknown>;
   orderBy?: Record<string, unknown> | Record<string, unknown>[];
+  // Turns validated input into Prisma `data` (e.g. id lists into relation writes).
+  mapData?: (data: any, mode: "create" | "update") => any;
 }) {
   const router = Router();
-  const { delegate, createSchema, updateSchema, include, orderBy } = opts;
+  const { delegate, createSchema, updateSchema, include, orderBy, mapData = (data) => data } = opts;
 
   router.get("/", async (_req, res) => {
     const items = await delegate.findMany({ include, orderBy });
@@ -35,7 +37,7 @@ export function crudRouter(opts: {
     const parsed = createSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
     try {
-      const item = await delegate.create({ data: parsed.data, include });
+      const item = await delegate.create({ data: mapData(parsed.data, "create"), include });
       res.status(201).json(item);
     } catch (e: any) {
       res.status(409).json({ error: e.message ?? "Create failed" });
@@ -46,7 +48,7 @@ export function crudRouter(opts: {
     const parsed = updateSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
     try {
-      const item = await delegate.update({ where: { id: req.params.id }, data: parsed.data, include });
+      const item = await delegate.update({ where: { id: req.params.id }, data: mapData(parsed.data, "update"), include });
       res.json(item);
     } catch (e: any) {
       res.status(404).json({ error: e.message ?? "Update failed" });

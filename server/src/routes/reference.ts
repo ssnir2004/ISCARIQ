@@ -203,8 +203,15 @@ export const cuttingConditionRouter = crudRouter({
   include: { insert: true, material: true },
 });
 
-function glossaryRouter(delegate: Parameters<typeof crudRouter>[0]["delegate"], extraFields: z.ZodRawShape = {}) {
+type CrudOptions = Parameters<typeof crudRouter>[0];
+
+function glossaryRouter(
+  delegate: CrudOptions["delegate"],
+  extraFields: z.ZodRawShape = {},
+  options: Pick<CrudOptions, "include" | "mapData"> = {}
+) {
   return crudRouter({
+    ...options,
     delegate,
     createSchema: z
       .object({
@@ -226,10 +233,42 @@ function glossaryRouter(delegate: Parameters<typeof crudRouter>[0]["delegate"], 
 
 export const shapeRouter = glossaryRouter(prisma.shape);
 export const chipbreakerRouter = glossaryRouter(prisma.chipbreaker);
-export const gradeRouter = glossaryRouter(prisma.grade, {
-  iso513Groups: z.array(z.enum(["P", "M", "K", "N", "S", "H"])).default([]),
-  applications: z.array(z.enum(["MILLING", "TURNING", "DRILLING", "GROOVING"])).default([]),
+export const gradeRouter = glossaryRouter(
+  prisma.grade,
+  {
+    iso513Groups: z.array(z.enum(["P", "M", "K", "N", "S", "H"])).default([]),
+    applicationIds: z.array(z.string().min(1)).default([]),
+  },
+  {
+    include: { applications: { orderBy: { name: "asc" } } },
+    mapData: ({ applicationIds, ...data }, mode) => {
+      if (applicationIds === undefined) return data;
+      const ids = applicationIds.map((id: string) => ({ id }));
+      return { ...data, applications: mode === "create" ? { connect: ids } : { set: ids } };
+    },
+  }
+);
+
+// An application still selected on grades can't be deleted, so it doesn't
+// silently disappear from them.
+export const applicationRouter = Router();
+
+applicationRouter.delete("/:id", async (req, res, next) => {
+  const application = await prisma.application.findUnique({
+    where: { id: req.params.id },
+    include: { grades: { select: { name: true }, orderBy: { name: "asc" } } },
+  });
+  if (application && application.grades.length > 0) {
+    return res.status(409).json({
+      error: `"${application.name}" is used by ${application.grades.length} grade(s): ${application.grades
+        .map((g) => g.name)
+        .join(", ")}. Remove it from those grades first.`,
+    });
+  }
+  next();
 });
+
+applicationRouter.use(glossaryRouter(prisma.application));
 export const coatingRouter = glossaryRouter(prisma.coating);
 
 export const testReportRouter = crudRouter({

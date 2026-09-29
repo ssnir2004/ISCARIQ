@@ -88,6 +88,9 @@ const ISO513_MATERIALS: { group: "P" | "M" | "K" | "N" | "S" | "H"; name: string
   { group: "H", name: "Hardened Materials", description: "Hardened steel and chilled cast iron (>45 HRC)" },
 ];
 
+// Default machining applications; more can be added on the Applications screen.
+const APPLICATIONS = ["Milling", "Turning", "Drilling", "Grooving"];
+
 const PROBLEM_TAGS = [
   "Chip breaking",
   "Soft steel wear (built-up edge)",
@@ -176,6 +179,14 @@ async function main() {
         data: { id: `iso513-${m.group}`, iso513Group: m.group, name: m.name, description: m.description, isCategory: true },
       });
     }
+  }
+
+  for (const name of APPLICATIONS) {
+    await prisma.application.upsert({
+      where: { name },
+      update: {},
+      create: { id: `app-${name.toLowerCase()}`, name },
+    });
   }
 
   for (const name of PROBLEM_TAGS) {

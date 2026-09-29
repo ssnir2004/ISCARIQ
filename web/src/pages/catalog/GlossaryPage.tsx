@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent, type FormEvent } from "react";
+import { useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import { useResource } from "../../lib/useResource";
 import { api, ApiError } from "../../lib/api";
 import type { GlossaryEntry } from "../../lib/types";
@@ -6,18 +6,27 @@ import { Button, Card, Input, Label, PageHeader, Textarea } from "../../componen
 
 const EMPTY_FORM = { name: "", description: "", image: "" as string | null };
 
-// A multi-select field stored as an array of enum values on the entry (e.g.
-// a Grade's ISO 513 material groups). Rendered as toggle chips.
+// A multi-select field sent as an array of values under `key` (e.g. a
+// Grade's ISO 513 groups or application ids). Rendered as toggle chips.
 export interface GlossaryTagField {
   key: string;
   label: string;
   // `short` is shown in the list view (falls back to `label`). `color`, when
   // set, fills the chip (e.g. ISO 513 material group colors).
   options: { value: string; label: string; short?: string; color?: string }[];
+  // Reads the selected values off a loaded entry, for fields the API returns
+  // in a different shape (e.g. related records). Defaults to entry[key].
+  read?: (entry: Entry) => string[];
+  // Shown under the field when it has no options to pick from.
+  emptyHint?: ReactNode;
 }
 
-type Entry = GlossaryEntry & Record<string, unknown>;
+export type Entry = GlossaryEntry & Record<string, unknown>;
 type Tags = Record<string, string[]>;
+
+function readTags(field: GlossaryTagField, entry: Entry): string[] {
+  return field.read ? field.read(entry) : ((entry[field.key] as string[] | undefined) ?? []);
+}
 
 function emptyTags(fields: GlossaryTagField[]): Tags {
   return Object.fromEntries(fields.map((f) => [f.key, []]));
@@ -89,7 +98,7 @@ export function GlossaryPage({
 
   function startEdit(entry: Entry) {
     setForm({ name: entry.name, description: entry.description ?? "", image: entry.image ?? "" });
-    setTags(Object.fromEntries(tagFields.map((f) => [f.key, (entry[f.key] as string[] | undefined) ?? []])));
+    setTags(Object.fromEntries(tagFields.map((f) => [f.key, readTags(f, entry)])));
     setEditingId(entry.id);
     setError(null);
   }
@@ -154,6 +163,9 @@ export function GlossaryPage({
             <div key={field.key}>
               <Label>{field.label}</Label>
               <TagToggles field={field} value={tags[field.key] ?? []} onChange={(v) => setTags({ ...tags, [field.key]: v })} />
+              {field.options.length === 0 && field.emptyHint && (
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">{field.emptyHint}</p>
+              )}
             </div>
           ))}
           <div>
@@ -188,7 +200,7 @@ export function GlossaryPage({
                   <span className="ml-2 text-neutral-500 dark:text-neutral-400">— {entry.description}</span>
                 )}
                 {tagFields.map((field) => {
-                  const values = (entry[field.key] as string[] | undefined) ?? [];
+                  const values = readTags(field, entry);
                   if (values.length === 0) return null;
                   return (
                     <div key={field.key} className="mt-1 flex flex-wrap items-center gap-1">
