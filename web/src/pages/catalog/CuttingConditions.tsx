@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useResource } from "../../lib/useResource";
 import { api, ApiError } from "../../lib/api";
 import type { CoolantPreference, CuttingCondition, Insert, InsertProblemMatch, Material, OperationType, ProblemTag } from "../../lib/types";
-import { Button, Card, Input, Label, PageHeader, Select } from "../../components/ui";
+import { Button, Card, Input, Iso513Badge, Label, PageHeader, Select } from "../../components/ui";
 
 const OPERATIONS: OperationType[] = ["TURNING", "MILLING", "DRILLING", "GROOVING", "THREADING", "BORING"];
 const COOLANT_OPTIONS: CoolantPreference[] = ["REQUIRED", "OPTIONAL", "AVOID"];
@@ -155,7 +155,7 @@ function CuttingConditionsSection({ inserts, materials }: { inserts: Insert[]; m
             {data.map((c) => (
               <tr key={c.id} className="border-t border-neutral-200 dark:border-neutral-800">
                 <td className="px-2 py-1 font-mono">{c.insert?.designation}</td>
-                <td className="px-2 py-1">{c.material?.iso513Group}</td>
+                <td className="px-2 py-1">{c.material && <Iso513Badge group={c.material.iso513Group} />}</td>
                 <td className="px-2 py-1">{c.operationType}</td>
                 <td className="px-2 py-1">
                   {c.apMin ?? "—"}–{c.apMax ?? "—"}

@@ -11,8 +11,9 @@ const EMPTY_FORM = { name: "", description: "", image: "" as string | null };
 export interface GlossaryTagField {
   key: string;
   label: string;
-  // `short` is shown in the list view (falls back to `label`).
-  options: { value: string; label: string; short?: string }[];
+  // `short` is shown in the list view (falls back to `label`). `color`, when
+  // set, fills the chip (e.g. ISO 513 material group colors).
+  options: { value: string; label: string; short?: string; color?: string }[];
 }
 
 type Entry = GlossaryEntry & Record<string, unknown>;
@@ -34,11 +35,16 @@ function TagToggles({ field, value, onChange }: { field: GlossaryTagField; value
           type="button"
           aria-pressed={value.includes(o.value)}
           onClick={() => toggle(o.value)}
-          className={`rounded-full border px-2.5 py-1 text-xs ${
-            value.includes(o.value)
-              ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-              : "border-neutral-200 text-neutral-600 dark:border-neutral-700 dark:text-neutral-300"
+          className={`rounded-full px-2.5 py-1 text-xs ${
+            o.color
+              ? `border-2 ${value.includes(o.value) ? "font-medium text-neutral-900" : "text-neutral-600 dark:text-neutral-300"}`
+              : `border ${
+                  value.includes(o.value)
+                    ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                    : "border-neutral-200 text-neutral-600 dark:border-neutral-700 dark:text-neutral-300"
+                }`
           }`}
+          style={o.color ? (value.includes(o.value) ? { backgroundColor: o.color, borderColor: o.color } : { borderColor: o.color }) : undefined}
         >
           {o.label}
         </button>
@@ -192,7 +198,10 @@ export function GlossaryPage({
                         .map((o) => (
                           <span
                             key={o.value}
-                            className="rounded-full bg-neutral-100 px-2 py-0.5 text-xs text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300"
+                            className={`rounded-full px-2 py-0.5 text-xs ${
+                              o.color ? "font-semibold text-neutral-900" : "bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300"
+                            }`}
+                            style={o.color ? { backgroundColor: o.color } : undefined}
                           >
                             {o.short ?? o.label}
                           </span>

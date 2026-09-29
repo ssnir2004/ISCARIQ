@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useResource } from "../../lib/useResource";
 import { api, ApiError } from "../../lib/api";
 import type { Iso513Group, Material } from "../../lib/types";
-import { Button, Card, Input, Label, PageHeader, Select } from "../../components/ui";
+import { Button, Card, Input, Iso513Badge, Label, PageHeader, Select } from "../../components/ui";
 
 const GROUPS: Iso513Group[] = ["P", "M", "K", "N", "S", "H"];
 
@@ -127,8 +127,8 @@ export function Materials() {
           <Card key={m.id} className="flex items-center justify-between gap-3 p-3">
             <div className="text-sm">
               <div>
-                <span className="mr-2 rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-xs dark:bg-neutral-800">
-                  {m.iso513Group}
+                <span className="mr-2">
+                  <Iso513Badge group={m.iso513Group} />
                 </span>
                 <span className="font-medium text-neutral-900 dark:text-neutral-100">{m.name}</span>
                 {m.hardness && <span className="ml-2 text-neutral-500 dark:text-neutral-400">({m.hardness})</span>}

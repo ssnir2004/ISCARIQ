@@ -14,11 +14,10 @@ export function Iso513MultiSelect({ value, onChange }: { value: Iso513Group[]; o
           type="button"
           aria-pressed={value.includes(g.value)}
           onClick={() => toggle(g.value)}
-          className={`rounded-full border px-2.5 py-1 text-xs ${
-            value.includes(g.value)
-              ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-              : "border-neutral-200 text-neutral-600 dark:border-neutral-700 dark:text-neutral-300"
+          className={`rounded-full border-2 px-2.5 py-1 text-xs ${
+            value.includes(g.value) ? "font-medium text-neutral-900" : "text-neutral-600 dark:text-neutral-300"
           }`}
+          style={value.includes(g.value) ? { backgroundColor: g.color, borderColor: g.color } : { borderColor: g.color }}
         >
           {g.label}
         </button>

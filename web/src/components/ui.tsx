@@ -1,4 +1,6 @@
 import type { ButtonHTMLAttributes, HTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
+import { ISO513_COLORS, iso513Label } from "../lib/npaKnowledgeConstants";
+import type { Iso513Group } from "../lib/types";
 
 export function Card({ children, className = "", ...props }: HTMLAttributes<HTMLDivElement> & { children: ReactNode; className?: string }) {
   return (
@@ -80,6 +82,20 @@ export function StatusBadge({ status }: { status: string }) {
   return (
     <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap ${cls}`}>
       {status.replaceAll("_", " ")}
+    </span>
+  );
+}
+
+// ISO 513 material group chip in its standard color. `full` shows the group
+// name ("P — Steel") instead of just the letter.
+export function Iso513Badge({ group, full = false }: { group: Iso513Group; full?: boolean }) {
+  return (
+    <span
+      title={iso513Label(group)}
+      className="inline-block rounded px-1.5 py-0.5 font-mono text-xs font-semibold whitespace-nowrap text-neutral-900"
+      style={{ backgroundColor: ISO513_COLORS[group] }}
+    >
+      {full ? iso513Label(group) : group}
     </span>
   );
 }
