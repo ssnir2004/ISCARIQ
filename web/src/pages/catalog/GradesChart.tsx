@@ -117,7 +117,7 @@ export function GradesChart({
     const { box, start } = d;
     if (box.x === start.x && box.y === start.y && box.w === start.w && box.h === start.h) {
       const grade = grades.find((g) => g.id === d.gradeId);
-      if (grade) onOpenCases(grade);
+      if (grade && caseCount(grade.id) > 0) onOpenCases(grade);
       return;
     }
     const key = localKey(d.gradeId);
@@ -204,7 +204,7 @@ export function GradesChart({
                       backgroundColor: `${color}cc`,
                       borderColor: color,
                     }}
-                    title={`${grade.name} — click for cases, drag to move, drag the corner to resize`}
+                    title={`${grade.name}${caseCount(grade.id) > 0 ? " — click for cases" : ""} — drag to move, drag the corner to resize`}
                   >
                     <span className="text-sm font-bold leading-tight">
                       {grade.name}

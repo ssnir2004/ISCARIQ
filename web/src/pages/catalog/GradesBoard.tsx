@@ -146,7 +146,8 @@ export function GradesBoard({ data, startEdit, remove }: GlossaryListContext) {
     // A press that never turned into a drag is a click: open the grade's cases.
     if (drag && !drag.active && !(e.target as HTMLElement).closest("button")) {
       const grade = column.find((g) => g.id === drag.id);
-      if (grade) setCasesFor({ grade, group: drag.group });
+      // Only when there is something to show; new cases are added via the Cases button.
+      if (grade && caseCount(grade.id, drag.group) > 0) setCasesFor({ grade, group: drag.group });
       return;
     }
     if (!drag?.active || drag.index === null) return;
@@ -325,10 +326,16 @@ export function GradesBoard({ data, startEdit, remove }: GlossaryListContext) {
                                   </button>
                                 </span>
                               </div>
+                              {grade.description && (
+                                <div className="mt-0.5 line-clamp-2 text-neutral-600 dark:text-neutral-300" title={grade.description}>
+                                  {grade.description}
+                                </div>
+                              )}
                               {grade.substrate && <div className="mt-0.5 text-neutral-500 dark:text-neutral-400">{grade.substrate.name}</div>}
-                              {grade.applications.length > 0 && (
+                              {/* Other applications only: the current tab's application is implied. */}
+                              {grade.applications.some((a) => a.id !== scope) && (
                                 <div className="mt-1 flex flex-wrap gap-1">
-                                  {grade.applications.map((a) => (
+                                  {grade.applications.filter((a) => a.id !== scope).map((a) => (
                                     <span
                                       key={a.id}
                                       className="rounded-full bg-neutral-100 px-1.5 py-0.5 text-[10px] text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300"
