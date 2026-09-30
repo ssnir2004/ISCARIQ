@@ -418,12 +418,16 @@ model Grade {
 }
 
 // Manual Harder (first) -> Tougher (last) ranking of grades within each
-// ISO 513 column of the Grades screen. A grade in several groups has an
-// independent position in each column. Ids of grades no longer in the
-// group are ignored; grades missing from the list go to the bottom.
+// ISO 513 column of the Grades screen. `scope` is "all" for the overall
+// board or an Application id for that application's board, so each board
+// and column has an independent order. Ids of grades no longer in the
+// column are ignored; grades missing from the list go to the bottom.
 model GradeColumnOrder {
-  iso513Group Iso513Group @id
+  scope       String      @default("all")
+  iso513Group Iso513Group
   gradeIds    String[]
+
+  @@id([scope, iso513Group])
 }
 
 model Coating {

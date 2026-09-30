@@ -141,8 +141,10 @@ export type Shape = GlossaryEntry;
 export type Chipbreaker = GlossaryEntry;
 export type Application = GlossaryEntry;
 
-// Saved Harder -> Tougher ranking of grade ids for one ISO 513 column.
+// Saved Harder -> Tougher ranking of grade ids for one ISO 513 column of one
+// board: scope "all" (every grade) or an Application id.
 export interface GradeColumnOrder {
+  scope: string;
   iso513Group: Iso513Group;
   gradeIds: string[];
 }

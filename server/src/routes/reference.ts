@@ -259,15 +259,21 @@ gradeOrderRouter.get("/", async (_req, res) => {
 const gradeOrderSchema = z.object({ gradeIds: z.array(z.string().min(1)) });
 const iso513GroupSchema = z.enum(["P", "M", "K", "N", "S", "H"]);
 
-gradeOrderRouter.put("/:group", async (req, res) => {
+// :scope is "all" (the overall board) or the id of an Application (that
+// application's board).
+gradeOrderRouter.put("/:scope/:group", async (req, res) => {
+  const { scope } = req.params;
   const group = iso513GroupSchema.safeParse(req.params.group);
   const parsed = gradeOrderSchema.safeParse(req.body);
   if (!group.success || !parsed.success) return res.status(400).json({ error: "Invalid group or gradeIds" });
+  if (scope !== "all" && !(await prisma.application.findUnique({ where: { id: scope } }))) {
+    return res.status(404).json({ error: "Unknown application" });
+  }
   const gradeIds = [...new Set(parsed.data.gradeIds)];
   const order = await prisma.gradeColumnOrder.upsert({
-    where: { iso513Group: group.data },
+    where: { scope_iso513Group: { scope, iso513Group: group.data } },
     update: { gradeIds },
-    create: { iso513Group: group.data, gradeIds },
+    create: { scope, iso513Group: group.data, gradeIds },
   });
   res.json(order);
 });
@@ -288,6 +294,8 @@ applicationRouter.delete("/:id", async (req, res, next) => {
         .join(", ")}. Remove it from those grades first.`,
     });
   }
+  // Its board's saved order goes with it.
+  if (application) await prisma.gradeColumnOrder.deleteMany({ where: { scope: application.id } });
   next();
 });
 

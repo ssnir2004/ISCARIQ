@@ -2,18 +2,33 @@ import { useRef, useState, type PointerEvent } from "react";
 import { api, ApiError } from "../../lib/api";
 import { ISO513_COLORS, ISO513_GROUPS } from "../../lib/npaKnowledgeConstants";
 import { useResource } from "../../lib/useResource";
-import type { Grade, GradeColumnOrder, Iso513Group } from "../../lib/types";
+import type { Application, Grade, GradeColumnOrder, Iso513Group } from "../../lib/types";
 import { Button, Card } from "../../components/ui";
 import type { Entry, GlossaryListContext } from "./GlossaryPage";
 
 // Grades laid out in one column per ISO 513 group, each ranked by hand from
-// Harder (top) to Tougher (bottom) by dragging. The order is saved per
-// column, so a grade in several groups has its own position in each.
+// Harder (top) to Tougher (bottom) by dragging. There is one board for all
+// grades plus one per Application (tabs), and the order is saved per board
+// and column, so a grade has its own position in each. An application board
+// with no saved order for a column starts from the "All" board's order.
 //
 // Dragging uses pointer events rather than native HTML5 drag and drop, so it
 // behaves the same with a mouse and on touch screens (via the ⋮⋮ handle).
 
 type Dragging = { group: Iso513Group; id: string; startY: number; active: boolean; index: number | null };
+
+const ALL = "all";
+const TAB_STORAGE_KEY = "iscariq.grades.boardTab";
+
+function readStoredTab(): string {
+  try {
+    return localStorage.getItem(TAB_STORAGE_KEY) ?? ALL;
+  } catch {
+    return ALL;
+  }
+}
+
+const orderKey = (scope: string, group: Iso513Group) => `${scope}:${group}`;
 
 // Pixels the pointer must move before a press turns into a drag, so plain
 // clicks (e.g. on Edit) still work.
@@ -46,14 +61,33 @@ function DropLine() {
 export function GradesBoard({ data, startEdit, remove }: GlossaryListContext) {
   const grades = data as unknown as Grade[];
   const { data: savedOrders } = useResource<GradeColumnOrder>("/grade-order");
-  // Orders changed in this session, applied optimistically before the save returns.
-  const [localOrders, setLocalOrders] = useState<Partial<Record<Iso513Group, string[]>>>({});
+  const { data: applications } = useResource<Application>("/applications");
+  const [storedTab, setStoredTab] = useState(readStoredTab);
+  // Fall back to "All" if the remembered application no longer exists.
+  const scope = storedTab === ALL || applications.some((a) => a.id === storedTab) ? storedTab : ALL;
+  // Orders changed in this session (by orderKey), applied optimistically before the save returns.
+  const [localOrders, setLocalOrders] = useState<Record<string, string[] | undefined>>({});
   const [dragging, setDragging] = useState<Dragging | null>(null);
   const [error, setError] = useState<string | null>(null);
   const columnRefs = useRef<Partial<Record<Iso513Group, HTMLDivElement | null>>>({});
 
-  const savedFor = (g: Iso513Group) => localOrders[g] ?? savedOrders.find((o) => o.iso513Group === g)?.gradeIds;
-  const unassigned = grades.filter((g) => g.iso513Groups.length === 0);
+  const orderFor = (s: string, g: Iso513Group) =>
+    localOrders[orderKey(s, g)] ?? savedOrders.find((o) => o.scope === s && o.iso513Group === g)?.gradeIds;
+  const savedFor = (g: Iso513Group) => orderFor(scope, g) ?? (scope === ALL ? undefined : orderFor(ALL, g));
+
+  const inScope = (s: string) => (s === ALL ? grades : grades.filter((g) => g.applications.some((a) => a.id === s)));
+  const boardGrades = inScope(scope);
+  const unassigned = boardGrades.filter((g) => g.iso513Groups.length === 0);
+
+  function selectTab(s: string) {
+    setStoredTab(s);
+    setDragging(null);
+    try {
+      localStorage.setItem(TAB_STORAGE_KEY, s);
+    } catch {
+      // storage unavailable: the tab just isn't remembered
+    }
+  }
 
   function onPointerDown(e: PointerEvent<HTMLDivElement>, group: Iso513Group, id: string) {
     if (e.button !== 0 || (e.target as HTMLElement).closest("button")) return;
@@ -83,20 +117,39 @@ export function GradesBoard({ data, startEdit, remove }: GlossaryListContext) {
     ids.splice(from, 1);
     ids.splice(to, 0, drag.id);
 
-    const group = drag.group;
-    const previous = localOrders[group];
-    setLocalOrders((o) => ({ ...o, [group]: ids }));
+    const key = orderKey(scope, drag.group);
+    const previous = localOrders[key];
+    setLocalOrders((o) => ({ ...o, [key]: ids }));
     setError(null);
     try {
-      await api.put(`/grade-order/${group}`, { gradeIds: ids });
+      await api.put(`/grade-order/${scope}/${drag.group}`, { gradeIds: ids });
     } catch (err) {
-      setLocalOrders((o) => ({ ...o, [group]: previous }));
+      setLocalOrders((o) => ({ ...o, [key]: previous }));
       setError(err instanceof ApiError ? err.message : "Failed to save the new order");
     }
   }
 
   return (
     <div className="space-y-4">
+      <div role="tablist" className="flex flex-wrap gap-1 border-b border-neutral-200 dark:border-neutral-800">
+        {[{ id: ALL, name: "All" }, ...[...applications].sort((a, b) => a.name.localeCompare(b.name))].map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            role="tab"
+            aria-selected={scope === tab.id}
+            onClick={() => selectTab(tab.id)}
+            className={`-mb-px border-b-2 px-3 py-1.5 text-sm ${
+              scope === tab.id
+                ? "border-blue-500 font-medium text-blue-700 dark:text-blue-300"
+                : "border-transparent text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200"
+            }`}
+          >
+            {tab.name}
+            <span className="ml-1.5 text-xs opacity-60">{inScope(tab.id).length}</span>
+          </button>
+        ))}
+      </div>
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
       <div className="flex gap-3">
         {/* Hardness axis: the order within every column runs Harder -> Tougher. */}
@@ -111,7 +164,7 @@ export function GradesBoard({ data, startEdit, remove }: GlossaryListContext) {
         <div className="flex-1 overflow-x-auto">
           <div className="grid min-w-[720px] grid-cols-6 gap-2">
             {ISO513_GROUPS.map(({ value: group, label }) => {
-              const column = orderColumn(group, grades, savedFor(group));
+              const column = orderColumn(group, boardGrades, savedFor(group));
               const dropIndex = dragging?.active && dragging.group === group ? dragging.index : null;
               return (
                 <div key={group} className="flex flex-col" data-column={group}>
