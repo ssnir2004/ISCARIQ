@@ -5,7 +5,7 @@ import { useResource } from "../../lib/useResource";
 import type { Grade, GradeChartBox, Iso513Group } from "../../lib/types";
 import { Button } from "../../components/ui";
 
-// Hard (y, up) / Tough (x, right) chart for one board scope and ISO 513
+// Speed (y, up) / Tough (x, right) chart for one board scope and ISO 513
 // group. Each grade is a box spanning its range: drag it to move, drag the
 // corner handle to resize. Positions are percentages of the plot area, saved
 // per scope + group + grade. Grades without a saved box are laid out on a
@@ -154,7 +154,7 @@ export function GradesChart({
       <div className="flex gap-2">
         {/* Y axis label */}
         <div className="flex w-5 items-center justify-center">
-          <span className="rotate-180 text-sm font-semibold text-neutral-700 [writing-mode:vertical-rl] dark:text-neutral-300">Hard</span>
+          <span className="rotate-180 text-sm font-semibold text-neutral-700 [writing-mode:vertical-rl] dark:text-neutral-300">Speed</span>
         </div>
         <div className="flex-1">
           <div className="relative border-b-2 border-l-2 border-neutral-500 dark:border-neutral-400">
