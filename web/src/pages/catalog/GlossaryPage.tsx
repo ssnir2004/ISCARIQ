@@ -21,8 +21,22 @@ export interface GlossaryTagField {
   emptyHint?: ReactNode;
 }
 
+// A single-line optional text field (e.g. a Grade's substrate). Suggests
+// `suggestions` plus every value already used on other entries.
+export interface GlossaryTextField {
+  key: string;
+  label: string;
+  placeholder?: string;
+  suggestions?: string[];
+}
+
 export type Entry = GlossaryEntry & Record<string, unknown>;
 type Tags = Record<string, string[]>;
+type Texts = Record<string, string>;
+
+function emptyTexts(fields: GlossaryTextField[]): Texts {
+  return Object.fromEntries(fields.map((f) => [f.key, ""]));
+}
 
 function readTags(field: GlossaryTagField, entry: Entry): string[] {
   return field.read ? field.read(entry) : ((entry[field.key] as string[] | undefined) ?? []);
@@ -76,15 +90,23 @@ export function GlossaryPage({
   title,
   singular,
   tagFields = [],
+  textFields = [],
 }: {
   resource: string;
   title: string;
   singular: string;
   tagFields?: GlossaryTagField[];
+  textFields?: GlossaryTextField[];
 }) {
   const { data, reload } = useResource<Entry>(resource);
   const [form, setForm] = useState(EMPTY_FORM);
   const [tags, setTags] = useState<Tags>(() => emptyTags(tagFields));
+  const [texts, setTexts] = useState<Texts>(() => emptyTexts(textFields));
+
+  function suggestionsFor(field: GlossaryTextField): string[] {
+    const used = data.map((e) => e[field.key]).filter((v): v is string => typeof v === "string" && v.trim() !== "");
+    return [...new Set([...(field.suggestions ?? []), ...used])].sort((a, b) => a.localeCompare(b));
+  }
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -99,6 +121,7 @@ export function GlossaryPage({
   function startEdit(entry: Entry) {
     setForm({ name: entry.name, description: entry.description ?? "", image: entry.image ?? "" });
     setTags(Object.fromEntries(tagFields.map((f) => [f.key, readTags(f, entry)])));
+    setTexts(Object.fromEntries(textFields.map((f) => [f.key, (entry[f.key] as string | null | undefined) ?? ""])));
     setEditingId(entry.id);
     setError(null);
   }
@@ -106,6 +129,7 @@ export function GlossaryPage({
   function cancelEdit() {
     setForm(EMPTY_FORM);
     setTags(emptyTags(tagFields));
+    setTexts(emptyTexts(textFields));
     setEditingId(null);
     setFileInputKey((k) => k + 1);
     setError(null);
@@ -116,7 +140,9 @@ export function GlossaryPage({
     setError(null);
     setSubmitting(true);
     try {
-      const body = { ...form, ...tags };
+      // Blank text fields are sent as null so clearing one actually clears it.
+      const textValues = Object.fromEntries(Object.entries(texts).map(([k, v]) => [k, v.trim() || null]));
+      const body = { ...form, ...textValues, ...tags };
       if (editingId) {
         await api.patch(`${resource}/${editingId}`, body);
       } else {
@@ -124,6 +150,7 @@ export function GlossaryPage({
       }
       setForm(EMPTY_FORM);
       setTags(emptyTags(tagFields));
+      setTexts(emptyTexts(textFields));
       setEditingId(null);
       setFileInputKey((k) => k + 1);
       reload();
@@ -159,6 +186,22 @@ export function GlossaryPage({
             <Label>Description</Label>
             <Textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           </div>
+          {textFields.map((field) => (
+            <div key={field.key}>
+              <Label>{field.label}</Label>
+              <Input
+                list={`${field.key}-suggestions`}
+                value={texts[field.key] ?? ""}
+                placeholder={field.placeholder}
+                onChange={(e) => setTexts({ ...texts, [field.key]: e.target.value })}
+              />
+              <datalist id={`${field.key}-suggestions`}>
+                {suggestionsFor(field).map((s) => (
+                  <option key={s} value={s} />
+                ))}
+              </datalist>
+            </div>
+          ))}
           {tagFields.map((field) => (
             <div key={field.key}>
               <Label>{field.label}</Label>
@@ -199,6 +242,15 @@ export function GlossaryPage({
                 {entry.description && (
                   <span className="ml-2 text-neutral-500 dark:text-neutral-400">— {entry.description}</span>
                 )}
+                {textFields.map((field) => {
+                  const value = entry[field.key];
+                  if (typeof value !== "string" || value === "") return null;
+                  return (
+                    <div key={field.key} className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                      {field.label}: <span className="font-medium text-neutral-700 dark:text-neutral-300">{value}</span>
+                    </div>
+                  );
+                })}
                 {tagFields.map((field) => {
                   const values = readTags(field, entry);
                   if (values.length === 0) return null;
