@@ -3,6 +3,8 @@ import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { crudRouter } from "../lib/crud.js";
 
+const iso513GroupSchema = z.enum(["P", "M", "K", "N", "S", "H"]);
+
 export const branchRouter = crudRouter({
   delegate: prisma.branch,
   createSchema: z.object({ name: z.string().min(1) }),
@@ -255,6 +257,70 @@ export const gradeRouter = glossaryRouter(
   }
 );
 
+// Trials / case studies per grade. The list omits the (large) image so the
+// Grades screen can show counts cheaply; GET /:id returns it.
+export const gradeCaseRouter = Router();
+
+const caseSelect = {
+  id: true,
+  gradeId: true,
+  applicationId: true,
+  iso513Group: true,
+  title: true,
+  notes: true,
+  createdAt: true,
+  application: { select: { id: true, name: true } },
+} as const;
+
+const gradeCaseSchema = z.object({
+  gradeId: z.string().min(1),
+  applicationId: z.string().min(1).nullable().optional(),
+  iso513Group: iso513GroupSchema.nullable().optional(),
+  title: z.string().min(1),
+  notes: z.string().nullable().optional(),
+  image: z.string().startsWith("data:image/", "Image must be an uploaded picture"),
+});
+
+gradeCaseRouter.get("/", async (req, res) => {
+  const gradeId = typeof req.query.gradeId === "string" ? req.query.gradeId : undefined;
+  res.json(await prisma.gradeCase.findMany({ where: { gradeId }, select: caseSelect, orderBy: { createdAt: "desc" } }));
+});
+
+gradeCaseRouter.get("/:id", async (req, res) => {
+  const item = await prisma.gradeCase.findUnique({ where: { id: req.params.id }, include: { application: { select: { id: true, name: true } } } });
+  if (!item) return res.status(404).json({ error: "Not found" });
+  res.json(item);
+});
+
+gradeCaseRouter.post("/", async (req, res) => {
+  const parsed = gradeCaseSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid case" });
+  try {
+    res.status(201).json(await prisma.gradeCase.create({ data: parsed.data, select: caseSelect }));
+  } catch (e: any) {
+    res.status(409).json({ error: e.message ?? "Create failed" });
+  }
+});
+
+gradeCaseRouter.patch("/:id", async (req, res) => {
+  const parsed = gradeCaseSchema.omit({ gradeId: true }).partial().safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid case" });
+  try {
+    res.json(await prisma.gradeCase.update({ where: { id: req.params.id }, data: parsed.data, select: caseSelect }));
+  } catch (e: any) {
+    res.status(404).json({ error: e.message ?? "Update failed" });
+  }
+});
+
+gradeCaseRouter.delete("/:id", async (req, res) => {
+  try {
+    await prisma.gradeCase.delete({ where: { id: req.params.id } });
+    res.status(204).end();
+  } catch {
+    res.status(404).json({ error: "Not found" });
+  }
+});
+
 // A substrate still used by grades can't be deleted, so grades don't
 // silently lose it.
 export const substrateRouter = Router();
@@ -299,7 +365,6 @@ gradeOrderRouter.get("/", async (_req, res) => {
 });
 
 const gradeOrderSchema = z.object({ gradeIds: z.array(z.string().min(1)) });
-const iso513GroupSchema = z.enum(["P", "M", "K", "N", "S", "H"]);
 
 // :scope is "all" (the overall board) or the id of an Application (that
 // application's board).

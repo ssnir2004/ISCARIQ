@@ -141,6 +141,21 @@ export type Shape = GlossaryEntry;
 export type Chipbreaker = GlossaryEntry;
 export type Application = GlossaryEntry;
 
+// A trial / case study for a grade (usually a slide image). A null
+// applicationId / iso513Group means it applies to every application / group.
+// `image` is only present when fetched by id.
+export interface GradeCase {
+  id: string;
+  gradeId: string;
+  applicationId: string | null;
+  application?: { id: string; name: string } | null;
+  iso513Group: Iso513Group | null;
+  title: string;
+  notes?: string | null;
+  image?: string;
+  createdAt: string;
+}
+
 // A grade's box (percent of the plot area, from the top-left) on the Hard /
 // Tough chart of one board scope ("all" or an Application id) and ISO group.
 export interface GradeChartBox {

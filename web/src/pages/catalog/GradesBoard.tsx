@@ -2,10 +2,12 @@ import { useRef, useState, type PointerEvent } from "react";
 import { api, ApiError } from "../../lib/api";
 import { ISO513_COLORS, ISO513_GROUPS } from "../../lib/npaKnowledgeConstants";
 import { useResource } from "../../lib/useResource";
-import type { Application, Grade, GradeColumnOrder, Iso513Group } from "../../lib/types";
+import type { Application, Grade, GradeCase, GradeColumnOrder, Iso513Group } from "../../lib/types";
 import { Button, Card } from "../../components/ui";
 import type { Entry, GlossaryListContext } from "./GlossaryPage";
 import { GradesChart } from "./GradesChart";
+import { GradeCasesModal } from "./GradeCasesModal";
+import { ALL_SCOPE, caseMatches } from "../../lib/gradeCases";
 
 // Grades laid out in one column per ISO 513 group, each ranked by hand from
 // Harder (top) to Tougher (bottom) by dragging. There is one board for all
@@ -99,6 +101,12 @@ export function GradesBoard({ data, startEdit, remove }: GlossaryListContext) {
   const boardGrades = inScope(scope);
   const unassigned = boardGrades.filter((g) => g.iso513Groups.length === 0);
 
+  // Cases (trials) per grade; the list has no images, just enough for counts.
+  const { data: cases, reload: reloadCases } = useResource<GradeCase>("/grade-cases");
+  const [casesFor, setCasesFor] = useState<{ grade: Grade; group: Iso513Group } | null>(null);
+  const caseCount = (gradeId: string, group: Iso513Group) =>
+    cases.filter((c) => c.gradeId === gradeId && caseMatches(c, scope, group)).length;
+
   function selectTab(s: string) {
     setStoredTab(s);
     setDragging(null);
@@ -132,9 +140,15 @@ export function GradesBoard({ data, startEdit, remove }: GlossaryListContext) {
     if (active !== dragging.active || index !== dragging.index) setDragging({ ...dragging, active, index });
   }
 
-  async function onPointerUp(column: Grade[]) {
+  async function onPointerUp(e: PointerEvent<HTMLDivElement>, column: Grade[]) {
     const drag = dragging;
     setDragging(null);
+    // A press that never turned into a drag is a click: open the grade's cases.
+    if (drag && !drag.active && !(e.target as HTMLElement).closest("button")) {
+      const grade = column.find((g) => g.id === drag.id);
+      if (grade) setCasesFor({ grade, group: drag.group });
+      return;
+    }
     if (!drag?.active || drag.index === null) return;
 
     const ids = column.map((g) => g.id);
@@ -222,6 +236,8 @@ export function GradesBoard({ data, startEdit, remove }: GlossaryListContext) {
             group={chartGroup}
             groupLabel={ISO513_GROUPS.find((g) => g.value === chartGroup)?.label ?? chartGroup}
             grades={orderColumn(chartGroup, boardGrades, savedFor(chartGroup))}
+            caseCount={(gradeId) => caseCount(gradeId, chartGroup)}
+            onOpenCases={(grade) => setCasesFor({ grade, group: chartGroup })}
           />
         </div>
       ) : (
@@ -268,7 +284,7 @@ export function GradesBoard({ data, startEdit, remove }: GlossaryListContext) {
                               data-grade-card
                               onPointerDown={(e) => onPointerDown(e, group, grade.id)}
                               onPointerMove={onPointerMove}
-                              onPointerUp={() => onPointerUp(column)}
+                              onPointerUp={(e) => onPointerUp(e, column)}
                               onPointerCancel={() => setDragging(null)}
                               className={`group cursor-grab rounded-lg border border-neutral-200 bg-white p-2 text-xs shadow-sm select-none active:cursor-grabbing dark:border-neutral-700 dark:bg-neutral-900 ${
                                 isDragged ? "opacity-40" : ""
@@ -280,8 +296,23 @@ export function GradesBoard({ data, startEdit, remove }: GlossaryListContext) {
                                     ⋮⋮
                                   </span>
                                   {grade.name}
+                                  {caseCount(grade.id, group) > 0 && (
+                                    <span
+                                      className="ml-1.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
+                                      title="Cases (click the card to open)"
+                                    >
+                                      📷 {caseCount(grade.id, group)}
+                                    </span>
+                                  )}
                                 </span>
                                 <span className="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                                  <button
+                                    type="button"
+                                    onClick={() => setCasesFor({ grade, group })}
+                                    className="text-amber-700 hover:underline dark:text-amber-400"
+                                  >
+                                    Cases
+                                  </button>
                                   <button
                                     type="button"
                                     onClick={() => startEdit(grade as unknown as Entry)}
@@ -319,6 +350,17 @@ export function GradesBoard({ data, startEdit, remove }: GlossaryListContext) {
             </div>
           </div>
         </div>
+      )}
+
+      {casesFor && (
+        <GradeCasesModal
+          grade={casesFor.grade}
+          scope={scope === ALL ? ALL_SCOPE : scope}
+          scopeName={scopeName}
+          group={casesFor.group}
+          onClose={() => setCasesFor(null)}
+          onChanged={reloadCases}
+        />
       )}
 
       {unassigned.length > 0 && (

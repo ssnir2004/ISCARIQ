@@ -397,11 +397,12 @@ model Chipbreaker {
 // Machining applications (Milling, Turning, ...), managed on the
 // Applications screen and selectable per Grade.
 model Application {
-  id          String  @id @default(cuid())
-  name        String  @unique
+  id          String      @id @default(cuid())
+  name        String      @unique
   description String?
   image       String?
   grades      Grade[]
+  gradeCases  GradeCase[]
 }
 
 // Carbide substrate a grade is built on, managed on the Substrates screen.
@@ -428,6 +429,23 @@ model Grade {
   iso513Groups Iso513Group[]
   applications Application[]
   chartBoxes   GradeChartBox[]
+  cases        GradeCase[]
+}
+
+// A trial / case study for a grade, usually a slide saved as an image (e.g.
+// "Milling ISO P (example)"). applicationId / iso513Group narrow it to one
+// application and material group; null means it applies to all of them.
+model GradeCase {
+  id            String       @id @default(cuid())
+  grade         Grade        @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+  gradeId       String
+  application   Application? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  applicationId String?
+  iso513Group   Iso513Group?
+  title         String
+  notes         String?
+  image         String
+  createdAt     DateTime     @default(now())
 }
 
 // Manual Harder (first) -> Tougher (last) ranking of grades within each
