@@ -278,6 +278,51 @@ gradeOrderRouter.put("/:scope/:group", async (req, res) => {
   res.json(order);
 });
 
+// Boxes on the Hard/Tough chart; :scope is "all" or an Application id, as
+// for grade-order.
+export const gradeChartRouter = Router();
+
+gradeChartRouter.get("/", async (_req, res) => {
+  res.json(await prisma.gradeChartBox.findMany());
+});
+
+const MIN_BOX = 4;
+const chartBoxSchema = z
+  .object({
+    x: z.number().min(0).max(100 - MIN_BOX),
+    y: z.number().min(0).max(100 - MIN_BOX),
+    w: z.number().min(MIN_BOX).max(100),
+    h: z.number().min(MIN_BOX).max(100),
+  })
+  .refine((b) => b.x + b.w <= 100.001 && b.y + b.h <= 100.001, "Box must stay inside the chart");
+
+async function validScope(scope: string) {
+  return scope === "all" || (await prisma.application.findUnique({ where: { id: scope } })) !== null;
+}
+
+gradeChartRouter.put("/:scope/:group/:gradeId", async (req, res) => {
+  const { scope, gradeId } = req.params;
+  const group = iso513GroupSchema.safeParse(req.params.group);
+  const box = chartBoxSchema.safeParse(req.body);
+  if (!group.success || !box.success) return res.status(400).json({ error: "Invalid group or box" });
+  if (!(await validScope(scope))) return res.status(404).json({ error: "Unknown application" });
+  if (!(await prisma.grade.findUnique({ where: { id: gradeId } }))) return res.status(404).json({ error: "Unknown grade" });
+  const saved = await prisma.gradeChartBox.upsert({
+    where: { scope_iso513Group_gradeId: { scope, iso513Group: group.data, gradeId } },
+    update: box.data,
+    create: { scope, iso513Group: group.data, gradeId, ...box.data },
+  });
+  res.json(saved);
+});
+
+// Resets one chart to the default layout derived from the board ranking.
+gradeChartRouter.delete("/:scope/:group", async (req, res) => {
+  const group = iso513GroupSchema.safeParse(req.params.group);
+  if (!group.success) return res.status(400).json({ error: "Invalid group" });
+  await prisma.gradeChartBox.deleteMany({ where: { scope: req.params.scope, iso513Group: group.data } });
+  res.status(204).end();
+});
+
 // An application still selected on grades can't be deleted, so it doesn't
 // silently disappear from them.
 export const applicationRouter = Router();
@@ -294,8 +339,11 @@ applicationRouter.delete("/:id", async (req, res, next) => {
         .join(", ")}. Remove it from those grades first.`,
     });
   }
-  // Its board's saved order goes with it.
-  if (application) await prisma.gradeColumnOrder.deleteMany({ where: { scope: application.id } });
+  // Its board's saved order and chart layout go with it.
+  if (application) {
+    await prisma.gradeColumnOrder.deleteMany({ where: { scope: application.id } });
+    await prisma.gradeChartBox.deleteMany({ where: { scope: application.id } });
+  }
   next();
 });
 

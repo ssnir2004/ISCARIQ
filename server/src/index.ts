@@ -31,6 +31,7 @@ import {
   gradeRouter,
   applicationRouter,
   gradeOrderRouter,
+  gradeChartRouter,
   coatingRouter,
   toolRouter,
   testReportRouter,
@@ -65,6 +66,7 @@ app.use("/api/chipbreakers", chipbreakerRouter);
 app.use("/api/grades", gradeRouter);
 app.use("/api/applications", applicationRouter);
 app.use("/api/grade-order", gradeOrderRouter);
+app.use("/api/grade-chart", gradeChartRouter);
 app.use("/api/coatings", coatingRouter);
 app.use("/api/tools", toolRouter);
 app.use("/api/test-reports", testReportRouter);

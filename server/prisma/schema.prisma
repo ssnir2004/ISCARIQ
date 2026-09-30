@@ -415,6 +415,7 @@ model Grade {
   // (a grade can cover several of each).
   iso513Groups Iso513Group[]
   applications Application[]
+  chartBoxes   GradeChartBox[]
 }
 
 // Manual Harder (first) -> Tougher (last) ranking of grades within each
@@ -428,6 +429,23 @@ model GradeColumnOrder {
   gradeIds    String[]
 
   @@id([scope, iso513Group])
+}
+
+// A grade's box on the Hard (y) / Tough (x) chart of one board (scope "all"
+// or an Application id) and ISO 513 group. x/y/w/h are percentages of the
+// chart area, measured from its top-left corner; the box spans the grade's
+// range. Grades without a box are laid out from the board's ranking.
+model GradeChartBox {
+  scope       String
+  iso513Group Iso513Group
+  grade       Grade       @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+  gradeId     String
+  x           Float
+  y           Float
+  w           Float
+  h           Float
+
+  @@id([scope, iso513Group, gradeId])
 }
 
 model Coating {

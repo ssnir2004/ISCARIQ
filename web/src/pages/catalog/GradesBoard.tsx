@@ -5,6 +5,7 @@ import { useResource } from "../../lib/useResource";
 import type { Application, Grade, GradeColumnOrder, Iso513Group } from "../../lib/types";
 import { Button, Card } from "../../components/ui";
 import type { Entry, GlossaryListContext } from "./GlossaryPage";
+import { GradesChart } from "./GradesChart";
 
 // Grades laid out in one column per ISO 513 group, each ranked by hand from
 // Harder (top) to Tougher (bottom) by dragging. There is one board for all
@@ -19,14 +20,28 @@ type Dragging = { group: Iso513Group; id: string; startY: number; active: boolea
 
 const ALL = "all";
 const TAB_STORAGE_KEY = "iscariq.grades.boardTab";
+const VIEW_STORAGE_KEY = "iscariq.grades.view";
+const CHART_GROUP_STORAGE_KEY = "iscariq.grades.chartGroup";
 
-function readStoredTab(): string {
+type View = "table" | "chart";
+
+function readStored(key: string, fallback: string): string {
   try {
-    return localStorage.getItem(TAB_STORAGE_KEY) ?? ALL;
+    return localStorage.getItem(key) ?? fallback;
   } catch {
-    return ALL;
+    return fallback;
   }
 }
+
+function store(key: string, value: string) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // storage unavailable: the choice just isn't remembered
+  }
+}
+
+const readStoredTab = () => readStored(TAB_STORAGE_KEY, ALL);
 
 const orderKey = (scope: string, group: Iso513Group) => `${scope}:${group}`;
 
@@ -63,6 +78,11 @@ export function GradesBoard({ data, startEdit, remove }: GlossaryListContext) {
   const { data: savedOrders } = useResource<GradeColumnOrder>("/grade-order");
   const { data: applications } = useResource<Application>("/applications");
   const [storedTab, setStoredTab] = useState(readStoredTab);
+  const [view, setView] = useState<View>(() => (readStored(VIEW_STORAGE_KEY, "table") === "chart" ? "chart" : "table"));
+  const [chartGroup, setChartGroup] = useState<Iso513Group>(() => {
+    const g = readStored(CHART_GROUP_STORAGE_KEY, "P");
+    return ISO513_GROUPS.some((x) => x.value === g) ? (g as Iso513Group) : "P";
+  });
   // Fall back to "All" if the remembered application no longer exists.
   const scope = storedTab === ALL || applications.some((a) => a.id === storedTab) ? storedTab : ALL;
   // Orders changed in this session (by orderKey), applied optimistically before the save returns.
@@ -82,12 +102,20 @@ export function GradesBoard({ data, startEdit, remove }: GlossaryListContext) {
   function selectTab(s: string) {
     setStoredTab(s);
     setDragging(null);
-    try {
-      localStorage.setItem(TAB_STORAGE_KEY, s);
-    } catch {
-      // storage unavailable: the tab just isn't remembered
-    }
+    store(TAB_STORAGE_KEY, s);
   }
+
+  function selectView(v: View) {
+    setView(v);
+    store(VIEW_STORAGE_KEY, v);
+  }
+
+  function selectChartGroup(g: Iso513Group) {
+    setChartGroup(g);
+    store(CHART_GROUP_STORAGE_KEY, g);
+  }
+
+  const scopeName = scope === ALL ? "All" : (applications.find((a) => a.id === scope)?.name ?? "All");
 
   function onPointerDown(e: PointerEvent<HTMLDivElement>, group: Iso513Group, id: string) {
     if (e.button !== 0 || (e.target as HTMLElement).closest("button")) return;
@@ -131,120 +159,167 @@ export function GradesBoard({ data, startEdit, remove }: GlossaryListContext) {
 
   return (
     <div className="space-y-4">
-      <div role="tablist" className="flex flex-wrap gap-1 border-b border-neutral-200 dark:border-neutral-800">
-        {[{ id: ALL, name: "All" }, ...[...applications].sort((a, b) => a.name.localeCompare(b.name))].map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            role="tab"
-            aria-selected={scope === tab.id}
-            onClick={() => selectTab(tab.id)}
-            className={`-mb-px border-b-2 px-3 py-1.5 text-sm ${
-              scope === tab.id
-                ? "border-blue-500 font-medium text-blue-700 dark:text-blue-300"
-                : "border-transparent text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200"
-            }`}
-          >
-            {tab.name}
-            <span className="ml-1.5 text-xs opacity-60">{inScope(tab.id).length}</span>
-          </button>
-        ))}
+      <div className="flex flex-wrap items-end justify-between gap-2 border-b border-neutral-200 dark:border-neutral-800">
+        <div role="tablist" className="flex flex-wrap gap-1">
+          {[{ id: ALL, name: "All" }, ...[...applications].sort((a, b) => a.name.localeCompare(b.name))].map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={scope === tab.id}
+              onClick={() => selectTab(tab.id)}
+              className={`-mb-px border-b-2 px-3 py-1.5 text-sm ${
+                scope === tab.id
+                  ? "border-blue-500 font-medium text-blue-700 dark:text-blue-300"
+                  : "border-transparent text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200"
+              }`}
+            >
+              {tab.name}
+              <span className="ml-1.5 text-xs opacity-60">{inScope(tab.id).length}</span>
+            </button>
+          ))}
+        </div>
+        <div className="mb-1.5 inline-flex rounded-lg border border-neutral-200 p-0.5 text-sm dark:border-neutral-700">
+          {(["table", "chart"] as View[]).map((v) => (
+            <button
+              key={v}
+              type="button"
+              aria-pressed={view === v}
+              onClick={() => selectView(v)}
+              className={`rounded-md px-3 py-1 capitalize ${
+                view === v ? "bg-blue-600 text-white" : "text-neutral-600 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white"
+              }`}
+            >
+              {v}
+            </button>
+          ))}
+        </div>
       </div>
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
-      <div className="flex gap-3">
-        {/* Hardness axis: the order within every column runs Harder -> Tougher. */}
-        <div className="flex w-6 shrink-0 flex-col items-center pt-10 text-[11px] font-semibold text-neutral-500 dark:text-neutral-400">
-          <span aria-hidden>▲</span>
-          <span className="rotate-180 [writing-mode:vertical-rl]">Harder</span>
-          <div className="my-2 w-1 flex-1 rounded-full bg-gradient-to-b from-neutral-700 to-neutral-300 dark:from-neutral-200 dark:to-neutral-700" />
-          <span className="rotate-180 [writing-mode:vertical-rl]">Tougher</span>
-          <span aria-hidden>▼</span>
+      {view === "chart" ? (
+        <div className="space-y-3">
+          <div className="flex flex-wrap gap-2">
+            {ISO513_GROUPS.map((g) => (
+              <button
+                key={g.value}
+                type="button"
+                aria-pressed={chartGroup === g.value}
+                onClick={() => selectChartGroup(g.value)}
+                className={`rounded-full border-2 px-2.5 py-1 text-xs ${
+                  chartGroup === g.value ? "font-medium text-neutral-900" : "text-neutral-600 dark:text-neutral-300"
+                }`}
+                style={chartGroup === g.value ? { backgroundColor: g.color, borderColor: g.color } : { borderColor: g.color }}
+              >
+                {g.label}
+                <span className="ml-1 opacity-60">{boardGrades.filter((x) => x.iso513Groups.includes(g.value)).length}</span>
+              </button>
+            ))}
+          </div>
+          <GradesChart
+            key={`${scope}:${chartGroup}`}
+            scope={scope}
+            scopeName={scopeName}
+            group={chartGroup}
+            groupLabel={ISO513_GROUPS.find((g) => g.value === chartGroup)?.label ?? chartGroup}
+            grades={orderColumn(chartGroup, boardGrades, savedFor(chartGroup))}
+          />
         </div>
+      ) : (
+        <div className="flex gap-3">
+          {/* Hardness axis: the order within every column runs Harder -> Tougher. */}
+          <div className="flex w-6 shrink-0 flex-col items-center pt-10 text-[11px] font-semibold text-neutral-500 dark:text-neutral-400">
+            <span aria-hidden>▲</span>
+            <span className="rotate-180 [writing-mode:vertical-rl]">Harder</span>
+            <div className="my-2 w-1 flex-1 rounded-full bg-gradient-to-b from-neutral-700 to-neutral-300 dark:from-neutral-200 dark:to-neutral-700" />
+            <span className="rotate-180 [writing-mode:vertical-rl]">Tougher</span>
+            <span aria-hidden>▼</span>
+          </div>
 
-        <div className="flex-1 overflow-x-auto">
-          <div className="grid min-w-[720px] grid-cols-6 gap-2">
-            {ISO513_GROUPS.map(({ value: group, label }) => {
-              const column = orderColumn(group, boardGrades, savedFor(group));
-              const dropIndex = dragging?.active && dragging.group === group ? dragging.index : null;
-              return (
-                <div key={group} className="flex flex-col" data-column={group}>
-                  <div
-                    className="mb-2 rounded-lg px-2 py-1.5 text-xs font-semibold text-neutral-900"
-                    style={{ backgroundColor: ISO513_COLORS[group] }}
-                    title={label}
-                  >
-                    {label}
-                    <span className="float-right font-normal opacity-70">{column.length}</span>
-                  </div>
-                  <div
-                    ref={(el) => {
-                      columnRefs.current[group] = el;
-                    }}
-                    className="flex min-h-24 flex-1 flex-col gap-1.5 rounded-lg bg-neutral-100/70 p-1.5 dark:bg-neutral-900/50"
-                  >
-                    {column.length === 0 && (
-                      <p className="py-4 text-center text-[11px] text-neutral-400 dark:text-neutral-500">No grades</p>
-                    )}
-                    {column.map((grade, index) => {
-                      const isDragged = dragging?.active && dragging.group === group && dragging.id === grade.id;
-                      return (
-                        <div key={grade.id} className="flex flex-col gap-1.5">
-                          {dropIndex === index && <DropLine />}
-                          <div
-                            data-grade-card
-                            onPointerDown={(e) => onPointerDown(e, group, grade.id)}
-                            onPointerMove={onPointerMove}
-                            onPointerUp={() => onPointerUp(column)}
-                            onPointerCancel={() => setDragging(null)}
-                            className={`group cursor-grab rounded-lg border border-neutral-200 bg-white p-2 text-xs shadow-sm select-none active:cursor-grabbing dark:border-neutral-700 dark:bg-neutral-900 ${
-                              isDragged ? "opacity-40" : ""
-                            }`}
-                          >
-                            <div className="flex items-start justify-between gap-1">
-                              <span className="font-semibold text-neutral-900 dark:text-neutral-100">
-                                <span className="mr-1 touch-none text-neutral-300 dark:text-neutral-600" aria-hidden>
-                                  ⋮⋮
-                                </span>
-                                {grade.name}
-                              </span>
-                              <span className="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
-                                <button
-                                  type="button"
-                                  onClick={() => startEdit(grade as unknown as Entry)}
-                                  className="text-blue-600 hover:underline dark:text-blue-400"
-                                >
-                                  Edit
-                                </button>
-                                <button type="button" onClick={() => remove(grade.id)} className="text-red-600 hover:underline dark:text-red-400">
-                                  Delete
-                                </button>
-                              </span>
-                            </div>
-                            {grade.substrate && <div className="mt-0.5 text-neutral-500 dark:text-neutral-400">{grade.substrate}</div>}
-                            {grade.applications.length > 0 && (
-                              <div className="mt-1 flex flex-wrap gap-1">
-                                {grade.applications.map((a) => (
-                                  <span
-                                    key={a.id}
-                                    className="rounded-full bg-neutral-100 px-1.5 py-0.5 text-[10px] text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300"
-                                  >
-                                    {a.name}
+          <div className="flex-1 overflow-x-auto">
+            <div className="grid min-w-[720px] grid-cols-6 gap-2">
+              {ISO513_GROUPS.map(({ value: group, label }) => {
+                const column = orderColumn(group, boardGrades, savedFor(group));
+                const dropIndex = dragging?.active && dragging.group === group ? dragging.index : null;
+                return (
+                  <div key={group} className="flex flex-col" data-column={group}>
+                    <div
+                      className="mb-2 rounded-lg px-2 py-1.5 text-xs font-semibold text-neutral-900"
+                      style={{ backgroundColor: ISO513_COLORS[group] }}
+                      title={label}
+                    >
+                      {label}
+                      <span className="float-right font-normal opacity-70">{column.length}</span>
+                    </div>
+                    <div
+                      ref={(el) => {
+                        columnRefs.current[group] = el;
+                      }}
+                      className="flex min-h-24 flex-1 flex-col gap-1.5 rounded-lg bg-neutral-100/70 p-1.5 dark:bg-neutral-900/50"
+                    >
+                      {column.length === 0 && (
+                        <p className="py-4 text-center text-[11px] text-neutral-400 dark:text-neutral-500">No grades</p>
+                      )}
+                      {column.map((grade, index) => {
+                        const isDragged = dragging?.active && dragging.group === group && dragging.id === grade.id;
+                        return (
+                          <div key={grade.id} className="flex flex-col gap-1.5">
+                            {dropIndex === index && <DropLine />}
+                            <div
+                              data-grade-card
+                              onPointerDown={(e) => onPointerDown(e, group, grade.id)}
+                              onPointerMove={onPointerMove}
+                              onPointerUp={() => onPointerUp(column)}
+                              onPointerCancel={() => setDragging(null)}
+                              className={`group cursor-grab rounded-lg border border-neutral-200 bg-white p-2 text-xs shadow-sm select-none active:cursor-grabbing dark:border-neutral-700 dark:bg-neutral-900 ${
+                                isDragged ? "opacity-40" : ""
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-1">
+                                <span className="font-semibold text-neutral-900 dark:text-neutral-100">
+                                  <span className="mr-1 touch-none text-neutral-300 dark:text-neutral-600" aria-hidden>
+                                    ⋮⋮
                                   </span>
-                                ))}
+                                  {grade.name}
+                                </span>
+                                <span className="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                                  <button
+                                    type="button"
+                                    onClick={() => startEdit(grade as unknown as Entry)}
+                                    className="text-blue-600 hover:underline dark:text-blue-400"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button type="button" onClick={() => remove(grade.id)} className="text-red-600 hover:underline dark:text-red-400">
+                                    Delete
+                                  </button>
+                                </span>
                               </div>
-                            )}
+                              {grade.substrate && <div className="mt-0.5 text-neutral-500 dark:text-neutral-400">{grade.substrate}</div>}
+                              {grade.applications.length > 0 && (
+                                <div className="mt-1 flex flex-wrap gap-1">
+                                  {grade.applications.map((a) => (
+                                    <span
+                                      key={a.id}
+                                      className="rounded-full bg-neutral-100 px-1.5 py-0.5 text-[10px] text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300"
+                                    >
+                                      {a.name}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                    {dropIndex === column.length && column.length > 0 && <DropLine />}
+                        );
+                      })}
+                      {dropIndex === column.length && column.length > 0 && <DropLine />}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {unassigned.length > 0 && (
         <Card className="p-3">
