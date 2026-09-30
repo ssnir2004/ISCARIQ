@@ -10,6 +10,25 @@ interface Delegate {
   delete: (args: any) => Promise<any>;
 }
 
+// Turns a Prisma write error into a status and a message fit for the UI
+// (instead of Prisma's raw "Invalid `prisma.x.create()` invocation" text).
+function writeError(e: unknown, body: Record<string, unknown>): { status: number; error: string } {
+  if (e instanceof Prisma.PrismaClientKnownRequestError) {
+    if (e.code === "P2002") {
+      const target = e.meta?.target;
+      const fields = Array.isArray(target) ? (target as string[]) : typeof target === "string" ? [target] : [];
+      if (fields.length === 1 && typeof body[fields[0]] === "string") {
+        return { status: 409, error: `"${body[fields[0]]}" already exists — ${fields[0] === "name" ? "names" : fields[0]} must be unique.` };
+      }
+      return { status: 409, error: `An item with the same ${fields.join(", ") || "values"} already exists.` };
+    }
+    if (e.code === "P2025") return { status: 404, error: "Not found" };
+    if (e.code === "P2003") return { status: 409, error: "A related item it refers to doesn't exist or is still in use." };
+  }
+  console.error(e);
+  return { status: 400, error: "Save failed" };
+}
+
 export function crudRouter(opts: {
   delegate: Delegate;
   createSchema: ZodSchema;
@@ -39,8 +58,9 @@ export function crudRouter(opts: {
     try {
       const item = await delegate.create({ data: mapData(parsed.data, "create"), include });
       res.status(201).json(item);
-    } catch (e: any) {
-      res.status(409).json({ error: e.message ?? "Create failed" });
+    } catch (e) {
+      const { status, error } = writeError(e, parsed.data as Record<string, unknown>);
+      res.status(status).json({ error });
     }
   });
 
@@ -50,8 +70,9 @@ export function crudRouter(opts: {
     try {
       const item = await delegate.update({ where: { id: req.params.id }, data: mapData(parsed.data, "update"), include });
       res.json(item);
-    } catch (e: any) {
-      res.status(404).json({ error: e.message ?? "Update failed" });
+    } catch (e) {
+      const { status, error } = writeError(e, parsed.data as Record<string, unknown>);
+      res.status(status).json({ error });
     }
   });
 

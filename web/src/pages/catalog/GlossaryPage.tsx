@@ -149,6 +149,9 @@ export function GlossaryPage({
     return [...new Set([...(field.suggestions ?? []), ...used])].sort((a, b) => a.localeCompare(b));
   }
   const [editingId, setEditingId] = useState<string | null>(null);
+  // Another entry with the name being typed (names are unique), if any.
+  const typedName = form.name.trim().toLowerCase();
+  const duplicate = typedName ? data.find((d) => d.id !== editingId && d.name.trim().toLowerCase() === typedName) : undefined;
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [fileInputKey, setFileInputKey] = useState(0);
@@ -182,6 +185,10 @@ export function GlossaryPage({
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    if (duplicate) {
+      setError(`A ${singular} named "${duplicate.name}" already exists. Edit it instead of adding it again.`);
+      return;
+    }
     setError(null);
     setSubmitting(true);
     try {
@@ -235,6 +242,14 @@ export function GlossaryPage({
             <div>
               <Label>Name</Label>
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+              {duplicate && (
+                <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-amber-700 dark:text-amber-400">
+                  A {singular} named "{duplicate.name}" already exists.
+                  <button type="button" onClick={() => startEdit(duplicate)} className="font-medium text-blue-600 hover:underline dark:text-blue-400">
+                    Edit {duplicate.name} instead
+                  </button>
+                </p>
+              )}
             </div>
             <div>
               <Label>Description</Label>
