@@ -141,6 +141,18 @@ export type Shape = GlossaryEntry;
 export type Chipbreaker = GlossaryEntry;
 export type Application = GlossaryEntry;
 
+// A grade's box (percent of the plot area, from the top-left) on the Hard /
+// Tough chart of one board scope ("all" or an Application id) and ISO group.
+export interface GradeChartBox {
+  scope: string;
+  iso513Group: Iso513Group;
+  gradeId: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
 // Saved Harder -> Tougher ranking of grade ids for one ISO 513 column of one
 // board: scope "all" (every grade) or an Application id.
 export interface GradeColumnOrder {
