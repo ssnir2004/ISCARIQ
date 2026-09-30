@@ -34,6 +34,9 @@ export function GradeCasesModal({
   const [onlyGroup, setOnlyGroup] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // Inline title editing for an existing case.
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
 
   const load = useCallback(async () => {
     const list = await api.get<GradeCase[]>(`/grade-cases?gradeId=${encodeURIComponent(grade.id)}`);
@@ -73,6 +76,28 @@ export function GradeCasesModal({
       setError(err instanceof ApiError ? err.message : "Failed to save the case");
     } finally {
       setSaving(false);
+    }
+  }
+
+  function startEditTitle(c: GradeCase) {
+    setEditingId(c.id);
+    setEditTitle(c.title);
+    setError(null);
+  }
+
+  async function saveTitle(e: FormEvent) {
+    e.preventDefault();
+    const newTitle = editTitle.trim();
+    if (!editingId || !newTitle) return;
+    setError(null);
+    try {
+      await api.patch(`/grade-cases/${editingId}`, { title: newTitle });
+      // Update in place so the loaded images don't have to be fetched again.
+      setCases((list) => list?.map((c) => (c.id === editingId ? { ...c, title: newTitle } : c)) ?? list);
+      setEditingId(null);
+      onChanged();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to rename the case");
     }
   }
 
@@ -145,11 +170,35 @@ export function GradeCasesModal({
             <div key={c.id} data-case={c.title} className="space-y-2 rounded-lg border border-neutral-200 p-3 dark:border-neutral-700">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">
-                    <Link to={`/cases/${c.id}`} target="_blank" className="hover:underline">
-                      {c.title}
-                    </Link>
-                  </h3>
+                  {editingId === c.id ? (
+                    <form onSubmit={saveTitle} className="flex items-center gap-2">
+                      <Input
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        onKeyDown={(e) => e.key === "Escape" && (e.stopPropagation(), setEditingId(null))}
+                        aria-label="Case title"
+                        autoFocus
+                        required
+                      />
+                      <Button type="submit">Save</Button>
+                      <Button type="button" variant="secondary" onClick={() => setEditingId(null)}>
+                        Cancel
+                      </Button>
+                    </form>
+                  ) : (
+                    <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">
+                      <Link to={`/cases/${c.id}`} target="_blank" className="hover:underline">
+                        {c.title}
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => startEditTitle(c)}
+                        className="ml-2 text-xs font-normal text-blue-600 hover:underline dark:text-blue-400"
+                      >
+                        Edit title
+                      </button>
+                    </h3>
+                  )}
                   <div className="mt-1 flex flex-wrap gap-1.5 text-xs">
                     <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
                       {c.application?.name ?? "All applications"}
