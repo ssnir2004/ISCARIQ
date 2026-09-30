@@ -417,6 +417,15 @@ model Grade {
   applications Application[]
 }
 
+// Manual Harder (first) -> Tougher (last) ranking of grades within each
+// ISO 513 column of the Grades screen. A grade in several groups has an
+// independent position in each column. Ids of grades no longer in the
+// group are ignored; grades missing from the list go to the bottom.
+model GradeColumnOrder {
+  iso513Group Iso513Group @id
+  gradeIds    String[]
+}
+
 model Coating {
   id          String  @id @default(cuid())
   name        String  @unique

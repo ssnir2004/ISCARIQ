@@ -30,6 +30,7 @@ import {
   chipbreakerRouter,
   gradeRouter,
   applicationRouter,
+  gradeOrderRouter,
   coatingRouter,
   toolRouter,
   testReportRouter,
@@ -63,6 +64,7 @@ app.use("/api/shapes", shapeRouter);
 app.use("/api/chipbreakers", chipbreakerRouter);
 app.use("/api/grades", gradeRouter);
 app.use("/api/applications", applicationRouter);
+app.use("/api/grade-order", gradeOrderRouter);
 app.use("/api/coatings", coatingRouter);
 app.use("/api/tools", toolRouter);
 app.use("/api/test-reports", testReportRouter);

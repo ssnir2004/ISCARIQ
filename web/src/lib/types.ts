@@ -140,6 +140,12 @@ export interface GlossaryEntry {
 export type Shape = GlossaryEntry;
 export type Chipbreaker = GlossaryEntry;
 export type Application = GlossaryEntry;
+
+// Saved Harder -> Tougher ranking of grade ids for one ISO 513 column.
+export interface GradeColumnOrder {
+  iso513Group: Iso513Group;
+  gradeIds: string[];
+}
 export interface Grade extends GlossaryEntry {
   substrate?: string | null;
   iso513Groups: Iso513Group[];

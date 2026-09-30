@@ -250,6 +250,28 @@ export const gradeRouter = glossaryRouter(
   }
 );
 
+export const gradeOrderRouter = Router();
+
+gradeOrderRouter.get("/", async (_req, res) => {
+  res.json(await prisma.gradeColumnOrder.findMany());
+});
+
+const gradeOrderSchema = z.object({ gradeIds: z.array(z.string().min(1)) });
+const iso513GroupSchema = z.enum(["P", "M", "K", "N", "S", "H"]);
+
+gradeOrderRouter.put("/:group", async (req, res) => {
+  const group = iso513GroupSchema.safeParse(req.params.group);
+  const parsed = gradeOrderSchema.safeParse(req.body);
+  if (!group.success || !parsed.success) return res.status(400).json({ error: "Invalid group or gradeIds" });
+  const gradeIds = [...new Set(parsed.data.gradeIds)];
+  const order = await prisma.gradeColumnOrder.upsert({
+    where: { iso513Group: group.data },
+    update: { gradeIds },
+    create: { iso513Group: group.data, gradeIds },
+  });
+  res.json(order);
+});
+
 // An application still selected on grades can't be deleted, so it doesn't
 // silently disappear from them.
 export const applicationRouter = Router();
