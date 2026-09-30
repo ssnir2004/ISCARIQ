@@ -198,7 +198,7 @@ export function GradesChart({
                     title={`${grade.name} — drag to move, drag the corner to resize`}
                   >
                     <span className="text-sm font-bold leading-tight">{grade.name}</span>
-                    {grade.substrate && <span className="text-[10px] leading-tight opacity-75">{grade.substrate}</span>}
+                    {grade.substrate && <span className="text-[10px] leading-tight opacity-75">{grade.substrate.name}</span>}
                     <div
                       data-resize-handle
                       onPointerDown={(e) => onPointerDown(e, grade, index, "resize")}

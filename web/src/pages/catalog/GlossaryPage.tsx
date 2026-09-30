@@ -2,7 +2,7 @@ import { useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } fr
 import { useResource } from "../../lib/useResource";
 import { api, ApiError } from "../../lib/api";
 import type { GlossaryEntry } from "../../lib/types";
-import { Button, Card, Input, Label, PageHeader, Textarea } from "../../components/ui";
+import { Button, Card, Input, Label, PageHeader, Select, Textarea } from "../../components/ui";
 
 const EMPTY_FORM = { name: "", description: "", image: "" as string | null };
 
@@ -21,13 +21,27 @@ export interface GlossaryTagField {
   emptyHint?: ReactNode;
 }
 
-// A single-line optional text field (e.g. a Grade's substrate). Suggests
-// `suggestions` plus every value already used on other entries.
+// A single-line optional text or number field (e.g. a Substrate's hardness).
+// Text fields suggest `suggestions` plus every value already used on other
+// entries. Blank values are saved as null.
 export interface GlossaryTextField {
   key: string;
   label: string;
+  type?: "text" | "number";
   placeholder?: string;
   suggestions?: string[];
+}
+
+// An optional single choice sent as an id under `key` (e.g. a Grade's
+// substrateId), or null for none.
+export interface GlossarySelectField {
+  key: string;
+  label: string;
+  options: { value: string; label: string }[];
+  // Reads the selected value off a loaded entry. Defaults to entry[key].
+  read?: (entry: Entry) => string | null | undefined;
+  // Shown under the field when it has no options to pick from.
+  emptyHint?: ReactNode;
 }
 
 export type Entry = GlossaryEntry & Record<string, unknown>;
@@ -43,8 +57,12 @@ export interface GlossaryListContext {
 type Tags = Record<string, string[]>;
 type Texts = Record<string, string>;
 
-function emptyTexts(fields: GlossaryTextField[]): Texts {
+function emptyTexts(fields: { key: string }[]): Texts {
   return Object.fromEntries(fields.map((f) => [f.key, ""]));
+}
+
+function readSelect(field: GlossarySelectField, entry: Entry): string {
+  return (field.read ? field.read(entry) : (entry[field.key] as string | null | undefined)) ?? "";
 }
 
 function readTags(field: GlossaryTagField, entry: Entry): string[] {
@@ -100,6 +118,7 @@ export function GlossaryPage({
   singular,
   tagFields = [],
   textFields = [],
+  selectFields = [],
   renderList,
 }: {
   resource: string;
@@ -107,6 +126,7 @@ export function GlossaryPage({
   singular: string;
   tagFields?: GlossaryTagField[];
   textFields?: GlossaryTextField[];
+  selectFields?: GlossarySelectField[];
   renderList?: (ctx: GlossaryListContext) => ReactNode;
 }) {
   const formRef = useRef<HTMLDivElement>(null);
@@ -114,6 +134,7 @@ export function GlossaryPage({
   const [form, setForm] = useState(EMPTY_FORM);
   const [tags, setTags] = useState<Tags>(() => emptyTags(tagFields));
   const [texts, setTexts] = useState<Texts>(() => emptyTexts(textFields));
+  const [selects, setSelects] = useState<Texts>(() => emptyTexts(selectFields));
 
   function suggestionsFor(field: GlossaryTextField): string[] {
     const used = data.map((e) => e[field.key]).filter((v): v is string => typeof v === "string" && v.trim() !== "");
@@ -133,7 +154,8 @@ export function GlossaryPage({
   function startEdit(entry: Entry) {
     setForm({ name: entry.name, description: entry.description ?? "", image: entry.image ?? "" });
     setTags(Object.fromEntries(tagFields.map((f) => [f.key, readTags(f, entry)])));
-    setTexts(Object.fromEntries(textFields.map((f) => [f.key, (entry[f.key] as string | null | undefined) ?? ""])));
+    setTexts(Object.fromEntries(textFields.map((f) => [f.key, String((entry[f.key] as string | number | null | undefined) ?? "")])));
+    setSelects(Object.fromEntries(selectFields.map((f) => [f.key, readSelect(f, entry)])));
     setEditingId(entry.id);
     setError(null);
     formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -143,6 +165,7 @@ export function GlossaryPage({
     setForm(EMPTY_FORM);
     setTags(emptyTags(tagFields));
     setTexts(emptyTexts(textFields));
+    setSelects(emptyTexts(selectFields));
     setEditingId(null);
     setFileInputKey((k) => k + 1);
     setError(null);
@@ -154,8 +177,14 @@ export function GlossaryPage({
     setSubmitting(true);
     try {
       // Blank text fields are sent as null so clearing one actually clears it.
-      const textValues = Object.fromEntries(Object.entries(texts).map(([k, v]) => [k, v.trim() || null]));
-      const body = { ...form, ...textValues, ...tags };
+      const textValues = Object.fromEntries(
+        textFields.map((f) => {
+          const v = (texts[f.key] ?? "").trim();
+          return [f.key, v === "" ? null : f.type === "number" ? Number(v) : v];
+        })
+      );
+      const selectValues = Object.fromEntries(Object.entries(selects).map(([k, v]) => [k, v || null]));
+      const body = { ...form, ...textValues, ...selectValues, ...tags };
       if (editingId) {
         await api.patch(`${resource}/${editingId}`, body);
       } else {
@@ -164,6 +193,7 @@ export function GlossaryPage({
       setForm(EMPTY_FORM);
       setTags(emptyTags(tagFields));
       setTexts(emptyTexts(textFields));
+      setSelects(emptyTexts(selectFields));
       setEditingId(null);
       setFileInputKey((k) => k + 1);
       reload();
@@ -204,16 +234,36 @@ export function GlossaryPage({
               <div key={field.key}>
                 <Label>{field.label}</Label>
                 <Input
-                  list={`${field.key}-suggestions`}
+                  type={field.type === "number" ? "number" : "text"}
+                  step="any"
+                  list={field.type === "number" ? undefined : `${field.key}-suggestions`}
                   value={texts[field.key] ?? ""}
                   placeholder={field.placeholder}
                   onChange={(e) => setTexts({ ...texts, [field.key]: e.target.value })}
                 />
-                <datalist id={`${field.key}-suggestions`}>
-                  {suggestionsFor(field).map((s) => (
-                    <option key={s} value={s} />
+                {field.type !== "number" && (
+                  <datalist id={`${field.key}-suggestions`}>
+                    {suggestionsFor(field).map((s) => (
+                      <option key={s} value={s} />
+                    ))}
+                  </datalist>
+                )}
+              </div>
+            ))}
+            {selectFields.map((field) => (
+              <div key={field.key}>
+                <Label>{field.label}</Label>
+                <Select value={selects[field.key] ?? ""} onChange={(e) => setSelects({ ...selects, [field.key]: e.target.value })}>
+                  <option value="">— None —</option>
+                  {field.options.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
                   ))}
-                </datalist>
+                </Select>
+                {field.options.length === 0 && field.emptyHint && (
+                  <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">{field.emptyHint}</p>
+                )}
               </div>
             ))}
             {tagFields.map((field) => (
@@ -262,10 +312,19 @@ export function GlossaryPage({
                   )}
                   {textFields.map((field) => {
                     const value = entry[field.key];
-                    if (typeof value !== "string" || value === "") return null;
+                    if ((typeof value !== "string" && typeof value !== "number") || value === "") return null;
                     return (
                       <div key={field.key} className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
                         {field.label}: <span className="font-medium text-neutral-700 dark:text-neutral-300">{value}</span>
+                      </div>
+                    );
+                  })}
+                  {selectFields.map((field) => {
+                    const option = field.options.find((o) => o.value === readSelect(field, entry));
+                    if (!option) return null;
+                    return (
+                      <div key={field.key} className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                        {field.label}: <span className="font-medium text-neutral-700 dark:text-neutral-300">{option.label}</span>
                       </div>
                     );
                   })}

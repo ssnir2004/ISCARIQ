@@ -404,13 +404,25 @@ model Application {
   grades      Grade[]
 }
 
+// Carbide substrate a grade is built on, managed on the Substrates screen.
+// Hardness and fracture toughness (KIC) place it on the substrate map.
+model Substrate {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String?
+  image       String?
+  hardness    Float?
+  toughness   Float?
+  grades      Grade[]
+}
+
 model Grade {
   id           String        @id @default(cuid())
   name         String        @unique
   description  String?
   image        String?
-  // Substrate material, e.g. "Carbide", "Cermet", "CBN" (free text).
-  substrate    String?
+  substrate    Substrate?    @relation(fields: [substrateId], references: [id])
+  substrateId  String?
   // Workpiece material groups and applications this grade is intended for
   // (a grade can cover several of each).
   iso513Groups Iso513Group[]

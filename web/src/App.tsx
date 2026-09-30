@@ -19,6 +19,7 @@ import { Shapes } from "./pages/catalog/Shapes";
 import { Chipbreakers } from "./pages/catalog/Chipbreakers";
 import { Grades } from "./pages/catalog/Grades";
 import { Applications } from "./pages/catalog/Applications";
+import { Substrates } from "./pages/catalog/Substrates";
 import { Coatings } from "./pages/catalog/Coatings";
 import { Npas } from "./pages/catalog/Npas";
 import { NpaKnowledge } from "./pages/catalog/NpaKnowledge";
@@ -58,6 +59,7 @@ function AppRoutes() {
         <Route path="/catalog/chipbreakers" element={<Chipbreakers />} />
         <Route path="/catalog/grades" element={<Grades />} />
         <Route path="/catalog/applications" element={<Applications />} />
+        <Route path="/catalog/substrates" element={<Substrates />} />
         <Route path="/catalog/coatings" element={<Coatings />} />
         <Route path="/catalog/npas" element={<Npas />} />
         <Route path="/catalog/npa-knowledge" element={<NpaKnowledge />} />

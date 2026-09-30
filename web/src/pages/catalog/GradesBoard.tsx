@@ -294,7 +294,7 @@ export function GradesBoard({ data, startEdit, remove }: GlossaryListContext) {
                                   </button>
                                 </span>
                               </div>
-                              {grade.substrate && <div className="mt-0.5 text-neutral-500 dark:text-neutral-400">{grade.substrate}</div>}
+                              {grade.substrate && <div className="mt-0.5 text-neutral-500 dark:text-neutral-400">{grade.substrate.name}</div>}
                               {grade.applications.length > 0 && (
                                 <div className="mt-1 flex flex-wrap gap-1">
                                   {grade.applications.map((a) => (

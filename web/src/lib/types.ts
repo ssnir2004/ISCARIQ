@@ -160,8 +160,16 @@ export interface GradeColumnOrder {
   iso513Group: Iso513Group;
   gradeIds: string[];
 }
+// A grade's carbide substrate; hardness and fracture toughness (KIC) place
+// it on the substrate map.
+export interface Substrate extends GlossaryEntry {
+  hardness?: number | null;
+  toughness?: number | null;
+  grades?: Pick<Grade, "id" | "name" | "iso513Groups" | "applications">[];
+}
+
 export interface Grade extends GlossaryEntry {
-  substrate?: string | null;
+  substrate?: Substrate | null;
   iso513Groups: Iso513Group[];
   applications: Application[];
 }

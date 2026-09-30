@@ -236,18 +236,60 @@ export const chipbreakerRouter = glossaryRouter(prisma.chipbreaker);
 export const gradeRouter = glossaryRouter(
   prisma.grade,
   {
-    substrate: z.string().nullable().optional(),
+    substrateId: z.string().min(1).nullable().optional(),
     iso513Groups: z.array(z.enum(["P", "M", "K", "N", "S", "H"])).default([]),
     applicationIds: z.array(z.string().min(1)).default([]),
   },
   {
-    include: { applications: { orderBy: { name: "asc" } } },
-    mapData: ({ applicationIds, ...data }, mode) => {
-      if (applicationIds === undefined) return data;
-      const ids = applicationIds.map((id: string) => ({ id }));
-      return { ...data, applications: mode === "create" ? { connect: ids } : { set: ids } };
+    include: { applications: { orderBy: { name: "asc" } }, substrate: true },
+    mapData: ({ applicationIds, substrateId, ...data }, mode) => {
+      if (applicationIds !== undefined) {
+        const ids = applicationIds.map((id: string) => ({ id }));
+        data.applications = mode === "create" ? { connect: ids } : { set: ids };
+      }
+      // Relation writes (applications) require the relation form here too.
+      if (substrateId) data.substrate = { connect: { id: substrateId } };
+      else if (substrateId === null && mode === "update") data.substrate = { disconnect: true };
+      return data;
     },
   }
+);
+
+// A substrate still used by grades can't be deleted, so grades don't
+// silently lose it.
+export const substrateRouter = Router();
+
+substrateRouter.delete("/:id", async (req, res, next) => {
+  const substrate = await prisma.substrate.findUnique({
+    where: { id: req.params.id },
+    include: { grades: { select: { name: true }, orderBy: { name: "asc" } } },
+  });
+  if (substrate && substrate.grades.length > 0) {
+    return res.status(409).json({
+      error: `"${substrate.name}" is used by ${substrate.grades.length} grade(s): ${substrate.grades
+        .map((g) => g.name)
+        .join(", ")}. Change their substrate first.`,
+    });
+  }
+  next();
+});
+
+substrateRouter.use(
+  glossaryRouter(
+    prisma.substrate,
+    {
+      hardness: z.number().positive().nullable().optional(),
+      toughness: z.number().positive().nullable().optional(),
+    },
+    {
+      include: {
+        grades: {
+          select: { id: true, name: true, iso513Groups: true, applications: { select: { id: true, name: true } } },
+          orderBy: { name: "asc" },
+        },
+      },
+    }
+  )
 );
 
 export const gradeOrderRouter = Router();
