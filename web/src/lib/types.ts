@@ -149,6 +149,8 @@ export interface GradeCase {
   gradeId: string;
   applicationId: string | null;
   application?: { id: string; name: string } | null;
+  // Only present when fetched by id.
+  grade?: { id: string; name: string };
   iso513Group: Iso513Group | null;
   title: string;
   notes?: string | null;
