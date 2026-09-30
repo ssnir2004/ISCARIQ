@@ -1,12 +1,8 @@
-import { useState } from "react";
-import { ISO513_GROUPS } from "../../lib/npaKnowledgeConstants";
-import type { Application, Iso513Group, Substrate } from "../../lib/types";
+import type { Substrate } from "../../lib/types";
 
 // Scatter map of substrates: fracture toughness (KIC) on x, hardness on y.
-// Each substrate is labelled with the grades built on it (optionally
-// filtered to one application and ISO 513 group); no point markers.
+// Each substrate is labelled with the grades built on it; no point markers.
 
-const ALL = "all";
 const W = 800;
 const H = 520;
 const M = { top: 24, right: 24, bottom: 64, left: 84 };
@@ -39,39 +35,10 @@ function paddedTicks(values: number[]): number[] {
   return niceTicks(min - pad, max + pad);
 }
 
-function Chip({ active, onClick, children, color }: { active: boolean; onClick: () => void; children: React.ReactNode; color?: string }) {
-  return (
-    <button
-      type="button"
-      aria-pressed={active}
-      onClick={onClick}
-      className={`rounded-full border-2 px-2.5 py-1 text-xs ${
-        active
-          ? color
-            ? "font-medium text-neutral-900"
-            : "border-blue-600 bg-blue-600 font-medium text-white"
-          : "border-neutral-300 text-neutral-600 dark:border-neutral-700 dark:text-neutral-300"
-      }`}
-      style={color ? (active ? { backgroundColor: color, borderColor: color } : { borderColor: color }) : undefined}
-    >
-      {children}
-    </button>
-  );
-}
-
-export function SubstrateMap({ substrates, applications }: { substrates: Substrate[]; applications: Application[] }) {
-  const [appId, setAppId] = useState<string>(ALL);
-  const [group, setGroup] = useState<Iso513Group | typeof ALL>(ALL);
-
-  const matches = (g: NonNullable<Substrate["grades"]>[number]) =>
-    (appId === ALL || g.applications.some((a) => a.id === appId)) && (group === ALL || g.iso513Groups.includes(group));
-  const filtered = appId !== ALL || group !== ALL;
-
+export function SubstrateMap({ substrates }: { substrates: Substrate[] }) {
   const points = substrates
     .filter((s) => s.hardness != null && s.toughness != null)
-    .map((s) => ({ substrate: s, grades: (s.grades ?? []).filter(matches) }))
-    // With a filter on, only substrates that have matching grades are shown.
-    .filter((p) => !filtered || p.grades.length > 0);
+    .map((s) => ({ substrate: s, grades: s.grades ?? [] }));
   const unplaced = substrates.filter((s) => s.hardness == null || s.toughness == null);
 
   const xTicks = points.length ? paddedTicks(points.map((p) => p.substrate.toughness!)) : [];
@@ -81,44 +48,14 @@ export function SubstrateMap({ substrates, applications }: { substrates: Substra
   const sx = (v: number) => M.left + ((v - x0) / (x1 - x0)) * PLOT_W;
   const sy = (v: number) => M.top + PLOT_H - ((v - y0) / (y1 - y0)) * PLOT_H;
 
-  const appName = appId === ALL ? "" : (applications.find((a) => a.id === appId)?.name ?? "");
-  const title = [appName, group === ALL ? "" : `ISO ${group}`].filter(Boolean).join(" ") || "All grades";
-
   return (
     <div className="max-w-4xl space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Application</span>
-        <Chip active={appId === ALL} onClick={() => setAppId(ALL)}>
-          All
-        </Chip>
-        {[...applications]
-          .sort((a, b) => a.name.localeCompare(b.name))
-          .map((a) => (
-            <Chip key={a.id} active={appId === a.id} onClick={() => setAppId(a.id)}>
-              {a.name}
-            </Chip>
-          ))}
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Material</span>
-        <Chip active={group === ALL} onClick={() => setGroup(ALL)}>
-          All
-        </Chip>
-        {ISO513_GROUPS.map((g) => (
-          <Chip key={g.value} active={group === g.value} onClick={() => setGroup(g.value)} color={g.color}>
-            {g.label}
-          </Chip>
-        ))}
-      </div>
-
-      <h3 className="text-base font-semibold text-neutral-900 dark:text-neutral-100">{title}</h3>
-
       {points.length === 0 ? (
         <p className="rounded-lg border border-dashed border-neutral-300 p-6 text-center text-sm text-neutral-500 dark:border-neutral-700 dark:text-neutral-400">
-          {filtered ? "No substrates with matching grades." : "No substrates with both hardness and fracture toughness yet."}
+          No substrates with both hardness and fracture toughness yet.
         </p>
       ) : (
-        <svg viewBox={`0 0 ${W} ${H}`} className="w-full rounded-lg border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900" role="img" aria-label={`Substrate map: ${title}`}>
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full rounded-lg border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900" role="img" aria-label="Substrate map">
           {/* Grid and tick labels */}
           {xTicks.map((t) => (
             <g key={`x${t}`}>

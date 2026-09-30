@@ -1,6 +1,5 @@
 import { Button, Card } from "../../components/ui";
-import { useResource } from "../../lib/useResource";
-import type { Application, Substrate } from "../../lib/types";
+import type { Substrate } from "../../lib/types";
 import { GlossaryPage, type Entry, type GlossaryListContext, type GlossaryTextField } from "./GlossaryPage";
 import { SubstrateMap } from "./SubstrateMap";
 
@@ -11,7 +10,6 @@ const TEXT_FIELDS: GlossaryTextField[] = [
 
 function SubstratesList({ data, startEdit, remove }: GlossaryListContext) {
   const substrates = data as unknown as Substrate[];
-  const { data: applications } = useResource<Application>("/applications");
 
   return (
     <div className="space-y-6">
@@ -56,7 +54,7 @@ function SubstratesList({ data, startEdit, remove }: GlossaryListContext) {
 
       <div>
         <h2 className="mb-3 text-lg font-semibold text-neutral-900 dark:text-neutral-100">Substrate map</h2>
-        <SubstrateMap substrates={substrates} applications={applications} />
+        <SubstrateMap substrates={substrates} />
       </div>
     </div>
   );
