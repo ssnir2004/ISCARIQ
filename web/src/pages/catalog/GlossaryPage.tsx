@@ -42,7 +42,13 @@ export interface GlossarySelectField {
   read?: (entry: Entry) => string | null | undefined;
   // Shown under the field when it has no options to pick from.
   emptyHint?: ReactNode;
+  // Lets the user create a new option on the spot: adds a "+ New …" choice
+  // that shows this inline form. `done` receives the new option's value
+  // (already present in `options`) to select it, or null if cancelled.
+  create?: { label: string; render: (done: (value: string | null) => void) => ReactNode };
 }
+
+const CREATE_OPTION = "__create__";
 
 export type Entry = GlossaryEntry & Record<string, unknown>;
 
@@ -135,6 +141,8 @@ export function GlossaryPage({
   const [tags, setTags] = useState<Tags>(() => emptyTags(tagFields));
   const [texts, setTexts] = useState<Texts>(() => emptyTexts(textFields));
   const [selects, setSelects] = useState<Texts>(() => emptyTexts(selectFields));
+  // Select field whose inline "create new" form is open, if any.
+  const [creatingKey, setCreatingKey] = useState<string | null>(null);
 
   function suggestionsFor(field: GlossaryTextField): string[] {
     const used = data.map((e) => e[field.key]).filter((v): v is string => typeof v === "string" && v.trim() !== "");
@@ -162,6 +170,7 @@ export function GlossaryPage({
   }
 
   function cancelEdit() {
+    setCreatingKey(null);
     setForm(EMPTY_FORM);
     setTags(emptyTags(tagFields));
     setTexts(emptyTexts(textFields));
@@ -194,6 +203,7 @@ export function GlossaryPage({
       setTags(emptyTags(tagFields));
       setTexts(emptyTexts(textFields));
       setSelects(emptyTexts(selectFields));
+      setCreatingKey(null);
       setEditingId(null);
       setFileInputKey((k) => k + 1);
       reload();
@@ -253,15 +263,26 @@ export function GlossaryPage({
             {selectFields.map((field) => (
               <div key={field.key}>
                 <Label>{field.label}</Label>
-                <Select value={selects[field.key] ?? ""} onChange={(e) => setSelects({ ...selects, [field.key]: e.target.value })}>
+                <Select
+                  value={selects[field.key] ?? ""}
+                  onChange={(e) =>
+                    e.target.value === CREATE_OPTION ? setCreatingKey(field.key) : setSelects({ ...selects, [field.key]: e.target.value })
+                  }
+                >
                   <option value="">— None —</option>
                   {field.options.map((o) => (
                     <option key={o.value} value={o.value}>
                       {o.label}
                     </option>
                   ))}
+                  {field.create && <option value={CREATE_OPTION}>{field.create.label}</option>}
                 </Select>
-                {field.options.length === 0 && field.emptyHint && (
+                {creatingKey === field.key &&
+                  field.create?.render((value) => {
+                    setCreatingKey(null);
+                    if (value) setSelects((s) => ({ ...s, [field.key]: value }));
+                  })}
+                {field.options.length === 0 && field.emptyHint && creatingKey !== field.key && (
                   <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">{field.emptyHint}</p>
                 )}
               </div>
