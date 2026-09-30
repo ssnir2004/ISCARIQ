@@ -141,6 +141,7 @@ export type Shape = GlossaryEntry;
 export type Chipbreaker = GlossaryEntry;
 export type Application = GlossaryEntry;
 export interface Grade extends GlossaryEntry {
+  substrate?: string | null;
   iso513Groups: Iso513Group[];
   applications: Application[];
 }

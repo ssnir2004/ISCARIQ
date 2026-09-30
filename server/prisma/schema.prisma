@@ -409,6 +409,8 @@ model Grade {
   name         String        @unique
   description  String?
   image        String?
+  // Substrate material, e.g. "Carbide", "Cermet", "CBN" (free text).
+  substrate    String?
   // Workpiece material groups and applications this grade is intended for
   // (a grade can cover several of each).
   iso513Groups Iso513Group[]

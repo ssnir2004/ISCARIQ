@@ -236,6 +236,7 @@ export const chipbreakerRouter = glossaryRouter(prisma.chipbreaker);
 export const gradeRouter = glossaryRouter(
   prisma.grade,
   {
+    substrate: z.string().nullable().optional(),
     iso513Groups: z.array(z.enum(["P", "M", "K", "N", "S", "H"])).default([]),
     applicationIds: z.array(z.string().min(1)).default([]),
   },
