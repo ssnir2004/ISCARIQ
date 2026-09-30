@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
+import { useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import { useResource } from "../../lib/useResource";
 import { api, ApiError } from "../../lib/api";
 import type { GlossaryEntry } from "../../lib/types";
@@ -31,6 +31,15 @@ export interface GlossaryTextField {
 }
 
 export type Entry = GlossaryEntry & Record<string, unknown>;
+
+// Lets a screen replace the default entry list with its own view (e.g. the
+// Grades board) while reusing this page's form, edit and delete handling.
+export interface GlossaryListContext {
+  data: Entry[];
+  startEdit: (entry: Entry) => void;
+  remove: (id: string) => void;
+  reload: () => void;
+}
 type Tags = Record<string, string[]>;
 type Texts = Record<string, string>;
 
@@ -91,13 +100,16 @@ export function GlossaryPage({
   singular,
   tagFields = [],
   textFields = [],
+  renderList,
 }: {
   resource: string;
   title: string;
   singular: string;
   tagFields?: GlossaryTagField[];
   textFields?: GlossaryTextField[];
+  renderList?: (ctx: GlossaryListContext) => ReactNode;
 }) {
+  const formRef = useRef<HTMLDivElement>(null);
   const { data, reload } = useResource<Entry>(resource);
   const [form, setForm] = useState(EMPTY_FORM);
   const [tags, setTags] = useState<Tags>(() => emptyTags(tagFields));
@@ -124,6 +136,7 @@ export function GlossaryPage({
     setTexts(Object.fromEntries(textFields.map((f) => [f.key, (entry[f.key] as string | null | undefined) ?? ""])));
     setEditingId(entry.id);
     setError(null);
+    formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   function cancelEdit() {
@@ -174,118 +187,124 @@ export function GlossaryPage({
   }
 
   return (
-    <div className="max-w-3xl">
+    <div className={renderList ? "" : "max-w-3xl"}>
       <PageHeader title={title} />
-      <Card className="mb-6 p-4">
-        <form onSubmit={onSubmit} className="grid grid-cols-1 gap-4">
-          <div>
-            <Label>Name</Label>
-            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
-          </div>
-          <div>
-            <Label>Description</Label>
-            <Textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-          </div>
-          {textFields.map((field) => (
-            <div key={field.key}>
-              <Label>{field.label}</Label>
-              <Input
-                list={`${field.key}-suggestions`}
-                value={texts[field.key] ?? ""}
-                placeholder={field.placeholder}
-                onChange={(e) => setTexts({ ...texts, [field.key]: e.target.value })}
-              />
-              <datalist id={`${field.key}-suggestions`}>
-                {suggestionsFor(field).map((s) => (
-                  <option key={s} value={s} />
-                ))}
-              </datalist>
+      <div ref={formRef} className="max-w-3xl scroll-mt-4">
+        <Card className="mb-6 p-4">
+          <form onSubmit={onSubmit} className="grid grid-cols-1 gap-4">
+            <div>
+              <Label>Name</Label>
+              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
             </div>
-          ))}
-          {tagFields.map((field) => (
-            <div key={field.key}>
-              <Label>{field.label}</Label>
-              <TagToggles field={field} value={tags[field.key] ?? []} onChange={(v) => setTags({ ...tags, [field.key]: v })} />
-              {field.options.length === 0 && field.emptyHint && (
-                <p className="text-xs text-neutral-500 dark:text-neutral-400">{field.emptyHint}</p>
-              )}
+            <div>
+              <Label>Description</Label>
+              <Textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
             </div>
-          ))}
-          <div>
-            <Label>Image (optional)</Label>
-            <div className="flex items-center gap-3">
-              <Input key={fileInputKey} type="file" accept="image/*" onChange={onImageChange} />
-              {form.image && <img src={form.image} alt="Preview" className="h-14 w-14 rounded object-cover" />}
-            </div>
-          </div>
-          {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
-          <div className="flex gap-2">
-            <Button type="submit" disabled={submitting}>
-              {editingId ? "Save Changes" : `Add ${singular}`}
-            </Button>
-            {editingId && (
-              <Button type="button" variant="secondary" onClick={cancelEdit}>
-                Cancel
-              </Button>
-            )}
-          </div>
-        </form>
-      </Card>
-
-      <div className="space-y-2">
-        {data.map((entry) => (
-          <Card key={entry.id} className="flex items-center justify-between gap-3 p-3">
-            <div className="flex items-center gap-3">
-              {entry.image && <img src={entry.image} alt={entry.name} className="h-10 w-10 rounded object-cover" />}
-              <div className="text-sm">
-                <span className="font-medium text-neutral-900 dark:text-neutral-100">{entry.name}</span>
-                {entry.description && (
-                  <span className="ml-2 text-neutral-500 dark:text-neutral-400">— {entry.description}</span>
+            {textFields.map((field) => (
+              <div key={field.key}>
+                <Label>{field.label}</Label>
+                <Input
+                  list={`${field.key}-suggestions`}
+                  value={texts[field.key] ?? ""}
+                  placeholder={field.placeholder}
+                  onChange={(e) => setTexts({ ...texts, [field.key]: e.target.value })}
+                />
+                <datalist id={`${field.key}-suggestions`}>
+                  {suggestionsFor(field).map((s) => (
+                    <option key={s} value={s} />
+                  ))}
+                </datalist>
+              </div>
+            ))}
+            {tagFields.map((field) => (
+              <div key={field.key}>
+                <Label>{field.label}</Label>
+                <TagToggles field={field} value={tags[field.key] ?? []} onChange={(v) => setTags({ ...tags, [field.key]: v })} />
+                {field.options.length === 0 && field.emptyHint && (
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400">{field.emptyHint}</p>
                 )}
-                {textFields.map((field) => {
-                  const value = entry[field.key];
-                  if (typeof value !== "string" || value === "") return null;
-                  return (
-                    <div key={field.key} className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                      {field.label}: <span className="font-medium text-neutral-700 dark:text-neutral-300">{value}</span>
-                    </div>
-                  );
-                })}
-                {tagFields.map((field) => {
-                  const values = readTags(field, entry);
-                  if (values.length === 0) return null;
-                  return (
-                    <div key={field.key} className="mt-1 flex flex-wrap items-center gap-1">
-                      <span className="text-xs text-neutral-500 dark:text-neutral-400">{field.label}:</span>
-                      {field.options
-                        .filter((o) => values.includes(o.value))
-                        .map((o) => (
-                          <span
-                            key={o.value}
-                            className={`rounded-full px-2 py-0.5 text-xs ${
-                              o.color ? "font-semibold text-neutral-900" : "bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300"
-                            }`}
-                            style={o.color ? { backgroundColor: o.color } : undefined}
-                          >
-                            {o.short ?? o.label}
-                          </span>
-                        ))}
-                    </div>
-                  );
-                })}
+              </div>
+            ))}
+            <div>
+              <Label>Image (optional)</Label>
+              <div className="flex items-center gap-3">
+                <Input key={fileInputKey} type="file" accept="image/*" onChange={onImageChange} />
+                {form.image && <img src={form.image} alt="Preview" className="h-14 w-14 rounded object-cover" />}
               </div>
             </div>
-            <div className="flex shrink-0 gap-1">
-              <Button variant="ghost" onClick={() => startEdit(entry)}>
-                Edit
+            {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+            <div className="flex gap-2">
+              <Button type="submit" disabled={submitting}>
+                {editingId ? "Save Changes" : `Add ${singular}`}
               </Button>
-              <Button variant="ghost" onClick={() => remove(entry.id)}>
-                Delete
-              </Button>
+              {editingId && (
+                <Button type="button" variant="secondary" onClick={cancelEdit}>
+                  Cancel
+                </Button>
+              )}
             </div>
-          </Card>
-        ))}
+          </form>
+        </Card>
       </div>
+
+      {renderList ? (
+        renderList({ data, startEdit, remove, reload })
+      ) : (
+        <div className="space-y-2">
+          {data.map((entry) => (
+            <Card key={entry.id} className="flex items-center justify-between gap-3 p-3">
+              <div className="flex items-center gap-3">
+                {entry.image && <img src={entry.image} alt={entry.name} className="h-10 w-10 rounded object-cover" />}
+                <div className="text-sm">
+                  <span className="font-medium text-neutral-900 dark:text-neutral-100">{entry.name}</span>
+                  {entry.description && (
+                    <span className="ml-2 text-neutral-500 dark:text-neutral-400">— {entry.description}</span>
+                  )}
+                  {textFields.map((field) => {
+                    const value = entry[field.key];
+                    if (typeof value !== "string" || value === "") return null;
+                    return (
+                      <div key={field.key} className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                        {field.label}: <span className="font-medium text-neutral-700 dark:text-neutral-300">{value}</span>
+                      </div>
+                    );
+                  })}
+                  {tagFields.map((field) => {
+                    const values = readTags(field, entry);
+                    if (values.length === 0) return null;
+                    return (
+                      <div key={field.key} className="mt-1 flex flex-wrap items-center gap-1">
+                        <span className="text-xs text-neutral-500 dark:text-neutral-400">{field.label}:</span>
+                        {field.options
+                          .filter((o) => values.includes(o.value))
+                          .map((o) => (
+                            <span
+                              key={o.value}
+                              className={`rounded-full px-2 py-0.5 text-xs ${
+                                o.color ? "font-semibold text-neutral-900" : "bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300"
+                              }`}
+                              style={o.color ? { backgroundColor: o.color } : undefined}
+                            >
+                              {o.short ?? o.label}
+                            </span>
+                          ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="flex shrink-0 gap-1">
+                <Button variant="ghost" onClick={() => startEdit(entry)}>
+                  Edit
+                </Button>
+                <Button variant="ghost" onClick={() => remove(entry.id)}>
+                  Delete
+                </Button>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

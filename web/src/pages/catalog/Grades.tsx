@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { GlossaryPage, type GlossaryTagField, type GlossaryTextField } from "./GlossaryPage";
+import { GradesBoard } from "./GradesBoard";
 import { ISO513_GROUPS } from "../../lib/npaKnowledgeConstants";
 import { useResource } from "../../lib/useResource";
 import type { Application } from "../../lib/types";
@@ -40,5 +41,14 @@ export function Grades() {
     },
   ];
 
-  return <GlossaryPage resource="/grades" title="Grades" singular="grade" textFields={TEXT_FIELDS} tagFields={fields} />;
+  return (
+    <GlossaryPage
+      resource="/grades"
+      title="Grades"
+      singular="grade"
+      textFields={TEXT_FIELDS}
+      tagFields={fields}
+      renderList={(ctx) => <GradesBoard {...ctx} />}
+    />
+  );
 }
