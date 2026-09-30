@@ -47,6 +47,8 @@ export function GradesChart({
   group,
   groupLabel,
   grades,
+  caseCount,
+  onOpenCases,
 }: {
   scope: string;
   scopeName: string;
@@ -54,6 +56,9 @@ export function GradesChart({
   groupLabel: string;
   // Grades in this group, in board order (Harder first).
   grades: Grade[];
+  caseCount: (gradeId: string) => number;
+  // Called when a box is clicked without being moved or resized.
+  onOpenCases: (grade: Grade) => void;
 }) {
   const { data: savedBoxes, reload } = useResource<GradeChartBox>("/grade-chart");
   // Boxes changed in this session, by grade id, applied before the save returns.
@@ -110,7 +115,11 @@ export function GradesChart({
     setDrag(null);
     if (!d) return;
     const { box, start } = d;
-    if (box.x === start.x && box.y === start.y && box.w === start.w && box.h === start.h) return;
+    if (box.x === start.x && box.y === start.y && box.w === start.w && box.h === start.h) {
+      const grade = grades.find((g) => g.id === d.gradeId);
+      if (grade) onOpenCases(grade);
+      return;
+    }
     const key = localKey(d.gradeId);
     const previous = local[key];
     setLocal((l) => ({ ...l, [key]: box }));
@@ -195,9 +204,12 @@ export function GradesChart({
                       backgroundColor: `${color}cc`,
                       borderColor: color,
                     }}
-                    title={`${grade.name} — drag to move, drag the corner to resize`}
+                    title={`${grade.name} — click for cases, drag to move, drag the corner to resize`}
                   >
-                    <span className="text-sm font-bold leading-tight">{grade.name}</span>
+                    <span className="text-sm font-bold leading-tight">
+                      {grade.name}
+                      {caseCount(grade.id) > 0 && <span className="ml-1 text-[10px] font-medium">📷{caseCount(grade.id)}</span>}
+                    </span>
                     {grade.substrate && <span className="text-[10px] leading-tight opacity-75">{grade.substrate.name}</span>}
                     <div
                       data-resize-handle
