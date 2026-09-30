@@ -287,7 +287,10 @@ gradeCaseRouter.get("/", async (req, res) => {
 });
 
 gradeCaseRouter.get("/:id", async (req, res) => {
-  const item = await prisma.gradeCase.findUnique({ where: { id: req.params.id }, include: { application: { select: { id: true, name: true } } } });
+  const item = await prisma.gradeCase.findUnique({
+    where: { id: req.params.id },
+    include: { application: { select: { id: true, name: true } }, grade: { select: { id: true, name: true } } },
+  });
   if (!item) return res.status(404).json({ error: "Not found" });
   res.json(item);
 });

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import { api, ApiError } from "../../lib/api";
 import { ISO513_COLORS } from "../../lib/npaKnowledgeConstants";
 import type { GradeCase, Iso513Group } from "../../lib/types";
@@ -25,7 +26,6 @@ export function GradeCasesModal({
   onChanged: () => void;
 }) {
   const [cases, setCases] = useState<GradeCase[] | null>(null);
-  const [zoomed, setZoomed] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [title, setTitle] = useState("");
   const [notes, setNotes] = useState("");
@@ -145,7 +145,11 @@ export function GradeCasesModal({
             <div key={c.id} data-case={c.title} className="space-y-2 rounded-lg border border-neutral-200 p-3 dark:border-neutral-700">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">{c.title}</h3>
+                  <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">
+                    <Link to={`/cases/${c.id}`} target="_blank" className="hover:underline">
+                      {c.title}
+                    </Link>
+                  </h3>
                   <div className="mt-1 flex flex-wrap gap-1.5 text-xs">
                     <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
                       {c.application?.name ?? "All applications"}
@@ -159,19 +163,24 @@ export function GradeCasesModal({
                     <span className="text-neutral-400 dark:text-neutral-500">{new Date(c.createdAt).toLocaleDateString()}</span>
                   </div>
                 </div>
-                <Button variant="ghost" onClick={() => remove(c)}>
-                  Delete
-                </Button>
+                <div className="flex shrink-0 items-center gap-1">
+                  <Link
+                    to={`/cases/${c.id}`}
+                    target="_blank"
+                    className="rounded-lg px-3 py-1.5 text-sm text-blue-600 hover:bg-neutral-100 dark:text-blue-400 dark:hover:bg-neutral-800"
+                  >
+                    Full screen ↗
+                  </Link>
+                  <Button variant="ghost" onClick={() => remove(c)}>
+                    Delete
+                  </Button>
+                </div>
               </div>
               {c.notes && <p className="text-sm whitespace-pre-line text-neutral-600 dark:text-neutral-300">{c.notes}</p>}
               {c.image && (
-                <button type="button" onClick={() => setZoomed(zoomed === c.id ? null : c.id)} className="block w-full" title="Click to zoom">
-                  <img
-                    src={c.image}
-                    alt={c.title}
-                    className={`mx-auto rounded-lg border border-neutral-200 dark:border-neutral-700 ${zoomed === c.id ? "w-full" : "max-h-[55vh] object-contain"}`}
-                  />
-                </button>
+                <Link to={`/cases/${c.id}`} target="_blank" className="block" title="Open full screen in a new tab">
+                  <img src={c.image} alt={c.title} className="mx-auto max-h-[55vh] rounded-lg border border-neutral-200 object-contain dark:border-neutral-700" />
+                </Link>
               )}
             </div>
           ))

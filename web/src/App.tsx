@@ -8,6 +8,7 @@ import { RfqDetail } from "./pages/RfqDetail";
 import { ProjectDetail } from "./pages/ProjectDetail";
 import { Advisor } from "./pages/Advisor";
 import { ChangePassword } from "./pages/ChangePassword";
+import { CaseView } from "./pages/CaseView";
 import { Materials } from "./pages/catalog/Materials";
 import { ProblemTags } from "./pages/catalog/ProblemTags";
 import { Teams } from "./pages/catalog/Teams";
@@ -35,6 +36,15 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      {/* Full-screen pages outside the app layout (no sidebar) */}
+      <Route
+        path="/cases/:id"
+        element={
+          <RequireAuth>
+            <CaseView />
+          </RequireAuth>
+        }
+      />
       <Route
         element={
           <RequireAuth>
