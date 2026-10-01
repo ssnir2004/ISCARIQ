@@ -241,10 +241,27 @@ export const gradeRouter = glossaryRouter(
     substrateId: z.string().min(1).nullable().optional(),
     iso513Groups: z.array(z.enum(["P", "M", "K", "N", "S", "H"])).default([]),
     applicationIds: z.array(z.string().min(1)).default([]),
+    // { [applicationId]: groups } for applications where the grade covers
+    // only some of its iso513Groups.
+    applicationGroups: z.record(z.string(), z.array(iso513GroupSchema)).optional(),
   },
   {
-    include: { applications: { orderBy: { name: "asc" } }, substrate: true },
-    mapData: ({ applicationIds, substrateId, ...data }, mode) => {
+    include: { applications: { orderBy: { name: "asc" } }, substrate: true, applicationGroups: true },
+    mapData: ({ applicationIds, substrateId, applicationGroups, ...data }, mode) => {
+      if (applicationGroups !== undefined) {
+        // Keep only real exceptions: applications the grade has, groups it
+        // has, and lists that don't simply equal all of its groups.
+        const groups: string[] | undefined = data.iso513Groups;
+        const apps: string[] | undefined = applicationIds;
+        const rows = Object.entries(applicationGroups as Record<string, string[]>)
+          .filter(([appId]) => !apps || apps.includes(appId))
+          .map(([applicationId, list]) => ({
+            applicationId,
+            iso513Groups: [...new Set(groups ? list.filter((g) => groups.includes(g)) : list)],
+          }))
+          .filter((r) => !groups || r.iso513Groups.length !== groups.length);
+        data.applicationGroups = mode === "create" ? { create: rows } : { deleteMany: {}, create: rows };
+      }
       if (applicationIds !== undefined) {
         const ids = applicationIds.map((id: string) => ({ id }));
         data.applications = mode === "create" ? { connect: ids } : { set: ids };

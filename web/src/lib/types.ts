@@ -189,6 +189,8 @@ export interface Grade extends GlossaryEntry {
   substrate?: Substrate | null;
   iso513Groups: Iso513Group[];
   applications: Application[];
+  // Applications where the grade covers only some of its iso513Groups.
+  applicationGroups?: { applicationId: string; iso513Groups: Iso513Group[] }[];
 }
 export type Coating = GlossaryEntry;
 
