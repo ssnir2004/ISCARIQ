@@ -2,7 +2,7 @@ import { useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } fr
 import { useResource } from "../../lib/useResource";
 import { api, ApiError } from "../../lib/api";
 import type { GlossaryEntry } from "../../lib/types";
-import { Button, Card, Input, Label, PageHeader, Select, Textarea } from "../../components/ui";
+import { Button, Card, Input, Label, Modal, PageHeader, Select, Textarea } from "../../components/ui";
 
 const EMPTY_FORM = { name: "", description: "", image: "" as string | null };
 
@@ -126,6 +126,7 @@ export function GlossaryPage({
   textFields = [],
   selectFields = [],
   renderList,
+  showDetails = false,
 }: {
   resource: string;
   title: string;
@@ -134,6 +135,9 @@ export function GlossaryPage({
   textFields?: GlossaryTextField[];
   selectFields?: GlossarySelectField[];
   renderList?: (ctx: GlossaryListContext) => ReactNode;
+  // Clicking an entry in the default list opens a window with its full
+  // details and image.
+  showDetails?: boolean;
 }) {
   const formRef = useRef<HTMLDivElement>(null);
   const { data, reload } = useResource<Entry>(resource);
@@ -149,6 +153,8 @@ export function GlossaryPage({
     return [...new Set([...(field.suggestions ?? []), ...used])].sort((a, b) => a.localeCompare(b));
   }
   const [editingId, setEditingId] = useState<string | null>(null);
+  // Entry shown in the details window (showDetails), if any.
+  const [viewing, setViewing] = useState<Entry | null>(null);
   // Another entry with the name being typed (names are unique), if any.
   const typedName = form.name.trim().toLowerCase();
   const duplicate = typedName ? data.find((d) => d.id !== editingId && d.name.trim().toLowerCase() === typedName) : undefined;
@@ -342,7 +348,12 @@ export function GlossaryPage({
       ) : (
         <div className="space-y-2">
           {data.map((entry) => (
-            <Card key={entry.id} className="flex items-center justify-between gap-3 p-3">
+            <Card
+              key={entry.id}
+              className={`flex items-center justify-between gap-3 p-3 ${showDetails ? "cursor-pointer hover:border-blue-300 dark:hover:border-blue-800" : ""}`}
+              onClick={showDetails ? (e) => !(e.target as HTMLElement).closest("button") && setViewing(entry) : undefined}
+              data-entry={entry.name}
+            >
               <div className="flex items-center gap-3">
                 {entry.image && <img src={entry.image} alt={entry.name} className="h-10 w-10 rounded object-cover" />}
                 <div className="text-sm">
@@ -403,6 +414,48 @@ export function GlossaryPage({
             </Card>
           ))}
         </div>
+      )}
+
+      {viewing && (
+        <Modal title={viewing.name} onClose={() => setViewing(null)} wide={!!viewing.image}>
+          <div className="space-y-4" data-details={viewing.name}>
+            {viewing.description ? (
+              <p className="text-sm whitespace-pre-line text-neutral-700 dark:text-neutral-300">{viewing.description}</p>
+            ) : (
+              <p className="text-sm text-neutral-400 italic dark:text-neutral-500">No description.</p>
+            )}
+            {textFields.map((field) => {
+              const value = viewing[field.key];
+              if ((typeof value !== "string" && typeof value !== "number") || value === "") return null;
+              return (
+                <p key={field.key} className="text-sm text-neutral-600 dark:text-neutral-300">
+                  <span className="font-medium">{field.label}:</span> {value}
+                </p>
+              );
+            })}
+            {viewing.image ? (
+              <img
+                src={viewing.image}
+                alt={viewing.name}
+                className="mx-auto max-h-[70vh] rounded-lg border border-neutral-200 object-contain dark:border-neutral-700"
+              />
+            ) : (
+              <p className="text-sm text-neutral-400 italic dark:text-neutral-500">No image attached.</p>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  startEdit(viewing);
+                  setViewing(null);
+                }}
+              >
+                Edit
+              </Button>
+              <Button onClick={() => setViewing(null)}>Close</Button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );
