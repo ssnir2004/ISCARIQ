@@ -7,6 +7,8 @@ import { Button, Card } from "../../components/ui";
 import type { Entry, GlossaryListContext } from "./GlossaryPage";
 import { GradesChart } from "./GradesChart";
 import { GradeCasesModal } from "./GradeCasesModal";
+import { GradeSearch } from "./GradeSearch";
+import { GradeCardModal } from "./GradeCardModal";
 import { ALL_SCOPE, caseMatches } from "../../lib/gradeCases";
 
 // Grades laid out in one column per ISO 513 group, each ranked by hand from
@@ -104,6 +106,8 @@ export function GradesBoard({ data, startEdit, remove }: GlossaryListContext) {
   // Cases (trials) per grade; the list has no images, just enough for counts.
   const { data: cases, reload: reloadCases } = useResource<GradeCase>("/grade-cases");
   const [casesFor, setCasesFor] = useState<{ grade: Grade; group: Iso513Group } | null>(null);
+  // Grade whose full card is open (picked from the search box).
+  const [cardFor, setCardFor] = useState<Grade | null>(null);
   const caseCount = (gradeId: string, group: Iso513Group) =>
     cases.filter((c) => c.gradeId === gradeId && caseMatches(c, scope, group)).length;
 
@@ -194,20 +198,23 @@ export function GradesBoard({ data, startEdit, remove }: GlossaryListContext) {
             </button>
           ))}
         </div>
-        <div className="mb-1.5 inline-flex rounded-lg border border-neutral-200 p-0.5 text-sm dark:border-neutral-700">
-          {(["table", "chart"] as View[]).map((v) => (
-            <button
-              key={v}
-              type="button"
-              aria-pressed={view === v}
-              onClick={() => selectView(v)}
-              className={`rounded-md px-3 py-1 capitalize ${
-                view === v ? "bg-blue-600 text-white" : "text-neutral-600 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white"
-              }`}
-            >
-              {v}
-            </button>
-          ))}
+        <div className="flex items-end gap-2">
+          <GradeSearch grades={grades} onPick={setCardFor} />
+          <div className="mb-1.5 inline-flex rounded-lg border border-neutral-200 p-0.5 text-sm dark:border-neutral-700">
+            {(["table", "chart"] as View[]).map((v) => (
+              <button
+                key={v}
+                type="button"
+                aria-pressed={view === v}
+                onClick={() => selectView(v)}
+                className={`rounded-md px-3 py-1 capitalize ${
+                  view === v ? "bg-blue-600 text-white" : "text-neutral-600 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white"
+                }`}
+              >
+                {v}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
@@ -357,6 +364,17 @@ export function GradesBoard({ data, startEdit, remove }: GlossaryListContext) {
             </div>
           </div>
         </div>
+      )}
+
+      {cardFor && (
+        <GradeCardModal
+          grade={grades.find((g) => g.id === cardFor.id) ?? cardFor}
+          onClose={() => setCardFor(null)}
+          onEdit={() => {
+            startEdit(cardFor as unknown as Entry);
+            setCardFor(null);
+          }}
+        />
       )}
 
       {casesFor && (
