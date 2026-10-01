@@ -186,7 +186,7 @@ export function GlossaryPage({
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     if (duplicate) {
-      setError(`A ${singular} named "${duplicate.name}" already exists. Edit it instead of adding it again.`);
+      setError(`A ${singular} named "${duplicate.name}" already exists. Update it instead of adding it again.`);
       return;
     }
     setError(null);
@@ -206,16 +206,76 @@ export function GlossaryPage({
       } else {
         await api.post(resource, body);
       }
-      setForm(EMPTY_FORM);
-      setTags(emptyTags(tagFields));
-      setTexts(emptyTexts(textFields));
-      setSelects(emptyTexts(selectFields));
-      setCreatingKey(null);
-      setEditingId(null);
-      setFileInputKey((k) => k + 1);
+      resetForm();
       reload();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : `Failed to save ${singular}`);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function resetForm() {
+    setForm(EMPTY_FORM);
+    setTags(emptyTags(tagFields));
+    setTexts(emptyTexts(textFields));
+    setSelects(emptyTexts(selectFields));
+    setCreatingKey(null);
+    setEditingId(null);
+    setFileInputKey((k) => k + 1);
+  }
+
+  // Applies what was entered for a duplicate name onto the existing entry:
+  // chosen tags are added to its own, and filled-in fields replace its
+  // values; anything left blank keeps the existing value.
+  async function updateExisting(existing: Entry) {
+    const body: Record<string, unknown> = {};
+    const changes: string[] = [];
+    const description = form.description.trim();
+    if (description && description !== (existing.description ?? "")) {
+      body.description = description;
+      changes.push(`Description: ${description}`);
+    }
+    if (form.image && form.image !== existing.image) {
+      body.image = form.image;
+      changes.push("Image: replaced");
+    }
+    for (const f of textFields) {
+      const v = (texts[f.key] ?? "").trim();
+      if (v && v !== String(existing[f.key] ?? "")) {
+        body[f.key] = f.type === "number" ? Number(v) : v;
+        changes.push(`${f.label}: ${v}`);
+      }
+    }
+    for (const f of selectFields) {
+      const v = selects[f.key] ?? "";
+      if (v && v !== readSelect(f, existing)) {
+        body[f.key] = v;
+        changes.push(`${f.label}: ${f.options.find((o) => o.value === v)?.label ?? v}`);
+      }
+    }
+    for (const f of tagFields) {
+      const current = readTags(f, existing);
+      const added = (tags[f.key] ?? []).filter((v) => !current.includes(v));
+      if (added.length) {
+        body[f.key] = [...current, ...added];
+        changes.push(`${f.label}: + ${added.map((v) => f.options.find((o) => o.value === v)?.label ?? v).join(", ")}`);
+      }
+    }
+    if (changes.length === 0) {
+      setError(`"${existing.name}" already has everything entered here — nothing to update.`);
+      return;
+    }
+    const summary = [`Update the existing ${singular} "${existing.name}"?`, "", ...changes, "", "Its other details are kept."].join("\n");
+    if (!confirm(summary)) return;
+    setError(null);
+    setSubmitting(true);
+    try {
+      await api.patch(`${resource}/${existing.id}`, body);
+      resetForm();
+      reload();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : `Failed to update ${singular}`);
     } finally {
       setSubmitting(false);
     }
@@ -245,8 +305,17 @@ export function GlossaryPage({
               {duplicate && (
                 <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-amber-700 dark:text-amber-400">
                   A {singular} named "{duplicate.name}" already exists.
+                  <button
+                    type="button"
+                    onClick={() => updateExisting(duplicate)}
+                    disabled={submitting}
+                    className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+                  >
+                    Update {duplicate.name} with these details
+                  </button>
+                  <span className="text-neutral-400">·</span>
                   <button type="button" onClick={() => startEdit(duplicate)} className="font-medium text-blue-600 hover:underline dark:text-blue-400">
-                    Edit {duplicate.name} instead
+                    Open {duplicate.name} for editing
                   </button>
                 </p>
               )}
