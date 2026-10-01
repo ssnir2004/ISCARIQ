@@ -4,6 +4,7 @@ import { api } from "../../lib/api";
 import { ISO513_COLORS, ISO513_GROUPS } from "../../lib/npaKnowledgeConstants";
 import type { Grade, GradeCase } from "../../lib/types";
 import { Button, Modal } from "../../components/ui";
+import { groupsIn } from "../../lib/gradeGroups";
 
 // A grade's full card (opened from the Grades search): everything known
 // about it in one place, including its cases across all applications.
@@ -60,13 +61,24 @@ export function GradeCardModal({ grade, onClose, onEdit }: { grade: Grade; onClo
 
           <dt className="text-neutral-500 dark:text-neutral-400">Applications</dt>
           <dd className="flex flex-wrap gap-1">
-            {grade.applications.length === 0
-              ? "—"
-              : grade.applications.map((a) => (
-                  <span key={a.id} className="rounded-full bg-neutral-100 px-2 py-0.5 text-xs text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
-                    {a.name}
-                  </span>
+            {grade.applications.length === 0 ? (
+              "—"
+            ) : (
+              <ul className="space-y-1">
+                {grade.applications.map((a) => (
+                  <li key={a.id} className="flex flex-wrap items-center gap-1" data-app-materials={a.name}>
+                    <span className="mr-1 rounded-full bg-neutral-100 px-2 py-0.5 text-xs text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
+                      {a.name}
+                    </span>
+                    {groupsIn(grade, a.id).map((g) => (
+                      <span key={g} className="rounded px-1.5 text-xs font-semibold text-neutral-900" style={{ backgroundColor: ISO513_COLORS[g] }}>
+                        {g}
+                      </span>
+                    ))}
+                  </li>
                 ))}
+              </ul>
+            )}
           </dd>
 
           <dt className="text-neutral-500 dark:text-neutral-400">Cases</dt>

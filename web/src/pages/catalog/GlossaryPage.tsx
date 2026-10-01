@@ -52,6 +52,14 @@ const CREATE_OPTION = "__create__";
 
 export type Entry = GlossaryEntry & Record<string, unknown>;
 
+// An extra, screen-specific part of the form (e.g. the Grades per-application
+// material matrix). Its values are merged into the saved body.
+export interface GlossaryExtraSection {
+  // Values loaded from an entry when editing it.
+  read: (entry: Entry) => Record<string, unknown>;
+  render: (ctx: { tags: Record<string, string[]>; values: Record<string, unknown>; setValues: (v: Record<string, unknown>) => void }) => ReactNode;
+}
+
 // Lets a screen replace the default entry list with its own view (e.g. the
 // Grades board) while reusing this page's form, edit and delete handling.
 export interface GlossaryListContext {
@@ -127,6 +135,7 @@ export function GlossaryPage({
   selectFields = [],
   renderList,
   showDetails = false,
+  extraSection,
 }: {
   resource: string;
   title: string;
@@ -138,6 +147,7 @@ export function GlossaryPage({
   // Clicking an entry in the default list opens a window with its full
   // details and image.
   showDetails?: boolean;
+  extraSection?: GlossaryExtraSection;
 }) {
   const formRef = useRef<HTMLDivElement>(null);
   const { data, reload } = useResource<Entry>(resource);
@@ -147,6 +157,7 @@ export function GlossaryPage({
   const [selects, setSelects] = useState<Texts>(() => emptyTexts(selectFields));
   // Select field whose inline "create new" form is open, if any.
   const [creatingKey, setCreatingKey] = useState<string | null>(null);
+  const [extraValues, setExtraValues] = useState<Record<string, unknown>>({});
 
   function suggestionsFor(field: GlossaryTextField): string[] {
     const used = data.map((e) => e[field.key]).filter((v): v is string => typeof v === "string" && v.trim() !== "");
@@ -173,6 +184,7 @@ export function GlossaryPage({
     setTags(Object.fromEntries(tagFields.map((f) => [f.key, readTags(f, entry)])));
     setTexts(Object.fromEntries(textFields.map((f) => [f.key, String((entry[f.key] as string | number | null | undefined) ?? "")])));
     setSelects(Object.fromEntries(selectFields.map((f) => [f.key, readSelect(f, entry)])));
+    setExtraValues(extraSection ? extraSection.read(entry) : {});
     setEditingId(entry.id);
     setError(null);
     formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -184,6 +196,7 @@ export function GlossaryPage({
     setTags(emptyTags(tagFields));
     setTexts(emptyTexts(textFields));
     setSelects(emptyTexts(selectFields));
+    setExtraValues({});
     setEditingId(null);
     setFileInputKey((k) => k + 1);
     setError(null);
@@ -206,7 +219,7 @@ export function GlossaryPage({
         })
       );
       const selectValues = Object.fromEntries(Object.entries(selects).map(([k, v]) => [k, v || null]));
-      const body = { ...form, ...textValues, ...selectValues, ...tags };
+      const body = { ...form, ...textValues, ...selectValues, ...tags, ...extraValues };
       if (editingId) {
         await api.patch(`${resource}/${editingId}`, body);
       } else {
@@ -226,6 +239,7 @@ export function GlossaryPage({
     setTags(emptyTags(tagFields));
     setTexts(emptyTexts(textFields));
     setSelects(emptyTexts(selectFields));
+    setExtraValues({});
     setCreatingKey(null);
     setEditingId(null);
     setFileInputKey((k) => k + 1);
@@ -321,6 +335,7 @@ export function GlossaryPage({
                 )}
               </div>
             ))}
+            {extraSection?.render({ tags, values: extraValues, setValues: setExtraValues })}
             <div>
               <Label>Image (optional)</Label>
               <div className="flex items-center gap-3">

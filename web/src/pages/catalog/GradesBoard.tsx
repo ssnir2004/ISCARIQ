@@ -10,6 +10,7 @@ import { GradeCasesModal } from "./GradeCasesModal";
 import { GradeSearch } from "./GradeSearch";
 import { GradeCardModal } from "./GradeCardModal";
 import { ALL_SCOPE, caseMatches } from "../../lib/gradeCases";
+import { groupsIn } from "../../lib/gradeGroups";
 
 // Grades laid out in one column per ISO 513 group, each ranked by hand from
 // Harder (top) to Tougher (bottom) by dragging. There is one board for all
@@ -53,8 +54,8 @@ const orderKey = (scope: string, group: Iso513Group) => `${scope}:${group}`;
 // clicks (e.g. on Edit) still work.
 const DRAG_THRESHOLD = 4;
 
-function orderColumn(group: Iso513Group, grades: Grade[], savedIds: string[] | undefined): Grade[] {
-  const inGroup = grades.filter((g) => g.iso513Groups.includes(group));
+function orderColumn(group: Iso513Group, grades: Grade[], savedIds: string[] | undefined, scope: string): Grade[] {
+  const inGroup = grades.filter((g) => groupsIn(g, scope).includes(group));
   const byId = new Map(inGroup.map((g) => [g.id, g]));
   const ranked = (savedIds ?? []).map((id) => byId.get(id)).filter((g): g is Grade => g !== undefined);
   const rankedIds = new Set(ranked.map((g) => g.id));
@@ -101,7 +102,7 @@ export function GradesBoard({ data, startEdit, remove }: GlossaryListContext) {
 
   const inScope = (s: string) => (s === ALL ? grades : grades.filter((g) => g.applications.some((a) => a.id === s)));
   const boardGrades = inScope(scope);
-  const unassigned = boardGrades.filter((g) => g.iso513Groups.length === 0);
+  const unassigned = boardGrades.filter((g) => groupsIn(g, scope).length === 0);
 
   // Cases (trials) per grade; the list has no images, just enough for counts.
   const { data: cases, reload: reloadCases } = useResource<GradeCase>("/grade-cases");
@@ -233,7 +234,7 @@ export function GradesBoard({ data, startEdit, remove }: GlossaryListContext) {
                 style={chartGroup === g.value ? { backgroundColor: g.color, borderColor: g.color } : { borderColor: g.color }}
               >
                 {g.label}
-                <span className="ml-1 opacity-60">{boardGrades.filter((x) => x.iso513Groups.includes(g.value)).length}</span>
+                <span className="ml-1 opacity-60">{boardGrades.filter((x) => groupsIn(x, scope).includes(g.value)).length}</span>
               </button>
             ))}
           </div>
@@ -243,7 +244,7 @@ export function GradesBoard({ data, startEdit, remove }: GlossaryListContext) {
             scopeName={scopeName}
             group={chartGroup}
             groupLabel={ISO513_GROUPS.find((g) => g.value === chartGroup)?.label ?? chartGroup}
-            grades={orderColumn(chartGroup, boardGrades, savedFor(chartGroup))}
+            grades={orderColumn(chartGroup, boardGrades, savedFor(chartGroup), scope)}
             caseCount={(gradeId) => caseCount(gradeId, chartGroup)}
             onOpenCases={(grade) => setCasesFor({ grade, group: chartGroup })}
           />
@@ -262,7 +263,7 @@ export function GradesBoard({ data, startEdit, remove }: GlossaryListContext) {
           <div className="flex-1 overflow-x-auto">
             <div className="grid min-w-[720px] grid-cols-6 gap-2">
               {ISO513_GROUPS.map(({ value: group, label }) => {
-                const column = orderColumn(group, boardGrades, savedFor(group));
+                const column = orderColumn(group, boardGrades, savedFor(group), scope);
                 const dropIndex = dragging?.active && dragging.group === group ? dragging.index : null;
                 return (
                   <div key={group} className="flex flex-col" data-column={group}>

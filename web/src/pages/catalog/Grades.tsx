@@ -1,12 +1,82 @@
 import { useState, type KeyboardEvent } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError } from "../../lib/api";
-import { Button, Input } from "../../components/ui";
-import { GlossaryPage, type GlossarySelectField, type GlossaryTagField } from "./GlossaryPage";
+import { Button, Input, Label } from "../../components/ui";
+import { GlossaryPage, type GlossaryExtraSection, type GlossarySelectField, type GlossaryTagField } from "./GlossaryPage";
 import { GradesBoard } from "./GradesBoard";
-import { ISO513_GROUPS } from "../../lib/npaKnowledgeConstants";
+import { ISO513_COLORS, ISO513_GROUPS } from "../../lib/npaKnowledgeConstants";
 import { useResource } from "../../lib/useResource";
-import type { Application, Substrate } from "../../lib/types";
+import type { Application, Grade, Iso513Group, Substrate } from "../../lib/types";
+
+type AppGroups = Record<string, Iso513Group[]>;
+
+// Rows = the grade's selected applications, columns = its selected ISO 513
+// groups. Unticking a cell (e.g. IC830 · Milling · S) makes the grade skip
+// that group in that application only. Only rows that differ from "all
+// groups" are kept in `value`.
+function ApplicationGroupsMatrix({
+  applications,
+  groups,
+  value,
+  onChange,
+}: {
+  applications: Application[];
+  groups: Iso513Group[];
+  value: AppGroups;
+  onChange: (v: AppGroups) => void;
+}) {
+  if (applications.length === 0 || groups.length === 0) return null;
+  const orderedGroups = ISO513_GROUPS.filter((g) => groups.includes(g.value)).map((g) => g.value);
+  const checked = (appId: string, g: Iso513Group) => (value[appId] ? value[appId].includes(g) : true);
+
+  function toggle(appId: string, g: Iso513Group) {
+    const current = orderedGroups.filter((x) => checked(appId, x));
+    const next = current.includes(g) ? current.filter((x) => x !== g) : [...current, g];
+    const copy = { ...value };
+    if (next.length === orderedGroups.length) delete copy[appId];
+    else copy[appId] = next;
+    onChange(copy);
+  }
+
+  return (
+    <div>
+      <Label>Materials per application</Label>
+      <p className="mb-1.5 text-xs text-neutral-500 dark:text-neutral-400">Untick a material the grade isn't used for in a specific application.</p>
+      <table className="text-sm" data-app-groups-matrix>
+        <thead>
+          <tr>
+            <th />
+            {orderedGroups.map((g) => (
+              <th key={g} className="px-1 pb-1">
+                <span className="inline-block w-7 rounded text-center text-xs font-semibold text-neutral-900" style={{ backgroundColor: ISO513_COLORS[g] }}>
+                  {g}
+                </span>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {applications.map((a) => (
+            <tr key={a.id}>
+              <td className="pr-3 text-neutral-700 dark:text-neutral-300">{a.name}</td>
+              {orderedGroups.map((g) => (
+                <td key={g} className="px-1 text-center">
+                  <input
+                    type="checkbox"
+                    aria-label={`${a.name} ${g}`}
+                    checked={checked(a.id, g)}
+                    onChange={() => toggle(a.id, g)}
+                    className="h-4 w-4 accent-blue-600"
+                  />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
 // Inline "new substrate" form shown inside the grade form. It is not a
 // <form> (it sits inside the grade's form), so Enter is handled by hand.
@@ -128,6 +198,22 @@ export function Grades() {
     },
   ];
 
+  const appGroupsSection: GlossaryExtraSection = {
+    read: (entry) => ({
+      applicationGroups: Object.fromEntries(
+        ((entry.applicationGroups as Grade["applicationGroups"]) ?? []).map((r) => [r.applicationId, r.iso513Groups])
+      ),
+    }),
+    render: ({ tags, values, setValues }) => (
+      <ApplicationGroupsMatrix
+        applications={applications.filter((a) => (tags.applicationIds ?? []).includes(a.id))}
+        groups={(tags.iso513Groups ?? []) as Iso513Group[]}
+        value={(values.applicationGroups as AppGroups) ?? {}}
+        onChange={(v) => setValues({ ...values, applicationGroups: v })}
+      />
+    ),
+  };
+
   return (
     <GlossaryPage
       resource="/grades"
@@ -135,6 +221,7 @@ export function Grades() {
       singular="grade"
       selectFields={selectFields}
       tagFields={fields}
+      extraSection={appGroupsSection}
       renderList={(ctx) => <GradesBoard {...ctx} />}
     />
   );

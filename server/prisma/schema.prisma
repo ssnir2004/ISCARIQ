@@ -403,6 +403,7 @@ model Application {
   image       String?
   grades      Grade[]
   gradeCases  GradeCase[]
+  gradeGroups GradeApplicationGroups[]
 }
 
 // Carbide substrate a grade is built on, managed on the Substrates screen.
@@ -430,6 +431,22 @@ model Grade {
   applications Application[]
   chartBoxes   GradeChartBox[]
   cases        GradeCase[]
+  // Per-application exceptions to iso513Groups (e.g. S for Turning but not
+  // for Milling). Without a row, a grade covers all its groups in every one
+  // of its applications.
+  applicationGroups GradeApplicationGroups[]
+}
+
+// The ISO 513 groups a grade is used for in one specific application, when
+// that differs from the grade's full iso513Groups.
+model GradeApplicationGroups {
+  grade         Grade         @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+  gradeId       String
+  application   Application   @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  applicationId String
+  iso513Groups  Iso513Group[]
+
+  @@id([gradeId, applicationId])
 }
 
 // A trial / case study for a grade, usually a slide saved as an image (e.g.
