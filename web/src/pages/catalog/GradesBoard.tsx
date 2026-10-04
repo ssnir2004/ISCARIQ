@@ -244,16 +244,39 @@ export function GradesBoard({ data, startEdit, remove, family }: GlossaryListCon
               </button>
             ))}
           </div>
-          <GradesChart
-            key={`${storeScope(scope)}:${chartGroup}`}
-            scope={storeScope(scope)}
-            scopeName={scopeName}
-            group={chartGroup}
-            groupLabel={ISO513_GROUPS.find((g) => g.value === chartGroup)?.label ?? chartGroup}
-            grades={orderColumn(chartGroup, boardGrades, savedFor(chartGroup), scope)}
-            caseCount={(gradeId) => caseCount(gradeId, chartGroup)}
-            onOpenCases={(grade) => setCasesFor({ grade, group: chartGroup })}
-          />
+          {(() => {
+            const chartGrades = orderColumn(chartGroup, boardGrades, savedFor(chartGroup), scope);
+            const chartProps = {
+              scopeName,
+              group: chartGroup,
+              groupLabel: ISO513_GROUPS.find((g) => g.value === chartGroup)?.label ?? chartGroup,
+              caseCount: (gradeId: string) => caseCount(gradeId, chartGroup),
+              onOpenCases: (grade: Grade) => setCasesFor({ grade, group: chartGroup }),
+            };
+            // CBN: uncoated and coated grades get separate charts side by side,
+            // each with its own saved layout ("~coated" scope).
+            if (family === "CBN") {
+              return (
+                <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+                  <GradesChart
+                    key={`${storeScope(scope)}:${chartGroup}`}
+                    {...chartProps}
+                    scope={storeScope(scope)}
+                    variant="Uncoated"
+                    grades={chartGrades.filter((g) => !g.coated)}
+                  />
+                  <GradesChart
+                    key={`${storeScope(scope)}~coated:${chartGroup}`}
+                    {...chartProps}
+                    scope={`${storeScope(scope)}~coated`}
+                    variant="Coated"
+                    grades={chartGrades.filter((g) => g.coated)}
+                  />
+                </div>
+              );
+            }
+            return <GradesChart key={`${storeScope(scope)}:${chartGroup}`} {...chartProps} scope={storeScope(scope)} grades={chartGrades} />;
+          })()}
         </div>
       ) : (
         <div className="flex gap-3">
@@ -349,6 +372,11 @@ export function GradesBoard({ data, startEdit, remove, family }: GlossaryListCon
                                 </div>
                               )}
                               {grade.substrate && <div className="mt-0.5 text-neutral-500 dark:text-neutral-400">{grade.substrate.name}</div>}
+                              {grade.coated && (
+                                <span className="mt-1 inline-block rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-medium text-violet-800 dark:bg-violet-900/40 dark:text-violet-300">
+                                  Coated
+                                </span>
+                              )}
                               {/* Other applications only: the current tab's application is implied. */}
                               {grade.applications.some((a) => a.id !== scope) && (
                                 <div className="mt-1 flex flex-wrap gap-1">

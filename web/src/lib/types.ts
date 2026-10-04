@@ -194,6 +194,8 @@ export type GradeFamily = "CARBIDE" | "CBN" | "CERAMIC" | "PCD";
 
 export interface Grade extends GlossaryEntry {
   family: GradeFamily;
+  // CBN only: coated grades get their own chart next to the uncoated one.
+  coated: boolean;
   substrate?: Substrate | null;
   iso513Groups: Iso513Group[];
   applications: Application[];

@@ -430,6 +430,8 @@ model Grade {
   id           String        @id @default(cuid())
   name         String        @unique
   family       GradeFamily   @default(CARBIDE)
+  // CBN grades can be coated; they get their own chart next to the uncoated one.
+  coated       Boolean       @default(false)
   description  String?
   image        String?
   substrate    Substrate?    @relation(fields: [substrateId], references: [id])

@@ -53,6 +53,13 @@ export function GradeCardModal({ grade, onClose, onEdit }: { grade: Grade; onClo
             </>
           )}
 
+          {grade.family === "CBN" && (
+            <>
+              <dt className="text-neutral-500 dark:text-neutral-400">Coated</dt>
+              <dd className="text-neutral-900 dark:text-neutral-100">{grade.coated ? "Yes" : "No"}</dd>
+            </>
+          )}
+
           <dt className="text-neutral-500 dark:text-neutral-400">Materials</dt>
           <dd className="flex flex-wrap gap-1">
             {grade.iso513Groups.length === 0

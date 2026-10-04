@@ -68,9 +68,12 @@ export function GradesChart({
   grades,
   caseCount,
   onOpenCases,
+  variant,
 }: {
   scope: string;
   scopeName: string;
+  // Shown after the title when a board has several charts (e.g. "Coated").
+  variant?: string;
   group: Iso513Group;
   groupLabel: string;
   // Grades in this group, in board order (Harder first).
@@ -328,6 +331,7 @@ export function GradesChart({
       <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
         <h3 className="text-base font-semibold text-neutral-900 dark:text-neutral-100">
           {scopeName} ISO {group}
+          {variant && <span className="ml-1.5 rounded bg-neutral-200 px-1.5 py-0.5 text-xs font-medium dark:bg-neutral-800">{variant}</span>}
           <span className="ml-2 text-xs font-normal text-neutral-500 dark:text-neutral-400">{groupLabel}</span>
         </h3>
         <div className="flex flex-wrap items-center gap-2">

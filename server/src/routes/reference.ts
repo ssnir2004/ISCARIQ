@@ -20,7 +20,8 @@ const FAMILY_GROUPS: Record<GradeFamily, string[]> = {
 // prefixed with "<FAMILY>:" for the non-carbide grade screens so each family
 // keeps its own layout, e.g. "CBN:app-milling".
 async function validScope(scope: string) {
-  const bare = scope.replace(/^(CBN|CERAMIC|PCD):/, "");
+  // A "~coated" suffix marks the coated-grades chart of a board (CBN).
+  const bare = scope.replace(/^(CBN|CERAMIC|PCD):/, "").replace(/~coated$/, "");
   return bare === "all" || (await prisma.application.findUnique({ where: { id: bare } })) !== null;
 }
 
@@ -278,6 +279,7 @@ const gradeCrudRouter = glossaryRouter(
   prisma.grade,
   {
     family: gradeFamilySchema.optional(),
+    coated: z.boolean().optional(),
     substrateId: z.string().min(1).nullable().optional(),
     iso513Groups: z.array(z.enum(["P", "M", "K", "N", "S", "H"])).default([]),
     applicationIds: z.array(z.string().min(1)).default([]),

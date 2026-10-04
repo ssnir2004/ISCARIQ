@@ -228,6 +228,7 @@ export function GradesScreen({ family, title }: { family: GradeFamily; title: st
       title={title}
       singular="grade"
       selectFields={family === "CARBIDE" ? selectFields : []}
+      checkboxFields={family === "CBN" ? [{ key: "coated", label: "Coated" }] : []}
       tagFields={fields}
       extraSection={appGroupsSection}
       renderList={(ctx) => <GradesBoard {...ctx} family={family} />}
