@@ -34,6 +34,12 @@ export interface GlossaryTextField {
 
 // An optional single choice sent as an id under `key` (e.g. a Grade's
 // substrateId), or null for none.
+// An on/off field (e.g. a CBN grade's "Coated"), saved as a boolean.
+export interface GlossaryCheckboxField {
+  key: string;
+  label: string;
+}
+
 export interface GlossarySelectField {
   key: string;
   label: string;
@@ -143,6 +149,7 @@ export function GlossaryPage({
   tagFields = [],
   textFields = [],
   selectFields = [],
+  checkboxFields = [],
   renderList,
   showDetails = false,
   extraSection,
@@ -155,6 +162,7 @@ export function GlossaryPage({
   tagFields?: GlossaryTagField[];
   textFields?: GlossaryTextField[];
   selectFields?: GlossarySelectField[];
+  checkboxFields?: GlossaryCheckboxField[];
   renderList?: (ctx: GlossaryListContext) => ReactNode;
   // Clicking an entry in the default list opens a window with its full
   // details and image.
@@ -171,6 +179,7 @@ export function GlossaryPage({
   const [tags, setTags] = useState<Tags>(() => emptyTags(tagFields));
   const [texts, setTexts] = useState<Texts>(() => emptyTexts(textFields));
   const [selects, setSelects] = useState<Texts>(() => emptyTexts(selectFields));
+  const [checks, setChecks] = useState<Record<string, boolean>>({});
   // Select field whose inline "create new" form is open, if any.
   const [creatingKey, setCreatingKey] = useState<string | null>(null);
   const [extraValues, setExtraValues] = useState<Record<string, unknown>>({});
@@ -200,6 +209,7 @@ export function GlossaryPage({
     setTags(Object.fromEntries(tagFields.map((f) => [f.key, readTags(f, entry)])));
     setTexts(Object.fromEntries(textFields.map((f) => [f.key, String((entry[f.key] as string | number | null | undefined) ?? "")])));
     setSelects(Object.fromEntries(selectFields.map((f) => [f.key, readSelect(f, entry)])));
+    setChecks(Object.fromEntries(checkboxFields.map((f) => [f.key, entry[f.key] === true])));
     setExtraValues(extraSection ? extraSection.read(entry) : {});
     setEditingId(entry.id);
     setError(null);
@@ -212,6 +222,7 @@ export function GlossaryPage({
     setTags(emptyTags(tagFields));
     setTexts(emptyTexts(textFields));
     setSelects(emptyTexts(selectFields));
+    setChecks({});
     setExtraValues({});
     setEditingId(null);
     setFileInputKey((k) => k + 1);
@@ -235,7 +246,8 @@ export function GlossaryPage({
         })
       );
       const selectValues = Object.fromEntries(Object.entries(selects).map(([k, v]) => [k, v || null]));
-      const body = { ...form, ...textValues, ...selectValues, ...tags, ...extraValues };
+      const checkValues = Object.fromEntries(checkboxFields.map((f) => [f.key, checks[f.key] === true]));
+      const body = { ...form, ...textValues, ...selectValues, ...checkValues, ...tags, ...extraValues };
       if (editingId) {
         await api.patch(`${resource}/${editingId}`, body);
       } else {
@@ -255,6 +267,7 @@ export function GlossaryPage({
     setTags(emptyTags(tagFields));
     setTexts(emptyTexts(textFields));
     setSelects(emptyTexts(selectFields));
+    setChecks({});
     setExtraValues({});
     setCreatingKey(null);
     setEditingId(null);
@@ -314,6 +327,17 @@ export function GlossaryPage({
                   </datalist>
                 )}
               </div>
+            ))}
+            {checkboxFields.map((field) => (
+              <label key={field.key} className="flex w-fit items-center gap-2 text-sm text-neutral-800 dark:text-neutral-200">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-blue-600"
+                  checked={checks[field.key] === true}
+                  onChange={(e) => setChecks((c) => ({ ...c, [field.key]: e.target.checked }))}
+                />
+                {field.label}
+              </label>
             ))}
             {selectFields.map((field) => (
               <div key={field.key}>
