@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type Request } from "express";
 import type { ZodSchema } from "zod";
 import { Prisma } from "@prisma/client";
 
@@ -37,12 +37,14 @@ export function crudRouter(opts: {
   orderBy?: Record<string, unknown> | Record<string, unknown>[];
   // Turns validated input into Prisma `data` (e.g. id lists into relation writes).
   mapData?: (data: any, mode: "create" | "update") => any;
+  // Optional filter for the list endpoint, built from the request (e.g. ?family=).
+  listWhere?: (req: Request) => Record<string, unknown> | undefined;
 }) {
   const router = Router();
-  const { delegate, createSchema, updateSchema, include, orderBy, mapData = (data) => data } = opts;
+  const { delegate, createSchema, updateSchema, include, orderBy, mapData = (data) => data, listWhere } = opts;
 
-  router.get("/", async (_req, res) => {
-    const items = await delegate.findMany({ include, orderBy });
+  router.get("/", async (req, res) => {
+    const items = await delegate.findMany({ where: listWhere?.(req), include, orderBy });
     res.json(items);
   });
 

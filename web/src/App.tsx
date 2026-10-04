@@ -18,7 +18,7 @@ import { Tools } from "./pages/catalog/Tools";
 import { CuttingConditions } from "./pages/catalog/CuttingConditions";
 import { Shapes } from "./pages/catalog/Shapes";
 import { Chipbreakers } from "./pages/catalog/Chipbreakers";
-import { Grades } from "./pages/catalog/Grades";
+import { Grades, GradesCbn, GradesCeramic, GradesPcb } from "./pages/catalog/Grades";
 import { Applications } from "./pages/catalog/Applications";
 import { Substrates } from "./pages/catalog/Substrates";
 import { Coatings } from "./pages/catalog/Coatings";
@@ -68,6 +68,9 @@ function AppRoutes() {
         <Route path="/catalog/shapes" element={<Shapes />} />
         <Route path="/catalog/chipbreakers" element={<Chipbreakers />} />
         <Route path="/catalog/grades" element={<Grades />} />
+        <Route path="/catalog/grades-cbn" element={<GradesCbn />} />
+        <Route path="/catalog/grades-ceramic" element={<GradesCeramic />} />
+        <Route path="/catalog/grades-pcb" element={<GradesPcb />} />
         <Route path="/catalog/applications" element={<Applications />} />
         <Route path="/catalog/substrates" element={<Substrates />} />
         <Route path="/catalog/coatings" element={<Coatings />} />

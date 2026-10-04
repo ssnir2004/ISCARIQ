@@ -4,6 +4,15 @@ import { prisma } from "../prisma.js";
 import { crudRouter } from "../lib/crud.js";
 
 const iso513GroupSchema = z.enum(["P", "M", "K", "N", "S", "H"]);
+const gradeFamilySchema = z.enum(["CARBIDE", "CBN", "CERAMIC", "PCB"]);
+
+// Board scopes (grade order, chart boxes) are "all" or an Application id,
+// prefixed with "<FAMILY>:" for the non-carbide grade screens so each family
+// keeps its own layout, e.g. "CBN:app-milling".
+async function validScope(scope: string) {
+  const bare = scope.replace(/^(CBN|CERAMIC|PCB):/, "");
+  return bare === "all" || (await prisma.application.findUnique({ where: { id: bare } })) !== null;
+}
 
 export const branchRouter = crudRouter({
   delegate: prisma.branch,
@@ -210,7 +219,7 @@ type CrudOptions = Parameters<typeof crudRouter>[0];
 function glossaryRouter(
   delegate: CrudOptions["delegate"],
   extraFields: z.ZodRawShape = {},
-  options: Pick<CrudOptions, "include" | "mapData"> = {}
+  options: Pick<CrudOptions, "include" | "mapData" | "listWhere"> = {}
 ) {
   return crudRouter({
     ...options,
@@ -238,6 +247,7 @@ export const chipbreakerRouter = glossaryRouter(prisma.chipbreaker);
 export const gradeRouter = glossaryRouter(
   prisma.grade,
   {
+    family: gradeFamilySchema.optional(),
     substrateId: z.string().min(1).nullable().optional(),
     iso513Groups: z.array(z.enum(["P", "M", "K", "N", "S", "H"])).default([]),
     applicationIds: z.array(z.string().min(1)).default([]),
@@ -247,6 +257,11 @@ export const gradeRouter = glossaryRouter(
   },
   {
     include: { applications: { orderBy: { name: "asc" } }, substrate: true, applicationGroups: true },
+    // ?family=CBN lists one family's grades (each has its own screen).
+    listWhere: (req) => {
+      const family = gradeFamilySchema.safeParse(req.query.family);
+      return family.success ? { family: family.data } : undefined;
+    },
     mapData: ({ applicationIds, substrateId, applicationGroups, ...data }, mode) => {
       if (applicationGroups !== undefined) {
         // Keep only real exceptions: applications the grade has, groups it
@@ -386,16 +401,14 @@ gradeOrderRouter.get("/", async (_req, res) => {
 
 const gradeOrderSchema = z.object({ gradeIds: z.array(z.string().min(1)) });
 
-// :scope is "all" (the overall board) or the id of an Application (that
+// :scope is a board scope (see validScope): "all" or an Application id (that
 // application's board).
 gradeOrderRouter.put("/:scope/:group", async (req, res) => {
   const { scope } = req.params;
   const group = iso513GroupSchema.safeParse(req.params.group);
   const parsed = gradeOrderSchema.safeParse(req.body);
   if (!group.success || !parsed.success) return res.status(400).json({ error: "Invalid group or gradeIds" });
-  if (scope !== "all" && !(await prisma.application.findUnique({ where: { id: scope } }))) {
-    return res.status(404).json({ error: "Unknown application" });
-  }
+  if (!(await validScope(scope))) return res.status(404).json({ error: "Unknown application" });
   const gradeIds = [...new Set(parsed.data.gradeIds)];
   const order = await prisma.gradeColumnOrder.upsert({
     where: { scope_iso513Group: { scope, iso513Group: group.data } },
@@ -405,7 +418,7 @@ gradeOrderRouter.put("/:scope/:group", async (req, res) => {
   res.json(order);
 });
 
-// Boxes on the Hard/Tough chart; :scope is "all" or an Application id, as
+// Boxes on the Hard/Tough chart; :scope is a board scope (see validScope), as
 // for grade-order.
 export const gradeChartRouter = Router();
 
@@ -422,10 +435,6 @@ const chartBoxSchema = z
     h: z.number().min(MIN_BOX).max(100),
   })
   .refine((b) => b.x + b.w <= 100.001 && b.y + b.h <= 100.001, "Box must stay inside the chart");
-
-async function validScope(scope: string) {
-  return scope === "all" || (await prisma.application.findUnique({ where: { id: scope } })) !== null;
-}
 
 gradeChartRouter.put("/:scope/:group/:gradeId", async (req, res) => {
   const { scope, gradeId } = req.params;
@@ -468,8 +477,9 @@ applicationRouter.delete("/:id", async (req, res, next) => {
   }
   // Its board's saved order and chart layout go with it.
   if (application) {
-    await prisma.gradeColumnOrder.deleteMany({ where: { scope: application.id } });
-    await prisma.gradeChartBox.deleteMany({ where: { scope: application.id } });
+    const scopes = { OR: [{ scope: application.id }, { scope: { endsWith: `:${application.id}` } }] };
+    await prisma.gradeColumnOrder.deleteMany({ where: scopes });
+    await prisma.gradeChartBox.deleteMany({ where: scopes });
   }
   next();
 });

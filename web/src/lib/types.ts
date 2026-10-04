@@ -185,7 +185,11 @@ export interface Substrate extends GlossaryEntry {
   grades?: Pick<Grade, "id" | "name" | "iso513Groups" | "applications">[];
 }
 
+// Each family has its own Grades screen; carbide grades also have a substrate.
+export type GradeFamily = "CARBIDE" | "CBN" | "CERAMIC" | "PCB";
+
 export interface Grade extends GlossaryEntry {
+  family: GradeFamily;
   substrate?: Substrate | null;
   iso513Groups: Iso513Group[];
   applications: Application[];
