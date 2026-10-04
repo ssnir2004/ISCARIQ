@@ -468,6 +468,8 @@ const chartBoxSchema = z
     y: z.number().min(0).max(100 - MIN_BOX),
     w: z.number().min(MIN_BOX).max(100),
     h: z.number().min(MIN_BOX).max(100),
+    // Stacking order: higher is drawn in front.
+    z: z.number().int().optional(),
   })
   .refine((b) => b.x + b.w <= 100.001 && b.y + b.h <= 100.001, "Box must stay inside the chart");
 

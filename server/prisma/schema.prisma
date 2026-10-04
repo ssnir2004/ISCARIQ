@@ -502,6 +502,8 @@ model GradeChartBox {
   h           Float
   // Grades merged into one block on the chart share a mergeId and a box.
   mergeId     String?
+  // Stacking order when blocks overlap: higher is drawn in front.
+  z           Int         @default(0)
 
   @@id([scope, iso513Group, gradeId])
 }

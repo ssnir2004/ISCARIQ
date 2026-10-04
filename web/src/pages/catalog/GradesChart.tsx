@@ -84,8 +84,8 @@ export function GradesChart({
   // returns; null means "no saved box" (after a reset).
   const [local, setLocal] = useState<Record<string, Box | null>>({});
   const [drag, setDrag] = useState<Drag | null>(null);
-  // The last block touched stays on top, so its handle stays reachable when blocks overlap.
-  const [topKey, setTopKey] = useState<string | null>(null);
+  // Stacking changes made in this session (block key -> z), before the reload.
+  const [localZ, setLocalZ] = useState<Record<string, number>>({});
   const dragRef = useRef<Drag | null>(null);
   const plotRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
@@ -157,7 +157,6 @@ export function GradesChart({
     };
     dragRef.current = next;
     setDrag(next);
-    setTopKey(block.key);
   }
 
   // Pressing on empty chart space starts a selection rectangle.
@@ -248,6 +247,37 @@ export function GradesChart({
     }
   }
 
+  // Saved stacking order of a block (higher = in front); default 0.
+  const zOf = (block: Block) => localZ[block.key] ?? savedFor(block.grades[0].id)?.z ?? 0;
+  // Draw order: by z, then board order. Index in this list = layer.
+  const stack = [...blocks].sort((a, b) => zOf(a) - zOf(b) || a.index - b.index);
+
+  // Brings blocks to the front (or sends them to the back) of the stack,
+  // keeping their order among themselves, and saves each block's new z.
+  async function restack(keys: string[], where: "front" | "back") {
+    const moving = stack.filter((b) => keys.includes(b.key));
+    if (moving.length === 0) return;
+    const others = stack.filter((b) => !keys.includes(b.key)).map(zOf);
+    const base = where === "front" ? (others.length ? Math.max(...others) : 0) + 1 : (others.length ? Math.min(...others) : 0) - moving.length;
+    const updates = moving.map((b, i) => ({ block: b, z: base + i }));
+    setLocalZ((m) => ({ ...m, ...Object.fromEntries(updates.map((u) => [u.block.key, u.z])) }));
+    setError(null);
+    try {
+      await Promise.all(
+        updates.map(({ block, z }) => {
+          const { x, y, w, h } = boxOf(block);
+          const body = { x, y, w, h, z };
+          return block.mergeId
+            ? api.put(`/grade-chart/${scope}/${group}/block/${block.mergeId}`, body)
+            : api.put(`/grade-chart/${scope}/${group}/${block.grades[0].id}`, body);
+        })
+      );
+    } catch (err) {
+      setLocalZ((m) => Object.fromEntries(Object.entries(m).filter(([k]) => !keys.includes(k))));
+      setError(err instanceof ApiError ? err.message : "Failed to change the stacking order");
+    }
+  }
+
   async function mergeSelected() {
     const chosen = blocks.filter((b) => selected.includes(b.key));
     const gradeIds = chosen.flatMap((b) => b.grades.map((g) => g.id));
@@ -319,12 +349,22 @@ export function GradesChart({
             </>
           ) : (
             <>
-              {selected.length > 1 ? (
+              {selected.length > 0 ? (
                 <>
-                  <span className="text-xs text-neutral-500 dark:text-neutral-400">{selected.length} selected — drag one to move them all</span>
-                  <Button onClick={mergeSelected} disabled={selectedGradeCount < 2}>
-                    Merge selected ({selectedGradeCount})
+                  <span className="text-xs text-neutral-500 dark:text-neutral-400">
+                    {selected.length} selected{selected.length > 1 ? " — drag one to move them all" : ""}
+                  </span>
+                  <Button variant="secondary" onClick={() => restack(selected, "front")}>
+                    Bring to front
                   </Button>
+                  <Button variant="secondary" onClick={() => restack(selected, "back")}>
+                    Send to back
+                  </Button>
+                  {selected.length > 1 && (
+                    <Button onClick={mergeSelected} disabled={selectedGradeCount < 2}>
+                      Merge selected ({selectedGradeCount})
+                    </Button>
+                  )}
                   <Button variant="secondary" onClick={() => setSelected([])}>
                     Clear selection
                   </Button>
@@ -387,7 +427,7 @@ export function GradesChart({
               {blocks.map((block) => {
                 const box = boxOf(block);
                 const active = !!drag?.items.some((i) => i.key === block.key);
-                const onTop = topKey === block.key;
+                const layer = stack.indexOf(block);
                 const isSelected = selected.includes(block.key);
                 const single = block.grades.length === 1 ? block.grades[0] : null;
                 return (
@@ -397,8 +437,10 @@ export function GradesChart({
                     onPointerDown={(e) => onPointerDown(e, block, "move")}
                     className={`group absolute flex flex-col items-center justify-center overflow-hidden rounded-xl border-2 text-center text-neutral-900 shadow ${
                       merging ? "cursor-pointer" : "cursor-move"
-                    } ${active ? "z-30 shadow-lg" : onTop ? "z-20" : "z-10"} ${isSelected ? "ring-4 ring-blue-500" : ""}`}
+                    } ${active ? "shadow-lg" : ""} ${isSelected ? "ring-4 ring-blue-500" : ""}`}
                     style={{
+                      // Saved stacking order; the block being dragged is drawn above all.
+                      zIndex: active ? 1000 : 10 + layer,
                       left: `${box.x}%`,
                       top: `${box.y}%`,
                       width: `${box.w}%`,
@@ -419,6 +461,26 @@ export function GradesChart({
                       </span>
                     ))}
                     {single?.substrate && <span className="text-[10px] leading-tight opacity-75">{single.substrate.name}</span>}
+                    {!merging && blocks.length > 1 && (
+                      <span className="absolute top-0.5 left-0.5 flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                        <button
+                          type="button"
+                          onClick={() => restack([block.key], "front")}
+                          className="rounded bg-neutral-900/50 px-1 text-[10px] text-white"
+                          title="Bring to front"
+                        >
+                          Front
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => restack([block.key], "back")}
+                          className="rounded bg-neutral-900/50 px-1 text-[10px] text-white"
+                          title="Send to back"
+                        >
+                          Back
+                        </button>
+                      </span>
+                    )}
                     {block.mergeId && !merging && (
                       <button
                         type="button"
