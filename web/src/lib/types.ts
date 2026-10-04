@@ -186,7 +186,7 @@ export interface Substrate extends GlossaryEntry {
 }
 
 // Each family has its own Grades screen; carbide grades also have a substrate.
-export type GradeFamily = "CARBIDE" | "CBN" | "CERAMIC" | "PCB";
+export type GradeFamily = "CARBIDE" | "CBN" | "CERAMIC" | "PCD";
 
 export interface Grade extends GlossaryEntry {
   family: GradeFamily;

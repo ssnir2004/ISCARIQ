@@ -138,7 +138,7 @@ function NewSubstrateInline({ onCreated, onCancel }: { onCreated: (id: string) =
   );
 }
 
-// One Grades screen per family (Carbide, CBN, Ceramic, PCB). They share the
+// One Grades screen per family (Carbide, CBN, Ceramic, PCD). They share the
 // whole interface; only carbide grades have a substrate.
 export function GradesScreen({ family, title }: { family: GradeFamily; title: string }) {
   // Applications are managed on their own screen, so new ones show up here automatically.
@@ -236,4 +236,4 @@ export function GradesScreen({ family, title }: { family: GradeFamily; title: st
 export const Grades = () => <GradesScreen family="CARBIDE" title="Grades" />;
 export const GradesCbn = () => <GradesScreen family="CBN" title="Grades (CBN)" />;
 export const GradesCeramic = () => <GradesScreen family="CERAMIC" title="Grades (Ceramic)" />;
-export const GradesPcb = () => <GradesScreen family="PCB" title="Grades (PCB)" />;
+export const GradesPcd = () => <GradesScreen family="PCD" title="Grades (PCD)" />;
