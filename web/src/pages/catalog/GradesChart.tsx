@@ -1,4 +1,4 @@
-import { useRef, useState, type PointerEvent } from "react";
+import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { api, ApiError } from "../../lib/api";
 import { ISO513_COLORS } from "../../lib/npaKnowledgeConstants";
 import { useResource } from "../../lib/useResource";
@@ -15,7 +15,13 @@ import { Button } from "../../components/ui";
 
 type Box = { x: number; y: number; w: number; h: number };
 type Block = { key: string; mergeId: string | null; grades: Grade[]; index: number };
-type Drag = { key: string; mode: "move" | "resize"; startX: number; startY: number; start: Box; box: Box; target: HTMLElement };
+// One drag can move several selected blocks together (resizing is always one block).
+type DragItem = { key: string; start: Box; box: Box };
+type Drag = { items: DragItem[]; mode: "move" | "resize"; startX: number; startY: number; target: HTMLElement };
+// Selection rectangle drawn by dragging on empty chart space (plot percentages).
+type Marquee = { x0: number; y0: number; x1: number; y1: number; additive: boolean };
+
+const overlaps = (a: Box, b: Box) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 
 const MIN_BOX = 4;
 
@@ -85,7 +91,19 @@ export function GradesChart({
   const [error, setError] = useState<string | null>(null);
   // Merge mode: clicks select blocks instead of dragging them.
   const [merging, setMerging] = useState(false);
+  // Selected block keys: from merge mode, Ctrl/Shift+click, or a selection
+  // rectangle. Dragging a selected block moves the whole selection.
   const [selected, setSelected] = useState<string[]>([]);
+  const [marquee, setMarquee] = useState<Marquee | null>(null);
+  const marqueeRef = useRef<Marquee | null>(null);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSelected([]);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const savedFor = (gradeId: string) => savedBoxes.find((b) => b.scope === scope && b.iso513Group === group && b.gradeId === gradeId);
 
@@ -99,7 +117,8 @@ export function GradesChart({
   });
 
   function boxOf(block: Block): Box {
-    if (drag?.key === block.key) return drag.box;
+    const dragged = drag?.items.find((i) => i.key === block.key);
+    if (dragged) return dragged.box;
     const override = local[block.key];
     if (override) return override;
     if (override !== null) {
@@ -109,60 +128,123 @@ export function GradesChart({
     return defaultBox(block.index, grades.length);
   }
 
+  // Pointer position as plot percentages.
+  function plotPoint(e: PointerEvent<HTMLDivElement>) {
+    const r = plotRef.current!.getBoundingClientRect();
+    return { x: clamp(((e.clientX - r.left) / r.width) * 100, 0, 100), y: clamp(((e.clientY - r.top) / r.height) * 100, 0, 100) };
+  }
+
   function onPointerDown(e: PointerEvent<HTMLDivElement>, block: Block, mode: Drag["mode"]) {
     if (e.button !== 0 || (e.target as HTMLElement).closest("button")) return;
     e.stopPropagation();
-    if (merging) {
+    // Merge mode, or Ctrl/Shift+click: toggle the block in the selection.
+    if (mode === "move" && (merging || e.ctrlKey || e.metaKey || e.shiftKey)) {
       setSelected((s) => (s.includes(block.key) ? s.filter((k) => k !== block.key) : [...s, block.key]));
       return;
     }
     e.currentTarget.setPointerCapture(e.pointerId);
-    const start = boxOf(block);
-    const next = { key: block.key, mode, startX: e.clientX, startY: e.clientY, start, box: start, target: e.target as HTMLElement };
+    // Dragging a selected block moves the whole selection; any other block
+    // moves alone and clears the selection.
+    const inSelection = mode === "move" && selected.includes(block.key) && selected.length > 1;
+    if (!selected.includes(block.key)) setSelected([]);
+    const moving = inSelection ? blocks.filter((b) => selected.includes(b.key)) : [block];
+    const next: Drag = {
+      items: moving.map((b) => ({ key: b.key, start: boxOf(b), box: boxOf(b) })),
+      mode,
+      startX: e.clientX,
+      startY: e.clientY,
+      target: e.target as HTMLElement,
+    };
     dragRef.current = next;
     setDrag(next);
     setTopKey(block.key);
   }
 
+  // Pressing on empty chart space starts a selection rectangle.
+  function onPlotPointerDown(e: PointerEvent<HTMLDivElement>) {
+    if (e.button !== 0 || e.target !== e.currentTarget) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    const { x, y } = plotPoint(e);
+    const next = { x0: x, y0: y, x1: x, y1: y, additive: merging || e.ctrlKey || e.metaKey || e.shiftKey };
+    marqueeRef.current = next;
+    setMarquee(next);
+  }
+
   function onPointerMove(e: PointerEvent<HTMLDivElement>) {
+    if (marqueeRef.current) {
+      const { x, y } = plotPoint(e);
+      const next = { ...marqueeRef.current, x1: x, y1: y };
+      marqueeRef.current = next;
+      setMarquee(next);
+      return;
+    }
     const d = dragRef.current;
     const plot = plotRef.current?.getBoundingClientRect();
     if (!d || !plot) return;
-    const dx = ((e.clientX - d.startX) / plot.width) * 100;
-    const dy = ((e.clientY - d.startY) / plot.height) * 100;
-    const s = d.start;
-    const box =
-      d.mode === "move"
-        ? { ...s, x: round(clamp(s.x + dx, 0, 100 - s.w)), y: round(clamp(s.y + dy, 0, 100 - s.h)) }
-        : { ...s, w: round(clamp(s.w + dx, MIN_BOX, 100 - s.x)), h: round(clamp(s.h + dy, MIN_BOX, 100 - s.y)) };
-    const next = { ...d, box };
+    let dx = ((e.clientX - d.startX) / plot.width) * 100;
+    let dy = ((e.clientY - d.startY) / plot.height) * 100;
+    let items: DragItem[];
+    if (d.mode === "move") {
+      // Shift every block by the same amount, limited so none leaves the chart.
+      dx = clamp(dx, Math.max(...d.items.map((i) => -i.start.x)), Math.min(...d.items.map((i) => 100 - i.start.x - i.start.w)));
+      dy = clamp(dy, Math.max(...d.items.map((i) => -i.start.y)), Math.min(...d.items.map((i) => 100 - i.start.y - i.start.h)));
+      items = d.items.map((i) => ({ ...i, box: { ...i.start, x: round(i.start.x + dx), y: round(i.start.y + dy) } }));
+    } else {
+      items = d.items.map((i) => ({
+        ...i,
+        box: { ...i.start, w: round(clamp(i.start.w + dx, MIN_BOX, 100 - i.start.x)), h: round(clamp(i.start.h + dy, MIN_BOX, 100 - i.start.y)) },
+      }));
+    }
+    const next = { ...d, items };
     dragRef.current = next;
     setDrag(next);
   }
 
   async function onPointerUp() {
+    const m = marqueeRef.current;
+    if (m) {
+      marqueeRef.current = null;
+      setMarquee(null);
+      const rect = { x: Math.min(m.x0, m.x1), y: Math.min(m.y0, m.y1), w: Math.abs(m.x1 - m.x0), h: Math.abs(m.y1 - m.y0) };
+      if (rect.w < 0.5 && rect.h < 0.5) {
+        // A plain click on empty space clears the selection.
+        if (!m.additive) setSelected([]);
+        return;
+      }
+      const hits = blocks.filter((b) => overlaps(boxOf(b), rect)).map((b) => b.key);
+      setSelected((s) => (m.additive ? [...new Set([...s, ...hits])] : hits));
+      return;
+    }
+
     const d = dragRef.current;
     dragRef.current = null;
     setDrag(null);
     if (!d) return;
-    const block = blocks.find((b) => b.key === d.key);
-    if (!block) return;
-    if (sameBox(d.box, d.start)) {
+    const moved = d.items.filter((i) => !sameBox(i.box, i.start));
+    if (moved.length === 0) {
+      if (d.items.length !== 1) return;
       // A click: open the cases of the grade clicked (or the block's only grade).
+      const block = blocks.find((b) => b.key === d.items[0].key);
       const clickedId = d.target.closest<HTMLElement>("[data-grade-id]")?.dataset.gradeId;
-      const grade = block.grades.find((g) => g.id === clickedId) ?? (block.grades.length === 1 ? block.grades[0] : undefined);
+      const grade = block?.grades.find((g) => g.id === clickedId) ?? (block?.grades.length === 1 ? block.grades[0] : undefined);
       if (grade && caseCount(grade.id) > 0) onOpenCases(grade);
       return;
     }
-    const previous = local[block.key];
-    setLocal((l) => ({ ...l, [block.key]: d.box }));
+    const previous = Object.fromEntries(moved.map((i) => [i.key, local[i.key]]));
+    setLocal((l) => ({ ...l, ...Object.fromEntries(moved.map((i) => [i.key, i.box])) }));
     setError(null);
     try {
-      if (block.mergeId) await api.put(`/grade-chart/${scope}/${group}/block/${block.mergeId}`, d.box);
-      else await api.put(`/grade-chart/${scope}/${group}/${block.grades[0].id}`, d.box);
+      await Promise.all(
+        moved.map((i) => {
+          const block = blocks.find((b) => b.key === i.key)!;
+          return block.mergeId
+            ? api.put(`/grade-chart/${scope}/${group}/block/${block.mergeId}`, i.box)
+            : api.put(`/grade-chart/${scope}/${group}/${block.grades[0].id}`, i.box);
+        })
+      );
     } catch (err) {
-      setLocal((l) => ({ ...l, [block.key]: previous }));
-      setError(err instanceof ApiError ? err.message : "Failed to save the box");
+      setLocal((l) => ({ ...l, ...previous }));
+      setError(err instanceof ApiError ? err.message : "Failed to save the boxes");
     }
   }
 
@@ -237,6 +319,19 @@ export function GradesChart({
             </>
           ) : (
             <>
+              {selected.length > 1 ? (
+                <>
+                  <span className="text-xs text-neutral-500 dark:text-neutral-400">{selected.length} selected — drag one to move them all</span>
+                  <Button onClick={mergeSelected} disabled={selectedGradeCount < 2}>
+                    Merge selected ({selectedGradeCount})
+                  </Button>
+                  <Button variant="secondary" onClick={() => setSelected([])}>
+                    Clear selection
+                  </Button>
+                </>
+              ) : (
+                <span className="text-xs text-neutral-400 dark:text-neutral-500">Drag on empty space to select several blocks</span>
+              )}
               <Button variant="secondary" onClick={() => setMerging(true)} disabled={blocks.length < 2}>
                 Merge blocks
               </Button>
@@ -261,13 +356,29 @@ export function GradesChart({
             <div
               ref={plotRef}
               className="relative m-3 aspect-[4/3] touch-none select-none"
+              onPointerDown={onPlotPointerDown}
               onPointerMove={onPointerMove}
               onPointerUp={onPointerUp}
               onPointerCancel={() => {
                 dragRef.current = null;
                 setDrag(null);
+                marqueeRef.current = null;
+                setMarquee(null);
               }}
             >
+              {marquee && (
+                <div
+                  aria-hidden
+                  data-marquee
+                  className="pointer-events-none absolute z-40 rounded border-2 border-dashed border-blue-500 bg-blue-500/10"
+                  style={{
+                    left: `${Math.min(marquee.x0, marquee.x1)}%`,
+                    top: `${Math.min(marquee.y0, marquee.y1)}%`,
+                    width: `${Math.abs(marquee.x1 - marquee.x0)}%`,
+                    height: `${Math.abs(marquee.y1 - marquee.y0)}%`,
+                  }}
+                />
+              )}
               {grades.length === 0 && (
                 <p className="absolute inset-0 flex items-center justify-center text-sm text-neutral-400 dark:text-neutral-500">
                   No grades for {scopeName} in ISO {group}
@@ -275,7 +386,7 @@ export function GradesChart({
               )}
               {blocks.map((block) => {
                 const box = boxOf(block);
-                const active = drag?.key === block.key;
+                const active = !!drag?.items.some((i) => i.key === block.key);
                 const onTop = topKey === block.key;
                 const isSelected = selected.includes(block.key);
                 const single = block.grades.length === 1 ? block.grades[0] : null;
