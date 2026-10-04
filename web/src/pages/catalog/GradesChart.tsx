@@ -6,18 +6,22 @@ import type { Grade, GradeChartBox, Iso513Group } from "../../lib/types";
 import { Button } from "../../components/ui";
 
 // Speed (y, up) / Tough (x, right) chart for one board scope and ISO 513
-// group. Each grade is a box spanning its range: drag it to move, drag the
-// corner handle to resize. Positions are percentages of the plot area, saved
-// per scope + group + grade. Grades without a saved box are laid out on a
-// diagonal from the board ranking (hardest top-left, toughest bottom-right).
+// group. Each block spans a range: drag it to move, drag the corner handle to
+// resize. A block is one grade, or several grades merged into one box (they
+// share a mergeId and a box). Positions are percentages of the plot area,
+// saved per scope + group + grade. Grades without a saved box are laid out
+// on a diagonal from the board ranking (hardest top-left, toughest
+// bottom-right).
 
 type Box = { x: number; y: number; w: number; h: number };
-type Drag = { gradeId: string; mode: "move" | "resize"; startX: number; startY: number; start: Box; box: Box };
+type Block = { key: string; mergeId: string | null; grades: Grade[]; index: number };
+type Drag = { key: string; mode: "move" | "resize"; startX: number; startY: number; start: Box; box: Box; target: HTMLElement };
 
 const MIN_BOX = 4;
 
 const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
 const round = (n: number) => Math.round(n * 10) / 10;
+const sameBox = (a: Box, b: Box) => a.x === b.x && a.y === b.y && a.w === b.w && a.h === b.h;
 
 // Diagonal layout, sized so neighbouring boxes don't cover each other's
 // resize handles (they only overlap once there are more than ~12 grades).
@@ -25,6 +29,15 @@ function defaultBox(index: number, count: number): Box {
   const size = round(clamp(100 / count - 1, 8, 22));
   const t = count > 1 ? index / (count - 1) : 0;
   return { x: round(t * (100 - size)), y: round(t * (100 - size)), w: size, h: size };
+}
+
+// Smallest box containing all the given boxes.
+function boundingBox(boxes: Box[]): Box {
+  const x = Math.min(...boxes.map((b) => b.x));
+  const y = Math.min(...boxes.map((b) => b.y));
+  const w = Math.max(...boxes.map((b) => b.x + b.w)) - x;
+  const h = Math.max(...boxes.map((b) => b.y + b.h)) - y;
+  return { x: round(x), y: round(y), w: round(w), h: round(h) };
 }
 
 function Arrowhead({ direction }: { direction: "up" | "right" }) {
@@ -57,40 +70,58 @@ export function GradesChart({
   // Grades in this group, in board order (Harder first).
   grades: Grade[];
   caseCount: (gradeId: string) => number;
-  // Called when a box is clicked without being moved or resized.
+  // Called when a grade is clicked without being moved or resized.
   onOpenCases: (grade: Grade) => void;
 }) {
   const { data: savedBoxes, reload } = useResource<GradeChartBox>("/grade-chart");
-  // Boxes changed in this session, by grade id, applied before the save returns.
+  // Blocks moved in this session, by block key, applied before the save
+  // returns; null means "no saved box" (after a reset).
   const [local, setLocal] = useState<Record<string, Box | null>>({});
   const [drag, setDrag] = useState<Drag | null>(null);
-  // The last box touched stays on top, so its handle stays reachable when boxes overlap.
-  const [topId, setTopId] = useState<string | null>(null);
+  // The last block touched stays on top, so its handle stays reachable when blocks overlap.
+  const [topKey, setTopKey] = useState<string | null>(null);
   const dragRef = useRef<Drag | null>(null);
   const plotRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
+  // Merge mode: clicks select blocks instead of dragging them.
+  const [merging, setMerging] = useState(false);
+  const [selected, setSelected] = useState<string[]>([]);
 
-  const localKey = (gradeId: string) => `${scope}:${group}:${gradeId}`;
-  function boxFor(grade: Grade, index: number): Box {
-    if (drag?.gradeId === grade.id) return drag.box;
-    const override = local[localKey(grade.id)];
+  const savedFor = (gradeId: string) => savedBoxes.find((b) => b.scope === scope && b.iso513Group === group && b.gradeId === gradeId);
+
+  // Group grades into blocks: merged grades share their mergeId's block.
+  const blocks: Block[] = [];
+  grades.forEach((grade, index) => {
+    const mergeId = savedFor(grade.id)?.mergeId ?? null;
+    const existing = mergeId ? blocks.find((b) => b.mergeId === mergeId) : undefined;
+    if (existing) existing.grades.push(grade);
+    else blocks.push({ key: mergeId ? `m:${mergeId}` : `g:${grade.id}`, mergeId, grades: [grade], index });
+  });
+
+  function boxOf(block: Block): Box {
+    if (drag?.key === block.key) return drag.box;
+    const override = local[block.key];
     if (override) return override;
     if (override !== null) {
-      const saved = savedBoxes.find((b) => b.scope === scope && b.iso513Group === group && b.gradeId === grade.id);
+      const saved = savedFor(block.grades[0].id);
       if (saved) return saved;
     }
-    return defaultBox(index, grades.length);
+    return defaultBox(block.index, grades.length);
   }
 
-  function onPointerDown(e: PointerEvent<HTMLDivElement>, grade: Grade, index: number, mode: Drag["mode"]) {
-    if (e.button !== 0) return;
+  function onPointerDown(e: PointerEvent<HTMLDivElement>, block: Block, mode: Drag["mode"]) {
+    if (e.button !== 0 || (e.target as HTMLElement).closest("button")) return;
     e.stopPropagation();
+    if (merging) {
+      setSelected((s) => (s.includes(block.key) ? s.filter((k) => k !== block.key) : [...s, block.key]));
+      return;
+    }
     e.currentTarget.setPointerCapture(e.pointerId);
-    const start = boxFor(grade, index);
-    const next = { gradeId: grade.id, mode, startX: e.clientX, startY: e.clientY, start, box: start };
+    const start = boxOf(block);
+    const next = { key: block.key, mode, startX: e.clientX, startY: e.clientY, start, box: start, target: e.target as HTMLElement };
     dragRef.current = next;
     setDrag(next);
-    setTopId(grade.id);
+    setTopKey(block.key);
   }
 
   function onPointerMove(e: PointerEvent<HTMLDivElement>) {
@@ -114,49 +145,107 @@ export function GradesChart({
     dragRef.current = null;
     setDrag(null);
     if (!d) return;
-    const { box, start } = d;
-    if (box.x === start.x && box.y === start.y && box.w === start.w && box.h === start.h) {
-      const grade = grades.find((g) => g.id === d.gradeId);
+    const block = blocks.find((b) => b.key === d.key);
+    if (!block) return;
+    if (sameBox(d.box, d.start)) {
+      // A click: open the cases of the grade clicked (or the block's only grade).
+      const clickedId = d.target.closest<HTMLElement>("[data-grade-id]")?.dataset.gradeId;
+      const grade = block.grades.find((g) => g.id === clickedId) ?? (block.grades.length === 1 ? block.grades[0] : undefined);
       if (grade && caseCount(grade.id) > 0) onOpenCases(grade);
       return;
     }
-    const key = localKey(d.gradeId);
-    const previous = local[key];
-    setLocal((l) => ({ ...l, [key]: box }));
+    const previous = local[block.key];
+    setLocal((l) => ({ ...l, [block.key]: d.box }));
     setError(null);
     try {
-      await api.put(`/grade-chart/${scope}/${group}/${d.gradeId}`, box);
+      if (block.mergeId) await api.put(`/grade-chart/${scope}/${group}/block/${block.mergeId}`, d.box);
+      else await api.put(`/grade-chart/${scope}/${group}/${block.grades[0].id}`, d.box);
     } catch (err) {
-      setLocal((l) => ({ ...l, [key]: previous }));
+      setLocal((l) => ({ ...l, [block.key]: previous }));
       setError(err instanceof ApiError ? err.message : "Failed to save the box");
     }
   }
 
+  async function mergeSelected() {
+    const chosen = blocks.filter((b) => selected.includes(b.key));
+    const gradeIds = chosen.flatMap((b) => b.grades.map((g) => g.id));
+    if (gradeIds.length < 2) return;
+    setError(null);
+    try {
+      // The merged block covers all the boxes it replaces.
+      await api.put(`/grade-chart/${scope}/${group}/merge`, { gradeIds, box: boundingBox(chosen.map(boxOf)) });
+      await reload();
+      setLocal({});
+      setSelected([]);
+      setMerging(false);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to merge the blocks");
+    }
+  }
+
+  async function split(block: Block) {
+    if (!block.mergeId) return;
+    setError(null);
+    try {
+      // The first grade keeps the block's box; the others return to the default layout.
+      await api.delete(`/grade-chart/${scope}/${group}/block/${block.mergeId}?keep=${encodeURIComponent(block.grades[0].id)}`);
+      await reload();
+      setLocal({});
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to split the block");
+    }
+  }
+
   async function resetLayout() {
-    if (!confirm(`Reset the ${scopeName} ISO ${group} chart to the default layout (from the board ranking)?`)) return;
+    if (!confirm(`Reset the ${scopeName} ISO ${group} chart to the default layout (from the board ranking)? Merged blocks are split.`)) return;
     setError(null);
     try {
       await api.delete(`/grade-chart/${scope}/${group}`);
-      // null marks "no saved box" until the reload arrives.
-      setLocal((l) => ({ ...l, ...Object.fromEntries(grades.map((g) => [localKey(g.id), null])) }));
-      reload();
+      await reload();
+      setLocal({});
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to reset the chart");
     }
   }
 
   const color = ISO513_COLORS[group];
+  const selectedGradeCount = blocks.filter((b) => selected.includes(b.key)).reduce((n, b) => n + b.grades.length, 0);
 
   return (
     <div className="max-w-4xl">
-      <div className="mb-2 flex items-center justify-between gap-3">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
         <h3 className="text-base font-semibold text-neutral-900 dark:text-neutral-100">
           {scopeName} ISO {group}
           <span className="ml-2 text-xs font-normal text-neutral-500 dark:text-neutral-400">{groupLabel}</span>
         </h3>
-        <Button variant="secondary" onClick={resetLayout} disabled={grades.length === 0}>
-          Reset layout
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {merging ? (
+            <>
+              <span className="text-xs text-neutral-500 dark:text-neutral-400">Click the blocks to merge</span>
+              <Button onClick={mergeSelected} disabled={selectedGradeCount < 2}>
+                Merge ({selectedGradeCount})
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setMerging(false);
+                  setSelected([]);
+                }}
+              >
+                Cancel
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="secondary" onClick={() => setMerging(true)} disabled={blocks.length < 2}>
+                Merge blocks
+              </Button>
+              <Button variant="secondary" onClick={resetLayout} disabled={grades.length === 0}>
+                Reset layout
+              </Button>
+            </>
+          )}
+        </div>
       </div>
       {error && <p className="mb-2 text-sm text-red-600 dark:text-red-400">{error}</p>}
 
@@ -184,18 +273,20 @@ export function GradesChart({
                   No grades for {scopeName} in ISO {group}
                 </p>
               )}
-              {grades.map((grade, index) => {
-                const box = boxFor(grade, index);
-                const active = drag?.gradeId === grade.id;
-                const onTop = topId === grade.id;
+              {blocks.map((block) => {
+                const box = boxOf(block);
+                const active = drag?.key === block.key;
+                const onTop = topKey === block.key;
+                const isSelected = selected.includes(block.key);
+                const single = block.grades.length === 1 ? block.grades[0] : null;
                 return (
                   <div
-                    key={grade.id}
-                    data-chart-box={grade.name}
-                    onPointerDown={(e) => onPointerDown(e, grade, index, "move")}
-                    className={`absolute flex cursor-move flex-col items-center justify-center overflow-hidden rounded-xl border-2 text-center text-neutral-900 shadow ${
-                      active ? "z-30 shadow-lg" : onTop ? "z-20" : "z-10"
-                    }`}
+                    key={block.key}
+                    data-chart-box={block.grades.map((g) => g.name).join("+")}
+                    onPointerDown={(e) => onPointerDown(e, block, "move")}
+                    className={`group absolute flex flex-col items-center justify-center overflow-hidden rounded-xl border-2 text-center text-neutral-900 shadow ${
+                      merging ? "cursor-pointer" : "cursor-move"
+                    } ${active ? "z-30 shadow-lg" : onTop ? "z-20" : "z-10"} ${isSelected ? "ring-4 ring-blue-500" : ""}`}
                     style={{
                       left: `${box.x}%`,
                       top: `${box.y}%`,
@@ -204,19 +295,37 @@ export function GradesChart({
                       backgroundColor: `${color}cc`,
                       borderColor: color,
                     }}
-                    title={`${grade.name}${caseCount(grade.id) > 0 ? " — click for cases" : ""} — drag to move, drag the corner to resize`}
+                    title={
+                      merging
+                        ? "Click to select for merging"
+                        : `${block.grades.map((g) => g.name).join(", ")} — click a name for its cases, drag to move, drag the corner to resize`
+                    }
                   >
-                    <span className="text-sm font-bold leading-tight">
-                      {grade.name}
-                      {caseCount(grade.id) > 0 && <span className="ml-1 text-[10px] font-medium">📷{caseCount(grade.id)}</span>}
-                    </span>
-                    {grade.substrate && <span className="text-[10px] leading-tight opacity-75">{grade.substrate.name}</span>}
-                    <div
-                      data-resize-handle
-                      onPointerDown={(e) => onPointerDown(e, grade, index, "resize")}
-                      className="absolute right-0 bottom-0 h-3.5 w-3.5 cursor-nwse-resize rounded-tl bg-neutral-900/40"
-                      aria-label={`Resize ${grade.name}`}
-                    />
+                    {block.grades.map((g) => (
+                      <span key={g.id} data-grade-id={g.id} className={`font-bold leading-tight ${block.grades.length > 3 ? "text-xs" : "text-sm"}`}>
+                        {g.name}
+                        {caseCount(g.id) > 0 && <span className="ml-1 text-[10px] font-medium">📷{caseCount(g.id)}</span>}
+                      </span>
+                    ))}
+                    {single?.substrate && <span className="text-[10px] leading-tight opacity-75">{single.substrate.name}</span>}
+                    {block.mergeId && !merging && (
+                      <button
+                        type="button"
+                        onClick={() => split(block)}
+                        className="absolute top-0.5 right-0.5 rounded bg-neutral-900/50 px-1 text-[10px] text-white opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100"
+                        title="Split this block back into separate grades"
+                      >
+                        Split
+                      </button>
+                    )}
+                    {!merging && (
+                      <div
+                        data-resize-handle
+                        onPointerDown={(e) => onPointerDown(e, block, "resize")}
+                        className="absolute right-0 bottom-0 h-3.5 w-3.5 cursor-nwse-resize rounded-tl bg-neutral-900/40"
+                        aria-label={`Resize ${block.grades.map((g) => g.name).join(", ")}`}
+                      />
+                    )}
                   </div>
                 );
               })}

@@ -500,6 +500,8 @@ model GradeChartBox {
   y           Float
   w           Float
   h           Float
+  // Grades merged into one block on the chart share a mergeId and a box.
+  mergeId     String?
 
   @@id([scope, iso513Group, gradeId])
 }
