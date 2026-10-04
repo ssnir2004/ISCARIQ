@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { Router, type NextFunction, type Request, type Response } from "express";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
@@ -469,6 +470,55 @@ const chartBoxSchema = z
     h: z.number().min(MIN_BOX).max(100),
   })
   .refine((b) => b.x + b.w <= 100.001 && b.y + b.h <= 100.001, "Box must stay inside the chart");
+
+// Merges several grades into one block: they all get the same box and a
+// shared mergeId. Registered before "/:scope/:group/:gradeId" so "merge" and
+// "block" aren't read as grade ids.
+const mergeSchema = z.object({ gradeIds: z.array(z.string().min(1)).min(2), box: chartBoxSchema });
+
+gradeChartRouter.put("/:scope/:group/merge", async (req, res) => {
+  const { scope } = req.params;
+  const group = iso513GroupSchema.safeParse(req.params.group);
+  const parsed = mergeSchema.safeParse(req.body);
+  if (!group.success || !parsed.success) return res.status(400).json({ error: "Pick at least two grades to merge" });
+  if (!(await validScope(scope))) return res.status(404).json({ error: "Unknown application" });
+  const gradeIds = [...new Set(parsed.data.gradeIds)];
+  if ((await prisma.grade.count({ where: { id: { in: gradeIds } } })) !== gradeIds.length) {
+    return res.status(404).json({ error: "Unknown grade" });
+  }
+  const mergeId = randomUUID();
+  const box = parsed.data.box;
+  await prisma.$transaction(
+    gradeIds.map((gradeId) =>
+      prisma.gradeChartBox.upsert({
+        where: { scope_iso513Group_gradeId: { scope, iso513Group: group.data, gradeId } },
+        update: { ...box, mergeId },
+        create: { scope, iso513Group: group.data, gradeId, ...box, mergeId },
+      })
+    )
+  );
+  res.json({ mergeId });
+});
+
+// Moves / resizes a merged block (every member keeps the same box).
+gradeChartRouter.put("/:scope/:group/block/:mergeId", async (req, res) => {
+  const box = chartBoxSchema.safeParse(req.body);
+  if (!box.success) return res.status(400).json({ error: "Invalid box" });
+  const { count } = await prisma.gradeChartBox.updateMany({ where: { mergeId: req.params.mergeId }, data: box.data });
+  if (count === 0) return res.status(404).json({ error: "Block not found" });
+  res.status(204).end();
+});
+
+// Splits a merged block: ?keep=<gradeId> keeps the block's box for that
+// grade; the others go back to the default layout.
+gradeChartRouter.delete("/:scope/:group/block/:mergeId", async (req, res) => {
+  const keep = typeof req.query.keep === "string" ? req.query.keep : undefined;
+  await prisma.$transaction([
+    prisma.gradeChartBox.deleteMany({ where: { mergeId: req.params.mergeId, ...(keep ? { gradeId: { not: keep } } : {}) } }),
+    prisma.gradeChartBox.updateMany({ where: { mergeId: req.params.mergeId }, data: { mergeId: null } }),
+  ]);
+  res.status(204).end();
+});
 
 gradeChartRouter.put("/:scope/:group/:gradeId", async (req, res) => {
   const { scope, gradeId } = req.params;
