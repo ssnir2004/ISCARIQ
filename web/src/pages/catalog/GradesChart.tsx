@@ -37,6 +37,43 @@ function defaultBox(index: number, count: number): Box {
   return { x: round(t * (100 - size)), y: round(t * (100 - size)), w: size, h: size };
 }
 
+// Largest uncovered part of `box` once `covers` (blocks drawn above it) are
+// laid over it, as a rectangle in percentages of the box itself, so a
+// block's label can sit where it's actually visible. Works on a grid: marks
+// covered cells, then finds the largest all-visible rectangle of cells.
+// A fully covered block gets its whole area (label stays centred).
+const LABEL_GRID = 24;
+function visibleArea(box: Box, covers: Box[]): Box {
+  const whole = { x: 0, y: 0, w: 100, h: 100 };
+  const hits = covers.filter((c) => overlaps(box, c));
+  if (hits.length === 0) return whole;
+  const n = LABEL_GRID;
+  const free: boolean[][] = Array.from({ length: n }, (_, r) =>
+    Array.from({ length: n }, (_, c) => {
+      const px = box.x + ((c + 0.5) / n) * box.w;
+      const py = box.y + ((r + 0.5) / n) * box.h;
+      return !hits.some((h) => px >= h.x && px <= h.x + h.w && py >= h.y && py <= h.y + h.h);
+    })
+  );
+  // Maximal rectangle of free cells (histogram method, row by row).
+  const heights = new Array(n).fill(0);
+  let best = { area: 0, r: 0, c: 0, w: 0, h: 0 };
+  for (let r = 0; r < n; r++) {
+    for (let c = 0; c < n; c++) heights[c] = free[r][c] ? heights[c] + 1 : 0;
+    for (let c = 0; c < n; c++) {
+      let minH = Infinity;
+      for (let c2 = c; c2 < n && heights[c2] > 0; c2++) {
+        minH = Math.min(minH, heights[c2]);
+        // Weight by real proportions so wide/tall blocks compare fairly.
+        const area = (c2 - c + 1) * box.w * minH * box.h;
+        if (area > best.area) best = { area, r: r - minH + 1, c, w: c2 - c + 1, h: minH };
+      }
+    }
+  }
+  if (best.area === 0) return whole;
+  return { x: (best.c / n) * 100, y: (best.r / n) * 100, w: (best.w / n) * 100, h: (best.h / n) * 100 };
+}
+
 // Smallest box containing all the given boxes.
 function boundingBox(boxes: Box[]): Box {
   const x = Math.min(...boxes.map((b) => b.x));
@@ -434,6 +471,12 @@ export function GradesChart({
                 const layer = stack.indexOf(block);
                 const isSelected = selected.includes(block.key);
                 const single = block.grades.length === 1 ? block.grades[0] : null;
+                // Blocks drawn above this one: higher layers, plus any block being
+                // dragged (always on top) unless it's this one.
+                const above = active
+                  ? []
+                  : blocks.filter((b) => b !== block && (stack.indexOf(b) > layer || drag?.items.some((i) => i.key === b.key))).map(boxOf);
+                const label = visibleArea(box, above);
                 return (
                   <div
                     key={block.key}
@@ -458,13 +501,20 @@ export function GradesChart({
                         : `${block.grades.map((g) => g.name).join(", ")} — click a name for its cases, drag to move, drag the corner to resize`
                     }
                   >
-                    {block.grades.map((g) => (
-                      <span key={g.id} data-grade-id={g.id} className={`font-bold leading-tight ${block.grades.length > 3 ? "text-xs" : "text-sm"}`}>
-                        {g.name}
-                        {caseCount(g.id) > 0 && <span className="ml-1 text-[10px] font-medium">📷{caseCount(g.id)}</span>}
-                      </span>
-                    ))}
-                    {single?.substrate && <span className="text-[10px] leading-tight opacity-75">{single.substrate.name}</span>}
+                    {/* Label centred in the largest part of the block not hidden by blocks above it. */}
+                    <div
+                      data-block-label
+                      className="absolute flex flex-col items-center justify-center overflow-hidden"
+                      style={{ left: `${label.x}%`, top: `${label.y}%`, width: `${label.w}%`, height: `${label.h}%` }}
+                    >
+                      {block.grades.map((g) => (
+                        <span key={g.id} data-grade-id={g.id} className={`font-bold leading-tight ${block.grades.length > 3 ? "text-xs" : "text-sm"}`}>
+                          {g.name}
+                          {caseCount(g.id) > 0 && <span className="ml-1 text-[10px] font-medium">📷{caseCount(g.id)}</span>}
+                        </span>
+                      ))}
+                      {single?.substrate && <span className="text-[10px] leading-tight opacity-75">{single.substrate.name}</span>}
+                    </div>
                     {!merging && blocks.length > 1 && (
                       <span className="absolute top-0.5 left-0.5 flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
                         <button
