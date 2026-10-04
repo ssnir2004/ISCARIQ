@@ -170,6 +170,8 @@ export interface GradeChartBox {
   h: number;
   // Shared by grades merged into one block.
   mergeId?: string | null;
+  // Stacking order (higher is drawn in front).
+  z?: number;
 }
 
 // Saved Harder -> Tougher ranking of grade ids for one ISO 513 column of one

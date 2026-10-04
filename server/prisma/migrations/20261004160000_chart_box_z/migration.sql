@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "GradeChartBox" ADD COLUMN     "z" INTEGER NOT NULL DEFAULT 0;
+
