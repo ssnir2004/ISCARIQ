@@ -16,7 +16,7 @@ const NAV = [
   { to: "/catalog/grades", label: "Grades" },
   { to: "/catalog/grades-cbn", label: "Grades (CBN)" },
   { to: "/catalog/grades-ceramic", label: "Grades (Ceramic)" },
-  { to: "/catalog/grades-pcb", label: "Grades (PCB)" },
+  { to: "/catalog/grades-pcd", label: "Grades (PCD)" },
   { to: "/catalog/applications", label: "Applications" },
   { to: "/catalog/substrates", label: "Substrates" },
   { to: "/catalog/coatings", label: "Coatings" },

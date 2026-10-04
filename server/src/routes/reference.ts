@@ -4,13 +4,13 @@ import { prisma } from "../prisma.js";
 import { crudRouter } from "../lib/crud.js";
 
 const iso513GroupSchema = z.enum(["P", "M", "K", "N", "S", "H"]);
-const gradeFamilySchema = z.enum(["CARBIDE", "CBN", "CERAMIC", "PCB"]);
+const gradeFamilySchema = z.enum(["CARBIDE", "CBN", "CERAMIC", "PCD"]);
 
 // Board scopes (grade order, chart boxes) are "all" or an Application id,
 // prefixed with "<FAMILY>:" for the non-carbide grade screens so each family
 // keeps its own layout, e.g. "CBN:app-milling".
 async function validScope(scope: string) {
-  const bare = scope.replace(/^(CBN|CERAMIC|PCB):/, "");
+  const bare = scope.replace(/^(CBN|CERAMIC|PCD):/, "");
   return bare === "all" || (await prisma.application.findUnique({ where: { id: bare } })) !== null;
 }
 

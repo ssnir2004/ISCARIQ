@@ -423,7 +423,7 @@ enum GradeFamily {
   CARBIDE
   CBN
   CERAMIC
-  PCB
+  PCD
 }
 
 model Grade {
