@@ -87,9 +87,19 @@ function emptyTags(fields: GlossaryTagField[]): Tags {
   return Object.fromEntries(fields.map((f) => [f.key, []]));
 }
 
-function TagToggles({ field, value, onChange }: { field: GlossaryTagField; value: string[]; onChange: (v: string[]) => void }) {
+// onChange receives an updater so quick successive toggles each apply to the
+// latest selection rather than a stale one.
+function TagToggles({
+  field,
+  value,
+  onChange,
+}: {
+  field: GlossaryTagField;
+  value: string[];
+  onChange: (update: (current: string[]) => string[]) => void;
+}) {
   function toggle(v: string) {
-    onChange(value.includes(v) ? value.filter((x) => x !== v) : [...value, v]);
+    onChange((current) => (current.includes(v) ? current.filter((x) => x !== v) : [...current, v]));
   }
   return (
     <div className="flex flex-wrap gap-2">
@@ -136,6 +146,8 @@ export function GlossaryPage({
   renderList,
   showDetails = false,
   extraSection,
+  listPath,
+  createValues,
 }: {
   resource: string;
   title: string;
@@ -148,9 +160,13 @@ export function GlossaryPage({
   // details and image.
   showDetails?: boolean;
   extraSection?: GlossaryExtraSection;
+  // GET path for the list when it differs from `resource` (e.g. a filter).
+  listPath?: string;
+  // Values added to every new entry (e.g. a grade's family).
+  createValues?: Record<string, unknown>;
 }) {
   const formRef = useRef<HTMLDivElement>(null);
-  const { data, reload } = useResource<Entry>(resource);
+  const { data, reload } = useResource<Entry>(listPath ?? resource);
   const [form, setForm] = useState(EMPTY_FORM);
   const [tags, setTags] = useState<Tags>(() => emptyTags(tagFields));
   const [texts, setTexts] = useState<Texts>(() => emptyTexts(textFields));
@@ -223,7 +239,7 @@ export function GlossaryPage({
       if (editingId) {
         await api.patch(`${resource}/${editingId}`, body);
       } else {
-        await api.post(resource, body);
+        await api.post(resource, { ...body, ...createValues });
       }
       resetForm();
       reload();
@@ -329,7 +345,7 @@ export function GlossaryPage({
             {tagFields.map((field) => (
               <div key={field.key}>
                 <Label>{field.label}</Label>
-                <TagToggles field={field} value={tags[field.key] ?? []} onChange={(v) => setTags({ ...tags, [field.key]: v })} />
+                <TagToggles field={field} value={tags[field.key] ?? []} onChange={(update) => setTags((t) => ({ ...t, [field.key]: update(t[field.key] ?? []) }))} />
                 {field.options.length === 0 && field.emptyHint && (
                   <p className="text-xs text-neutral-500 dark:text-neutral-400">{field.emptyHint}</p>
                 )}

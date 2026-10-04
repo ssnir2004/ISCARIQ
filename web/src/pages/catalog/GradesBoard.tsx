@@ -2,7 +2,7 @@ import { useRef, useState, type PointerEvent } from "react";
 import { api, ApiError } from "../../lib/api";
 import { ISO513_COLORS, ISO513_GROUPS } from "../../lib/npaKnowledgeConstants";
 import { useResource } from "../../lib/useResource";
-import type { Application, Grade, GradeCase, GradeColumnOrder, Iso513Group } from "../../lib/types";
+import type { Application, Grade, GradeCase, GradeColumnOrder, GradeFamily, Iso513Group } from "../../lib/types";
 import { Button, Card } from "../../components/ui";
 import type { Entry, GlossaryListContext } from "./GlossaryPage";
 import { GradesChart } from "./GradesChart";
@@ -46,7 +46,6 @@ function store(key: string, value: string) {
   }
 }
 
-const readStoredTab = () => readStored(TAB_STORAGE_KEY, ALL);
 
 const orderKey = (scope: string, group: Iso513Group) => `${scope}:${group}`;
 
@@ -78,14 +77,19 @@ function DropLine() {
   return <div className="h-0.5 rounded bg-blue-500" />;
 }
 
-export function GradesBoard({ data, startEdit, remove }: GlossaryListContext) {
+export function GradesBoard({ data, startEdit, remove, family }: GlossaryListContext & { family: GradeFamily }) {
   const grades = data as unknown as Grade[];
+  // Per-family storage: carbide keeps the original keys and order/chart
+  // scopes; other families prefix them ("CBN:app-milling") so each family has
+  // its own ranking and chart layout.
+  const keySuffix = family === "CARBIDE" ? "" : `.${family}`;
+  const storeScope = (s: string) => (family === "CARBIDE" ? s : `${family}:${s}`);
   const { data: savedOrders } = useResource<GradeColumnOrder>("/grade-order");
   const { data: applications } = useResource<Application>("/applications");
-  const [storedTab, setStoredTab] = useState(readStoredTab);
-  const [view, setView] = useState<View>(() => (readStored(VIEW_STORAGE_KEY, "table") === "chart" ? "chart" : "table"));
+  const [storedTab, setStoredTab] = useState(() => readStored(TAB_STORAGE_KEY + keySuffix, ALL));
+  const [view, setView] = useState<View>(() => (readStored(VIEW_STORAGE_KEY + keySuffix, "table") === "chart" ? "chart" : "table"));
   const [chartGroup, setChartGroup] = useState<Iso513Group>(() => {
-    const g = readStored(CHART_GROUP_STORAGE_KEY, "P");
+    const g = readStored(CHART_GROUP_STORAGE_KEY + keySuffix, "P");
     return ISO513_GROUPS.some((x) => x.value === g) ? (g as Iso513Group) : "P";
   });
   // Fall back to "All" if the remembered application no longer exists.
@@ -97,7 +101,7 @@ export function GradesBoard({ data, startEdit, remove }: GlossaryListContext) {
   const columnRefs = useRef<Partial<Record<Iso513Group, HTMLDivElement | null>>>({});
 
   const orderFor = (s: string, g: Iso513Group) =>
-    localOrders[orderKey(s, g)] ?? savedOrders.find((o) => o.scope === s && o.iso513Group === g)?.gradeIds;
+    localOrders[orderKey(s, g)] ?? savedOrders.find((o) => o.scope === storeScope(s) && o.iso513Group === g)?.gradeIds;
   const savedFor = (g: Iso513Group) => orderFor(scope, g) ?? (scope === ALL ? undefined : orderFor(ALL, g));
 
   const inScope = (s: string) => (s === ALL ? grades : grades.filter((g) => g.applications.some((a) => a.id === s)));
@@ -115,17 +119,17 @@ export function GradesBoard({ data, startEdit, remove }: GlossaryListContext) {
   function selectTab(s: string) {
     setStoredTab(s);
     setDragging(null);
-    store(TAB_STORAGE_KEY, s);
+    store(TAB_STORAGE_KEY + keySuffix, s);
   }
 
   function selectView(v: View) {
     setView(v);
-    store(VIEW_STORAGE_KEY, v);
+    store(VIEW_STORAGE_KEY + keySuffix, v);
   }
 
   function selectChartGroup(g: Iso513Group) {
     setChartGroup(g);
-    store(CHART_GROUP_STORAGE_KEY, g);
+    store(CHART_GROUP_STORAGE_KEY + keySuffix, g);
   }
 
   const scopeName = scope === ALL ? "All" : (applications.find((a) => a.id === scope)?.name ?? "All");
@@ -170,7 +174,7 @@ export function GradesBoard({ data, startEdit, remove }: GlossaryListContext) {
     setLocalOrders((o) => ({ ...o, [key]: ids }));
     setError(null);
     try {
-      await api.put(`/grade-order/${scope}/${drag.group}`, { gradeIds: ids });
+      await api.put(`/grade-order/${storeScope(scope)}/${drag.group}`, { gradeIds: ids });
     } catch (err) {
       setLocalOrders((o) => ({ ...o, [key]: previous }));
       setError(err instanceof ApiError ? err.message : "Failed to save the new order");
@@ -239,8 +243,8 @@ export function GradesBoard({ data, startEdit, remove }: GlossaryListContext) {
             ))}
           </div>
           <GradesChart
-            key={`${scope}:${chartGroup}`}
-            scope={scope}
+            key={`${storeScope(scope)}:${chartGroup}`}
+            scope={storeScope(scope)}
             scopeName={scopeName}
             group={chartGroup}
             groupLabel={ISO513_GROUPS.find((g) => g.value === chartGroup)?.label ?? chartGroup}

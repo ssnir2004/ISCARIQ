@@ -6,7 +6,7 @@ import { GlossaryPage, type GlossaryExtraSection, type GlossarySelectField, type
 import { GradesBoard } from "./GradesBoard";
 import { ISO513_COLORS, ISO513_GROUPS } from "../../lib/npaKnowledgeConstants";
 import { useResource } from "../../lib/useResource";
-import type { Application, Grade, Iso513Group, Substrate } from "../../lib/types";
+import type { Application, Grade, GradeFamily, Iso513Group, Substrate } from "../../lib/types";
 
 type AppGroups = Record<string, Iso513Group[]>;
 
@@ -138,7 +138,9 @@ function NewSubstrateInline({ onCreated, onCancel }: { onCreated: (id: string) =
   );
 }
 
-export function Grades() {
+// One Grades screen per family (Carbide, CBN, Ceramic, PCB). They share the
+// whole interface; only carbide grades have a substrate.
+export function GradesScreen({ family, title }: { family: GradeFamily; title: string }) {
   // Applications are managed on their own screen, so new ones show up here automatically.
   const { data: applications } = useResource<Application>("/applications");
   // Likewise substrates, from the Substrates screen.
@@ -216,13 +218,22 @@ export function Grades() {
 
   return (
     <GlossaryPage
+      // Remount per family so form and board state don't carry across screens.
+      key={family}
       resource="/grades"
-      title="Grades"
+      listPath={`/grades?family=${family}`}
+      createValues={{ family }}
+      title={title}
       singular="grade"
-      selectFields={selectFields}
+      selectFields={family === "CARBIDE" ? selectFields : []}
       tagFields={fields}
       extraSection={appGroupsSection}
-      renderList={(ctx) => <GradesBoard {...ctx} />}
+      renderList={(ctx) => <GradesBoard {...ctx} family={family} />}
     />
   );
 }
+
+export const Grades = () => <GradesScreen family="CARBIDE" title="Grades" />;
+export const GradesCbn = () => <GradesScreen family="CBN" title="Grades (CBN)" />;
+export const GradesCeramic = () => <GradesScreen family="CERAMIC" title="Grades (Ceramic)" />;
+export const GradesPcb = () => <GradesScreen family="PCB" title="Grades (PCB)" />;

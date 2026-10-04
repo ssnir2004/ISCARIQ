@@ -30,23 +30,28 @@ export function GradeCardModal({ grade, onClose, onEdit }: { grade: Grade; onClo
         )}
 
         <dl className="grid grid-cols-[8rem_1fr] gap-x-3 gap-y-2">
-          <dt className="text-neutral-500 dark:text-neutral-400">Substrate</dt>
-          <dd className="text-neutral-900 dark:text-neutral-100">
-            {s ? (
-              <>
-                <span className="font-medium">{s.name}</span>
-                {(s.hardness != null || s.toughness != null) && (
-                  <span className="ml-2 text-neutral-500 dark:text-neutral-400">
-                    {s.hardness != null && `hardness ${s.hardness}`}
-                    {s.hardness != null && s.toughness != null && " · "}
-                    {s.toughness != null && `KIC ${s.toughness}`}
-                  </span>
+          {/* Only carbide grades have a substrate. */}
+          {grade.family === "CARBIDE" && (
+            <>
+              <dt className="text-neutral-500 dark:text-neutral-400">Substrate</dt>
+              <dd className="text-neutral-900 dark:text-neutral-100">
+                {s ? (
+                  <>
+                    <span className="font-medium">{s.name}</span>
+                    {(s.hardness != null || s.toughness != null) && (
+                      <span className="ml-2 text-neutral-500 dark:text-neutral-400">
+                        {s.hardness != null && `hardness ${s.hardness}`}
+                        {s.hardness != null && s.toughness != null && " · "}
+                        {s.toughness != null && `KIC ${s.toughness}`}
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  "—"
                 )}
-              </>
-            ) : (
-              "—"
-            )}
-          </dd>
+              </dd>
+            </>
+          )}
 
           <dt className="text-neutral-500 dark:text-neutral-400">Materials</dt>
           <dd className="flex flex-wrap gap-1">
