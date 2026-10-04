@@ -1,10 +1,19 @@
-import { Router } from "express";
+import { Router, type NextFunction, type Request, type Response } from "express";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { crudRouter } from "../lib/crud.js";
 
 const iso513GroupSchema = z.enum(["P", "M", "K", "N", "S", "H"]);
 const gradeFamilySchema = z.enum(["CARBIDE", "CBN", "CERAMIC", "PCD"]);
+type GradeFamily = z.infer<typeof gradeFamilySchema>;
+
+// ISO 513 groups each grade family can be used for.
+const FAMILY_GROUPS: Record<GradeFamily, string[]> = {
+  CARBIDE: ["P", "M", "K", "N", "S", "H"],
+  CBN: ["K", "S", "H"],
+  CERAMIC: ["K", "S", "H"],
+  PCD: ["N"],
+};
 
 // Board scopes (grade order, chart boxes) are "all" or an Application id,
 // prefixed with "<FAMILY>:" for the non-carbide grade screens so each family
@@ -244,7 +253,27 @@ function glossaryRouter(
 
 export const shapeRouter = glossaryRouter(prisma.shape);
 export const chipbreakerRouter = glossaryRouter(prisma.chipbreaker);
-export const gradeRouter = glossaryRouter(
+// Rejects materials a grade's family can't be used for (e.g. P on a CBN
+// grade). The family comes from the body on create, from the DB on update.
+async function checkFamilyGroups(req: Request, res: Response, next: NextFunction) {
+  const groups: unknown = req.body?.iso513Groups;
+  if (!Array.isArray(groups)) return next();
+  let family: GradeFamily = "CARBIDE";
+  if (req.method === "POST") {
+    const parsed = gradeFamilySchema.safeParse(req.body?.family);
+    if (parsed.success) family = parsed.data;
+  } else {
+    const grade = await prisma.grade.findUnique({ where: { id: req.params.id }, select: { family: true } });
+    if (grade) family = grade.family;
+  }
+  const invalid = groups.filter((g) => !FAMILY_GROUPS[family].includes(String(g)));
+  if (invalid.length > 0) {
+    return res.status(400).json({ error: `${family} grades can only be used for ${FAMILY_GROUPS[family].join(", ")} (not ${invalid.join(", ")}).` });
+  }
+  next();
+}
+
+const gradeCrudRouter = glossaryRouter(
   prisma.grade,
   {
     family: gradeFamilySchema.optional(),
@@ -288,6 +317,11 @@ export const gradeRouter = glossaryRouter(
     },
   }
 );
+
+export const gradeRouter = Router();
+gradeRouter.post("/", checkFamilyGroups);
+gradeRouter.patch("/:id", checkFamilyGroups);
+gradeRouter.use(gradeCrudRouter);
 
 // Trials / case studies per grade. The list omits the (large) image so the
 // Grades screen can show counts cheaply; GET /:id returns it.

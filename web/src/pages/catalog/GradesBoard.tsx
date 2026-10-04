@@ -10,7 +10,7 @@ import { GradeCasesModal } from "./GradeCasesModal";
 import { GradeSearch } from "./GradeSearch";
 import { GradeCardModal } from "./GradeCardModal";
 import { ALL_SCOPE, caseMatches } from "../../lib/gradeCases";
-import { groupsIn } from "../../lib/gradeGroups";
+import { FAMILY_GROUPS, groupsIn } from "../../lib/gradeGroups";
 
 // Grades laid out in one column per ISO 513 group, each ranked by hand from
 // Harder (top) to Tougher (bottom) by dragging. There is one board for all
@@ -84,13 +84,15 @@ export function GradesBoard({ data, startEdit, remove, family }: GlossaryListCon
   // its own ranking and chart layout.
   const keySuffix = family === "CARBIDE" ? "" : `.${family}`;
   const storeScope = (s: string) => (family === "CARBIDE" ? s : `${family}:${s}`);
+  // Only this family's materials get columns / chart choices.
+  const familyGroups = ISO513_GROUPS.filter((g) => FAMILY_GROUPS[family].includes(g.value));
   const { data: savedOrders } = useResource<GradeColumnOrder>("/grade-order");
   const { data: applications } = useResource<Application>("/applications");
   const [storedTab, setStoredTab] = useState(() => readStored(TAB_STORAGE_KEY + keySuffix, ALL));
   const [view, setView] = useState<View>(() => (readStored(VIEW_STORAGE_KEY + keySuffix, "table") === "chart" ? "chart" : "table"));
   const [chartGroup, setChartGroup] = useState<Iso513Group>(() => {
     const g = readStored(CHART_GROUP_STORAGE_KEY + keySuffix, "P");
-    return ISO513_GROUPS.some((x) => x.value === g) ? (g as Iso513Group) : "P";
+    return FAMILY_GROUPS[family].includes(g as Iso513Group) ? (g as Iso513Group) : FAMILY_GROUPS[family][0];
   });
   // Fall back to "All" if the remembered application no longer exists.
   const scope = storedTab === ALL || applications.some((a) => a.id === storedTab) ? storedTab : ALL;
@@ -226,7 +228,7 @@ export function GradesBoard({ data, startEdit, remove, family }: GlossaryListCon
       {view === "chart" ? (
         <div className="space-y-3">
           <div className="flex flex-wrap gap-2">
-            {ISO513_GROUPS.map((g) => (
+            {familyGroups.map((g) => (
               <button
                 key={g.value}
                 type="button"
@@ -265,8 +267,11 @@ export function GradesBoard({ data, startEdit, remove, family }: GlossaryListCon
           </div>
 
           <div className="flex-1 overflow-x-auto">
-            <div className="grid min-w-[720px] grid-cols-6 gap-2">
-              {ISO513_GROUPS.map(({ value: group, label }) => {
+            <div
+              className="grid gap-2"
+              style={{ gridTemplateColumns: `repeat(${familyGroups.length}, minmax(0, 1fr))`, minWidth: familyGroups.length * 120 }}
+            >
+              {familyGroups.map(({ value: group, label }) => {
                 const column = orderColumn(group, boardGrades, savedFor(group), scope);
                 const dropIndex = dragging?.active && dragging.group === group ? dragging.index : null;
                 return (
