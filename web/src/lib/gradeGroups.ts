@@ -1,5 +1,14 @@
-import type { Grade, Iso513Group } from "./types";
+import type { Grade, GradeFamily, Iso513Group } from "./types";
 import { ALL_SCOPE } from "./gradeCases";
+
+// ISO 513 groups each grade family can be used for (CBN and ceramics:
+// cast iron, superalloys, hardened; PCD: non-ferrous only).
+export const FAMILY_GROUPS: Record<GradeFamily, Iso513Group[]> = {
+  CARBIDE: ["P", "M", "K", "N", "S", "H"],
+  CBN: ["K", "S", "H"],
+  CERAMIC: ["K", "S", "H"],
+  PCD: ["N"],
+};
 
 // The ISO 513 groups a grade is shown under on a board: all of its groups on
 // the "All" board, or in an application's board the per-application

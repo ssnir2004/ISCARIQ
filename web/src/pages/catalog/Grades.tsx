@@ -5,6 +5,7 @@ import { Button, Input, Label } from "../../components/ui";
 import { GlossaryPage, type GlossaryExtraSection, type GlossarySelectField, type GlossaryTagField } from "./GlossaryPage";
 import { GradesBoard } from "./GradesBoard";
 import { ISO513_COLORS, ISO513_GROUPS } from "../../lib/npaKnowledgeConstants";
+import { FAMILY_GROUPS } from "../../lib/gradeGroups";
 import { useResource } from "../../lib/useResource";
 import type { Application, Grade, GradeFamily, Iso513Group, Substrate } from "../../lib/types";
 
@@ -181,7 +182,8 @@ export function GradesScreen({ family, title }: { family: GradeFamily; title: st
     {
       key: "iso513Groups",
       label: "Materials (ISO 513)",
-      options: ISO513_GROUPS.map((g) => ({ ...g, short: g.value })),
+      // Only the materials this family can be used for.
+      options: ISO513_GROUPS.filter((g) => FAMILY_GROUPS[family].includes(g.value)).map((g) => ({ ...g, short: g.value })),
     },
     {
       key: "applicationIds",
