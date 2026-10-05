@@ -5,7 +5,7 @@ import { ALL_SCOPE } from "./gradeCases";
 // cast iron, superalloys, hardened; PCD: non-ferrous only).
 export const FAMILY_GROUPS: Record<GradeFamily, Iso513Group[]> = {
   CARBIDE: ["P", "M", "K", "N", "S", "H"],
-  CBN: ["K", "S", "H"],
+  CBN: ["K", "S", "H", "SM"],
   CERAMIC: ["K", "S", "H"],
   PCD: ["N"],
 };

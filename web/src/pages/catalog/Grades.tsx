@@ -4,7 +4,7 @@ import { api, ApiError } from "../../lib/api";
 import { Button, Input, Label } from "../../components/ui";
 import { GlossaryPage, type GlossaryExtraSection, type GlossarySelectField, type GlossaryTagField } from "./GlossaryPage";
 import { GradesBoard } from "./GradesBoard";
-import { ISO513_COLORS, ISO513_GROUPS } from "../../lib/npaKnowledgeConstants";
+import { ISO513_COLORS, MATERIAL_GROUPS } from "../../lib/npaKnowledgeConstants";
 import { FAMILY_GROUPS } from "../../lib/gradeGroups";
 import { useResource } from "../../lib/useResource";
 import type { Application, Grade, GradeFamily, Iso513Group, Substrate } from "../../lib/types";
@@ -27,7 +27,7 @@ function ApplicationGroupsMatrix({
   onChange: (v: AppGroups) => void;
 }) {
   if (applications.length === 0 || groups.length === 0) return null;
-  const orderedGroups = ISO513_GROUPS.filter((g) => groups.includes(g.value)).map((g) => g.value);
+  const orderedGroups = MATERIAL_GROUPS.filter((g) => groups.includes(g.value)).map((g) => g.value);
   const checked = (appId: string, g: Iso513Group) => (value[appId] ? value[appId].includes(g) : true);
 
   function toggle(appId: string, g: Iso513Group) {
@@ -183,7 +183,7 @@ export function GradesScreen({ family, title }: { family: GradeFamily; title: st
       key: "iso513Groups",
       label: "Materials (ISO 513)",
       // Only the materials this family can be used for.
-      options: ISO513_GROUPS.filter((g) => FAMILY_GROUPS[family].includes(g.value)).map((g) => ({ ...g, short: g.value })),
+      options: MATERIAL_GROUPS.filter((g) => FAMILY_GROUPS[family].includes(g.value)).map((g) => ({ ...g, short: g.value })),
     },
     {
       key: "applicationIds",

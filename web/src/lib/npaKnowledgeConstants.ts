@@ -20,6 +20,7 @@ export const ISO513_COLORS: Record<Iso513Group, string> = {
   N: "#00A859",
   S: "#F58A4B",
   H: "#BFBFBF",
+  SM: "#9B7FD4",
 };
 
 export const ISO513_GROUPS: { value: Iso513Group; label: string; color: string }[] = [
@@ -29,6 +30,14 @@ export const ISO513_GROUPS: { value: Iso513Group; label: string; color: string }
   { value: "N", label: "N — Non-Ferrous", color: ISO513_COLORS.N },
   { value: "S", label: "S — Superalloys / Titanium", color: ISO513_COLORS.S },
   { value: "H", label: "H — Hardened Materials", color: ISO513_COLORS.H },
+];
+
+// Every material group: the ISO 513 groups plus SM (Sintered Materials), which
+// is not part of ISO 513 and is used only by CBN grades. NPA screens keep
+// using ISO513_GROUPS.
+export const MATERIAL_GROUPS: { value: Iso513Group; label: string; color: string }[] = [
+  ...ISO513_GROUPS,
+  { value: "SM", label: "SM — Sintered Materials", color: ISO513_COLORS.SM },
 ];
 
 export const AVAILABILITIES: { value: NpaAvailability; label: string }[] = [
@@ -77,7 +86,7 @@ export function applicationLabel(value: NpaApplicationCategory) {
 }
 
 export function iso513Label(value: Iso513Group) {
-  return ISO513_GROUPS.find((g) => g.value === value)?.label ?? value;
+  return MATERIAL_GROUPS.find((g) => g.value === value)?.label ?? value;
 }
 
 export function availabilityLabel(value: NpaAvailability) {

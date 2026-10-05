@@ -166,6 +166,9 @@ enum Iso513Group {
   N
   S
   H
+  // Not an ISO 513 group: sintered materials (powder metallurgy), used only
+  // by CBN grades.
+  SM
 }
 
 model Material {

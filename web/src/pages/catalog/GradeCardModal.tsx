@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../lib/api";
-import { ISO513_COLORS, ISO513_GROUPS } from "../../lib/npaKnowledgeConstants";
+import { ISO513_COLORS, MATERIAL_GROUPS } from "../../lib/npaKnowledgeConstants";
 import type { Grade, GradeCase } from "../../lib/types";
 import { Button, Modal } from "../../components/ui";
 import { groupsIn } from "../../lib/gradeGroups";
@@ -64,7 +64,7 @@ export function GradeCardModal({ grade, onClose, onEdit }: { grade: Grade; onClo
           <dd className="flex flex-wrap gap-1">
             {grade.iso513Groups.length === 0
               ? "—"
-              : ISO513_GROUPS.filter((g) => grade.iso513Groups.includes(g.value)).map((g) => (
+              : MATERIAL_GROUPS.filter((g) => grade.iso513Groups.includes(g.value)).map((g) => (
                   <span key={g.value} className="rounded-full px-2 py-0.5 text-xs font-semibold text-neutral-900" style={{ backgroundColor: ISO513_COLORS[g.value] }}>
                     {g.label}
                   </span>
