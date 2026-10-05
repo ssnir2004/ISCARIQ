@@ -18,7 +18,7 @@ import { Tools } from "./pages/catalog/Tools";
 import { CuttingConditions } from "./pages/catalog/CuttingConditions";
 import { Shapes } from "./pages/catalog/Shapes";
 import { Chipbreakers } from "./pages/catalog/Chipbreakers";
-import { Grades, GradesCbn, GradesCeramic, GradesPcd } from "./pages/catalog/Grades";
+import { GradesHub } from "./pages/catalog/Grades";
 import { Applications } from "./pages/catalog/Applications";
 import { Substrates } from "./pages/catalog/Substrates";
 import { Coatings } from "./pages/catalog/Coatings";
@@ -67,10 +67,12 @@ function AppRoutes() {
         <Route path="/catalog/cutting-conditions" element={<CuttingConditions />} />
         <Route path="/catalog/shapes" element={<Shapes />} />
         <Route path="/catalog/chipbreakers" element={<Chipbreakers />} />
-        <Route path="/catalog/grades" element={<Grades />} />
-        <Route path="/catalog/grades-cbn" element={<GradesCbn />} />
-        <Route path="/catalog/grades-ceramic" element={<GradesCeramic />} />
-        <Route path="/catalog/grades-pcd" element={<GradesPcd />} />
+        <Route path="/catalog/grades" element={<GradesHub />} />
+        <Route path="/catalog/grades/:slug" element={<GradesHub />} />
+        {/* Old per-family addresses */}
+        <Route path="/catalog/grades-cbn" element={<Navigate to="/catalog/grades/cbn" replace />} />
+        <Route path="/catalog/grades-ceramic" element={<Navigate to="/catalog/grades/ceramic" replace />} />
+        <Route path="/catalog/grades-pcd" element={<Navigate to="/catalog/grades/pcd" replace />} />
         <Route path="/catalog/applications" element={<Applications />} />
         <Route path="/catalog/substrates" element={<Substrates />} />
         <Route path="/catalog/coatings" element={<Coatings />} />
