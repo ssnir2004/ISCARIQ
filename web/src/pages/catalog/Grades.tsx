@@ -4,6 +4,7 @@ import { api, ApiError } from "../../lib/api";
 import { Button, Input, Label, PageHeader } from "../../components/ui";
 import { GlossaryPage, type GlossaryExtraSection, type GlossarySelectField, type GlossaryTagField } from "./GlossaryPage";
 import { GradesBoard } from "./GradesBoard";
+import { GradeFormCases } from "./GradeFormCases";
 import { ISO513_COLORS, MATERIAL_GROUPS } from "../../lib/npaKnowledgeConstants";
 import { FAMILY_GROUPS } from "../../lib/gradeGroups";
 import { useResource } from "../../lib/useResource";
@@ -208,13 +209,23 @@ export function GradesScreen({ family, title, hideHeader = false }: { family: Gr
         ((entry.applicationGroups as Grade["applicationGroups"]) ?? []).map((r) => [r.applicationId, r.iso513Groups])
       ),
     }),
-    render: ({ tags, values, setValues }) => (
-      <ApplicationGroupsMatrix
-        applications={applications.filter((a) => (tags.applicationIds ?? []).includes(a.id))}
-        groups={(tags.iso513Groups ?? []) as Iso513Group[]}
-        value={(values.applicationGroups as AppGroups) ?? {}}
-        onChange={(v) => setValues({ ...values, applicationGroups: v })}
-      />
+    render: ({ tags, values, setValues, editing }) => (
+      <>
+        <ApplicationGroupsMatrix
+          applications={applications.filter((a) => (tags.applicationIds ?? []).includes(a.id))}
+          groups={(tags.iso513Groups ?? []) as Iso513Group[]}
+          value={(values.applicationGroups as AppGroups) ?? {}}
+          onChange={(v) => setValues({ ...values, applicationGroups: v })}
+        />
+        {/* Cases can be added only to a saved grade, i.e. while editing it. */}
+        {editing && (
+          <GradeFormCases
+            grade={editing}
+            applications={applications.filter((a) => (tags.applicationIds ?? []).includes(a.id))}
+            groups={(tags.iso513Groups ?? []) as Iso513Group[]}
+          />
+        )}
+      </>
     ),
   };
 
