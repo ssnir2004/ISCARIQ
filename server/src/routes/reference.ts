@@ -4,14 +4,15 @@ import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { crudRouter } from "../lib/crud.js";
 
-const iso513GroupSchema = z.enum(["P", "M", "K", "N", "S", "H"]);
+// Material groups: the six ISO 513 groups plus SM (Sintered Materials).
+const iso513GroupSchema = z.enum(["P", "M", "K", "N", "S", "H", "SM"]);
 const gradeFamilySchema = z.enum(["CARBIDE", "CBN", "CERAMIC", "PCD"]);
 type GradeFamily = z.infer<typeof gradeFamilySchema>;
 
 // ISO 513 groups each grade family can be used for.
 const FAMILY_GROUPS: Record<GradeFamily, string[]> = {
   CARBIDE: ["P", "M", "K", "N", "S", "H"],
-  CBN: ["K", "S", "H"],
+  CBN: ["K", "S", "H", "SM"],
   CERAMIC: ["K", "S", "H"],
   PCD: ["N"],
 };
@@ -113,7 +114,7 @@ materialRouter.delete("/:id", async (req, res, next) => {
 materialRouter.use(crudRouter({
   delegate: prisma.material,
   createSchema: z.object({
-    iso513Group: z.enum(["P", "M", "K", "N", "S", "H"]),
+    iso513Group: iso513GroupSchema,
     name: z.string().min(1),
     description: z.string().optional(),
     commonUse: z.string().optional(),
@@ -121,7 +122,7 @@ materialRouter.use(crudRouter({
     hardness: z.string().optional(),
   }),
   updateSchema: z.object({
-    iso513Group: z.enum(["P", "M", "K", "N", "S", "H"]).optional(),
+    iso513Group: iso513GroupSchema.optional(),
     name: z.string().min(1).optional(),
     description: z.string().optional(),
     commonUse: z.string().optional(),
@@ -281,7 +282,7 @@ const gradeCrudRouter = glossaryRouter(
     family: gradeFamilySchema.optional(),
     coated: z.boolean().optional(),
     substrateId: z.string().min(1).nullable().optional(),
-    iso513Groups: z.array(z.enum(["P", "M", "K", "N", "S", "H"])).default([]),
+    iso513Groups: z.array(iso513GroupSchema).default([]),
     applicationIds: z.array(z.string().min(1)).default([]),
     // { [applicationId]: groups } for applications where the grade covers
     // only some of its iso513Groups.

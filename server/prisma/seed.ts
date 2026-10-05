@@ -79,13 +79,14 @@ const TEAMS: { group: string; code: string; description: string; isManager?: boo
   { group: "GIL", code: "EN0", description: "GIL-INNOVATION", isManager: true },
 ];
 
-const ISO513_MATERIALS: { group: "P" | "M" | "K" | "N" | "S" | "H"; name: string; description: string }[] = [
+const ISO513_MATERIALS: { group: "P" | "M" | "K" | "N" | "S" | "H" | "SM"; name: string; description: string }[] = [
   { group: "P", name: "Steel", description: "Unalloyed and low/high-alloy steel, steel castings" },
   { group: "M", name: "Stainless Steel", description: "Ferritic, austenitic, duplex stainless steels" },
   { group: "K", name: "Cast Iron", description: "Grey, nodular, malleable cast iron" },
   { group: "N", name: "Non-Ferrous", description: "Aluminum, copper, brass, other non-ferrous metals" },
   { group: "S", name: "Superalloys / Titanium", description: "Heat-resistant superalloys and titanium alloys" },
   { group: "H", name: "Hardened Materials", description: "Hardened steel and chilled cast iron (>45 HRC)" },
+  { group: "SM", name: "Sintered Materials", description: "Powder-metallurgy (sintered) steels and irons" },
 ];
 
 // Default machining applications; more can be added on the Applications screen.

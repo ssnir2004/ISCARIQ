@@ -1,7 +1,7 @@
 import { useRef, useState, type FormEvent } from "react";
 import { useResource } from "../../lib/useResource";
 import { api, ApiError } from "../../lib/api";
-import { ISO513_COLORS, ISO513_GROUPS } from "../../lib/npaKnowledgeConstants";
+import { ISO513_COLORS, MATERIAL_GROUPS } from "../../lib/npaKnowledgeConstants";
 import type { Iso513Group, Material } from "../../lib/types";
 import { Button, Card, Input, Iso513Badge, Label, PageHeader, Select } from "../../components/ui";
 
@@ -42,7 +42,7 @@ export function Materials() {
 
   const categoryOf = (g: Iso513Group) => data.find((m) => m.isCategory && m.iso513Group === g);
   const categoryName = (g: Iso513Group) =>
-    categoryOf(g)?.name ?? ISO513_GROUPS.find((x) => x.value === g)?.label.split(" — ")[1] ?? g;
+    categoryOf(g)?.name ?? MATERIAL_GROUPS.find((x) => x.value === g)?.label.split(" — ")[1] ?? g;
   const editingCategory = editing?.isCategory ?? false;
 
   function focusForm(focusName: boolean) {
@@ -131,7 +131,7 @@ export function Materials() {
                 disabled={editingCategory}
                 onChange={(e) => setForm({ ...form, iso513Group: e.target.value as Iso513Group })}
               >
-                {ISO513_GROUPS.map(({ value: g }) => (
+                {MATERIAL_GROUPS.map(({ value: g }) => (
                   <option key={g} value={g}>
                     {g} — {categoryName(g)}
                   </option>
@@ -181,7 +181,7 @@ export function Materials() {
       </div>
 
       <div className="space-y-3">
-        {ISO513_GROUPS.map(({ value: g }) => {
+        {MATERIAL_GROUPS.map(({ value: g }) => {
           const category = categoryOf(g);
           const subs = data.filter((m) => !m.isCategory && m.iso513Group === g);
           return (

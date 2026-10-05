@@ -18,7 +18,8 @@ export type ProjectStatus =
   | "CLOSED";
 
 export type OperationType = "TURNING" | "MILLING" | "DRILLING" | "GROOVING" | "THREADING" | "BORING";
-export type Iso513Group = "P" | "M" | "K" | "N" | "S" | "H";
+// The six ISO 513 groups plus SM (Sintered Materials, CBN grades only).
+export type Iso513Group = "P" | "M" | "K" | "N" | "S" | "H" | "SM";
 export type CoolantPreference = "REQUIRED" | "OPTIONAL" | "AVOID";
 export type PlantMapView = "WORLD" | "GERMANY";
 

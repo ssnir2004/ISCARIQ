@@ -1,6 +1,6 @@
 import { useRef, useState, type PointerEvent } from "react";
 import { api, ApiError } from "../../lib/api";
-import { ISO513_COLORS, ISO513_GROUPS } from "../../lib/npaKnowledgeConstants";
+import { ISO513_COLORS, MATERIAL_GROUPS } from "../../lib/npaKnowledgeConstants";
 import { useResource } from "../../lib/useResource";
 import type { Application, Grade, GradeCase, GradeColumnOrder, GradeFamily, Iso513Group } from "../../lib/types";
 import { Button, Card } from "../../components/ui";
@@ -85,7 +85,7 @@ export function GradesBoard({ data, startEdit, remove, family }: GlossaryListCon
   const keySuffix = family === "CARBIDE" ? "" : `.${family}`;
   const storeScope = (s: string) => (family === "CARBIDE" ? s : `${family}:${s}`);
   // Only this family's materials get columns / chart choices.
-  const familyGroups = ISO513_GROUPS.filter((g) => FAMILY_GROUPS[family].includes(g.value));
+  const familyGroups = MATERIAL_GROUPS.filter((g) => FAMILY_GROUPS[family].includes(g.value));
   const { data: savedOrders } = useResource<GradeColumnOrder>("/grade-order");
   const { data: applications } = useResource<Application>("/applications");
   const [storedTab, setStoredTab] = useState(() => readStored(TAB_STORAGE_KEY + keySuffix, ALL));
@@ -249,7 +249,7 @@ export function GradesBoard({ data, startEdit, remove, family }: GlossaryListCon
             const chartProps = {
               scopeName,
               group: chartGroup,
-              groupLabel: ISO513_GROUPS.find((g) => g.value === chartGroup)?.label ?? chartGroup,
+              groupLabel: MATERIAL_GROUPS.find((g) => g.value === chartGroup)?.label ?? chartGroup,
               caseCount: (gradeId: string) => caseCount(gradeId, chartGroup),
               onOpenCases: (grade: Grade) => setCasesFor({ grade, group: chartGroup }),
             };
