@@ -87,13 +87,16 @@ export function GradeFormCases({
   );
 }
 
-// Window for adding a case to a grade; also used by the full-screen case view.
+// Window for adding a case to a grade, or editing one (`existing`, fetched
+// by id so it has its image). Used by the grade form, the Cases window and
+// the full-screen case view.
 export function AddCaseModal({
   grade,
   applications,
   groups,
   initialApplicationId = "",
   initialGroup = "",
+  existing,
   onClose,
   onSaved,
 }: {
@@ -103,14 +106,22 @@ export function AddCaseModal({
   // Preselected application / material ("" = all).
   initialApplicationId?: string;
   initialGroup?: Iso513Group | "";
+  existing?: GradeCase;
   onClose: () => void;
-  onSaved: (created: GradeCase) => void;
+  onSaved: (saved: GradeCase) => void;
 }) {
-  const [applicationId, setApplicationId] = useState(initialApplicationId);
-  const [group, setGroup] = useState<string>(initialGroup);
-  const [title, setTitle] = useState("");
-  const [notes, setNotes] = useState("");
-  const [image, setImage] = useState<string | null>(null);
+  const [applicationId, setApplicationId] = useState(existing ? (existing.applicationId ?? "") : initialApplicationId);
+  const [group, setGroup] = useState<string>(existing ? (existing.iso513Group ?? "") : initialGroup);
+  const [title, setTitle] = useState(existing?.title ?? "");
+  const [notes, setNotes] = useState(existing?.notes ?? "");
+  const [image, setImage] = useState<string | null>(existing?.image ?? null);
+  // Keep an edited case's current application / material selectable even if
+  // the grade no longer lists it.
+  const appOptions =
+    existing?.application && !applications.some((a) => a.id === existing.application?.id)
+      ? [...applications, existing.application]
+      : applications;
+  const groupOptions = existing?.iso513Group && !groups.includes(existing.iso513Group) ? [...groups, existing.iso513Group] : groups;
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -126,15 +137,17 @@ export function AddCaseModal({
     setError(null);
     setSaving(true);
     try {
-      const created = await api.post<GradeCase>("/grade-cases", {
-        gradeId: grade.id,
+      const fields = {
         applicationId: applicationId || null,
         iso513Group: group || null,
         title: title.trim(),
         notes: notes.trim() || null,
         image,
-      });
-      onSaved(created);
+      };
+      const saved = existing
+        ? await api.patch<GradeCase>(`/grade-cases/${existing.id}`, fields)
+        : await api.post<GradeCase>("/grade-cases", { gradeId: grade.id, ...fields });
+      onSaved(saved);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to save the case");
       setSaving(false);
@@ -142,7 +155,7 @@ export function AddCaseModal({
   }
 
   return (
-    <Modal title={`${grade.name} — add case`} onClose={onClose}>
+    <Modal title={`${grade.name} — ${existing ? "edit case" : "add case"}`} onClose={onClose}>
       <div className="space-y-3">
         <div>
           <Label>Title</Label>
@@ -153,7 +166,7 @@ export function AddCaseModal({
             <Label>Application</Label>
             <Select value={applicationId} onChange={(e) => setApplicationId(e.target.value)}>
               <option value="">All applications</option>
-              {applications.map((a) => (
+              {appOptions.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.name}
                 </option>
@@ -164,7 +177,7 @@ export function AddCaseModal({
             <Label>Material</Label>
             <Select value={group} onChange={(e) => setGroup(e.target.value)}>
               <option value="">All materials</option>
-              {groups.map((g) => (
+              {groupOptions.map((g) => (
                 <option key={g} value={g}>
                   {iso513Label(g)}
                 </option>

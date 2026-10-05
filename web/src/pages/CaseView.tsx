@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
 import { ISO513_COLORS } from "../lib/npaKnowledgeConstants";
@@ -21,7 +21,7 @@ const headerButton = "rounded-lg px-3 py-1.5 text-neutral-300 hover:bg-neutral-8
 // Full-screen view of one grade case, opened from the Grades board or the
 // Cases window. The image fills the screen; clicking it toggles fit / actual
 // size. Previous / Next step through the grade's cases, and cases can be
-// added, renamed and deleted here.
+// added, edited and deleted here.
 export function CaseView() {
   const { id } = useParams();
   const [item, setItem] = useState<GradeCase | null>(null);
@@ -38,8 +38,21 @@ export function CaseView() {
   // The grade itself, for the applications / materials a new case can use.
   const [grade, setGrade] = useState<Grade | null>(null);
   const [adding, setAdding] = useState(false);
-  const [editingTitle, setEditingTitle] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  const loadItem = useCallback(
+    () =>
+      api
+        .get<GradeCase>(`/grade-cases/${id}`)
+        .then((c) => {
+          setItem(c);
+          setError(null);
+          document.title = `${c.grade?.name ?? "Case"} — ${c.title}`;
+        })
+        .catch((err) => setError(err instanceof ApiError && err.status === 404 ? "This case no longer exists." : "Failed to load the case.")),
+    [id]
+  );
 
   const loadSiblings = useCallback(async () => {
     if (!gradeId) return;
@@ -68,21 +81,14 @@ export function CaseView() {
 
   useEffect(() => {
     setActualSize(false);
-    setEditingTitle(null);
+    setEditing(false);
     setActionError(null);
-    api
-      .get<GradeCase>(`/grade-cases/${id}`)
-      .then((c) => {
-        setItem(c);
-        setError(null);
-        document.title = `${c.grade?.name ?? "Case"} — ${c.title}`;
-      })
-      .catch((err) => setError(err instanceof ApiError && err.status === 404 ? "This case no longer exists." : "Failed to load the case."));
-  }, [id]);
+    loadItem();
+  }, [loadItem]);
 
   useEffect(() => {
-    // Keys belong to the add window / title field while they're open.
-    if (adding || editingTitle !== null) return;
+    // Keys belong to the add / edit window while it's open.
+    if (adding || editing) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") closeView();
       const target = e.key === "ArrowLeft" ? prevId : e.key === "ArrowRight" ? nextId : null;
@@ -90,22 +96,7 @@ export function CaseView() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [prevId, nextId, goTo, adding, editingTitle]);
-
-  async function saveTitle(e: FormEvent) {
-    e.preventDefault();
-    const title = editingTitle?.trim();
-    if (!item || !title) return;
-    setActionError(null);
-    try {
-      await api.patch(`/grade-cases/${item.id}`, { title });
-      setItem({ ...item, title });
-      document.title = `${item.grade?.name ?? "Case"} — ${title}`;
-      setEditingTitle(null);
-    } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : "Failed to rename the case");
-    }
-  }
+  }, [prevId, nextId, goTo, adding, editing]);
 
   async function remove() {
     if (!item || !confirm(`Delete the case "${item.title}"?`)) return;
@@ -134,31 +125,10 @@ export function CaseView() {
       <header className="flex shrink-0 items-start justify-between gap-4 border-b border-neutral-800 px-4 py-2">
         {item ? (
           <div className="min-w-0">
-            {editingTitle !== null ? (
-              <form onSubmit={saveTitle} className="flex items-center gap-2">
-                <span className="text-base font-semibold text-neutral-400">{item.grade?.name}</span>
-                <input
-                  value={editingTitle}
-                  onChange={(e) => setEditingTitle(e.target.value)}
-                  onKeyDown={(e) => e.key === "Escape" && setEditingTitle(null)}
-                  aria-label="Case title"
-                  autoFocus
-                  required
-                  className="w-80 max-w-full rounded-lg border border-neutral-700 bg-neutral-900 px-2 py-1 text-sm text-neutral-100"
-                />
-                <button type="submit" className="rounded-lg bg-blue-600 px-3 py-1 text-sm hover:bg-blue-500">
-                  Save
-                </button>
-                <button type="button" onClick={() => setEditingTitle(null)} className={headerButton}>
-                  Cancel
-                </button>
-              </form>
-            ) : (
               <h1 className="truncate text-base font-semibold">
                 <span className="mr-2 text-neutral-400">{item.grade?.name}</span>
                 {item.title}
               </h1>
-            )}
             <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
               <span className="rounded-full bg-neutral-800 px-2 py-0.5">{item.application?.name ?? "All applications"}</span>
               <span
@@ -194,11 +164,9 @@ export function CaseView() {
               <button type="button" onClick={() => setAdding(true)} className={headerButton}>
                 + Add case
               </button>
-              {editingTitle === null && (
-                <button type="button" onClick={() => setEditingTitle(item.title)} className={headerButton}>
-                  Edit title
-                </button>
-              )}
+              <button type="button" onClick={() => setEditing(true)} className={headerButton}>
+                Edit
+              </button>
               <button type="button" onClick={remove} className="rounded-lg px-3 py-1.5 text-red-400 hover:bg-neutral-800">
                 Delete
               </button>
@@ -225,6 +193,23 @@ export function CaseView() {
           />
         )}
       </main>
+      {editing && item && (
+        <AddCaseModal
+          grade={{ id: item.gradeId, name: item.grade?.name ?? grade?.name ?? "" }}
+          applications={grade?.applications ?? []}
+          groups={grade?.iso513Groups ?? []}
+          existing={item}
+          onClose={() => setEditing(false)}
+          onSaved={async () => {
+            setEditing(false);
+            await loadItem();
+            // A changed application / material can take the case out of this
+            // view's set; then show it among all of the grade's cases.
+            const ids = await loadSiblings().catch(() => undefined);
+            if (ids && !ids.includes(item.id)) navigate(caseUrl(item.id), { replace: true });
+          }}
+        />
+      )}
       {adding && item && (
         <AddCaseModal
           grade={{ id: item.gradeId, name: item.grade?.name ?? grade?.name ?? "" }}
