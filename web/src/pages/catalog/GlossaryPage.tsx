@@ -156,6 +156,7 @@ export function GlossaryPage({
   listPath,
   createValues,
   hideHeader = false,
+  collapsibleForm = false,
 }: {
   resource: string;
   title: string;
@@ -175,6 +176,9 @@ export function GlossaryPage({
   createValues?: Record<string, unknown>;
   // Omit the page title (e.g. when shown inside a tab that already names it).
   hideHeader?: boolean;
+  // Hide the add/edit form behind an "+ Add" button; it opens on click or on
+  // Edit, and closes on Cancel or after a successful save.
+  collapsibleForm?: boolean;
 }) {
   const formRef = useRef<HTMLDivElement>(null);
   const { data, reload } = useResource<Entry>(listPath ?? resource);
@@ -192,6 +196,7 @@ export function GlossaryPage({
     return [...new Set([...(field.suggestions ?? []), ...used])].sort((a, b) => a.localeCompare(b));
   }
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [formOpen, setFormOpen] = useState(!collapsibleForm);
   // Entry shown in the details window (showDetails), if any.
   const [viewing, setViewing] = useState<Entry | null>(null);
   // Another entry with the name being typed (names are unique), if any.
@@ -216,6 +221,7 @@ export function GlossaryPage({
     setExtraValues(extraSection ? extraSection.read(entry) : {});
     setEditingId(entry.id);
     setError(null);
+    setFormOpen(true);
     formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
@@ -230,6 +236,7 @@ export function GlossaryPage({
     setEditingId(null);
     setFileInputKey((k) => k + 1);
     setError(null);
+    setFormOpen(!collapsibleForm);
   }
 
   async function onSubmit(e: FormEvent) {
@@ -275,6 +282,7 @@ export function GlossaryPage({
     setCreatingKey(null);
     setEditingId(null);
     setFileInputKey((k) => k + 1);
+    setFormOpen(!collapsibleForm);
   }
 
   async function remove(id: string) {
@@ -293,6 +301,11 @@ export function GlossaryPage({
     <div className={renderList ? "" : "max-w-3xl"}>
       {!hideHeader && <PageHeader title={title} />}
       <div ref={formRef} className="max-w-3xl scroll-mt-4">
+        {!formOpen ? (
+          <Button type="button" className="mb-6" onClick={() => setFormOpen(true)}>
+            + Add {singular}
+          </Button>
+        ) : (
         <Card className="mb-6 p-4">
           <form onSubmit={onSubmit} className="grid grid-cols-1 gap-4">
             <div>
@@ -391,7 +404,7 @@ export function GlossaryPage({
               <Button type="submit" disabled={submitting}>
                 {editingId ? "Save Changes" : `Add ${singular}`}
               </Button>
-              {editingId && (
+              {(editingId || collapsibleForm) && (
                 <Button type="button" variant="secondary" onClick={cancelEdit}>
                   Cancel
                 </Button>
@@ -399,6 +412,7 @@ export function GlossaryPage({
             </div>
           </form>
         </Card>
+        )}
       </div>
 
       {renderList ? (

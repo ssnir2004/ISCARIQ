@@ -227,6 +227,7 @@ export function GradesScreen({ family, title, hideHeader = false }: { family: Gr
       createValues={{ family }}
       title={title}
       hideHeader={hideHeader}
+      collapsibleForm
       singular="grade"
       selectFields={family === "CARBIDE" ? selectFields : []}
       checkboxFields={family === "CBN" ? [{ key: "coated", label: "Coated" }] : []}
