@@ -277,29 +277,39 @@ export function GradesBoard({ data, startEdit, remove, family }: GlossaryListCon
               caseCount: (gradeId: string) => caseCount(gradeId, chartGroup),
               onOpenCases: (grade: Grade) => openFullScreen(grade, chartGroup),
             };
-            // CBN: uncoated and coated grades get separate charts side by side,
-            // each with its own saved layout ("~coated" scope).
-            if (family === "CBN") {
-              return (
-                <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+            // Grade groups: each group with grades here gets its own chart
+            // (saved layout under scope "~<group id>"), next to one for the
+            // grades without a group. No groups: a single chart.
+            const sets = [...new Map(chartGrades.filter((g) => g.set).map((g) => [g.set!.id, g.set!])).values()].sort((a, b) =>
+              a.name.localeCompare(b.name)
+            );
+            if (sets.length === 0) {
+              return <GradesChart key={`${storeScope(scope)}:${chartGroup}`} {...chartProps} scope={storeScope(scope)} grades={chartGrades} />;
+            }
+            const ungrouped = chartGrades.filter((g) => !g.set);
+            return (
+              <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+                {ungrouped.length > 0 && (
                   <GradesChart
                     key={`${storeScope(scope)}:${chartGroup}`}
                     {...chartProps}
                     scope={storeScope(scope)}
-                    variant="Uncoated"
-                    grades={chartGrades.filter((g) => !g.coated)}
+                    // "Not Coated" with one group; "Other" with several.
+                    variant={sets.length === 1 ? `Not ${sets[0].name}` : "Other"}
+                    grades={ungrouped}
                   />
+                )}
+                {sets.map((set) => (
                   <GradesChart
-                    key={`${storeScope(scope)}~coated:${chartGroup}`}
+                    key={`${storeScope(scope)}~${set.id}:${chartGroup}`}
                     {...chartProps}
-                    scope={`${storeScope(scope)}~coated`}
-                    variant="Coated"
-                    grades={chartGrades.filter((g) => g.coated)}
+                    scope={`${storeScope(scope)}~${set.id}`}
+                    variant={set.name}
+                    grades={chartGrades.filter((g) => g.set?.id === set.id)}
                   />
-                </div>
-              );
-            }
-            return <GradesChart key={`${storeScope(scope)}:${chartGroup}`} {...chartProps} scope={storeScope(scope)} grades={chartGrades} />;
+                ))}
+              </div>
+            );
           })()}
         </div>
       ) : (
@@ -396,9 +406,9 @@ export function GradesBoard({ data, startEdit, remove, family }: GlossaryListCon
                                 </div>
                               )}
                               {grade.substrate && <div className="mt-0.5 text-neutral-500 dark:text-neutral-400">{grade.substrate.name}</div>}
-                              {grade.coated && (
+                              {grade.set && (
                                 <span className="mt-1 inline-block rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-medium text-violet-800 dark:bg-violet-900/40 dark:text-violet-300">
-                                  Coated
+                                  {grade.set.name}
                                 </span>
                               )}
                               {/* Other applications only: the current tab's application is implied. */}

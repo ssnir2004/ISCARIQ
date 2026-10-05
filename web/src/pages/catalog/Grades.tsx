@@ -8,7 +8,7 @@ import { GradeFormCases } from "./GradeFormCases";
 import { ISO513_COLORS, MATERIAL_GROUPS } from "../../lib/npaKnowledgeConstants";
 import { FAMILY_GROUPS } from "../../lib/gradeGroups";
 import { useResource } from "../../lib/useResource";
-import type { Application, Grade, GradeFamily, Iso513Group, Substrate } from "../../lib/types";
+import type { Application, Grade, GradeFamily, GradeSet, Iso513Group, Substrate } from "../../lib/types";
 
 type AppGroups = Record<string, Iso513Group[]>;
 
@@ -82,6 +82,55 @@ function ApplicationGroupsMatrix({
 
 // Inline "new substrate" form shown inside the grade form. It is not a
 // <form> (it sits inside the grade's form), so Enter is handled by hand.
+// Inline form under the Group select for creating a group on the spot.
+function NewGroupInline({ family, onCreated, onCancel }: { family: GradeFamily; onCreated: (id: string) => Promise<void>; onCancel: () => void }) {
+  const [name, setName] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    if (!name.trim()) {
+      setError("Name is required");
+      return;
+    }
+    setError(null);
+    setSaving(true);
+    try {
+      const created = await api.post<GradeSet>("/grade-sets", { name: name.trim(), family });
+      await onCreated(created.id);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to create the group");
+      setSaving(false);
+    }
+  }
+
+  function onKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter") {
+      e.preventDefault(); // don't submit the grade form
+      save();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      onCancel();
+    }
+  }
+
+  return (
+    <div className="mt-2 space-y-2 rounded-lg border border-blue-200 bg-blue-50/50 p-3 dark:border-blue-900 dark:bg-blue-950/20">
+      <p className="text-xs font-medium text-blue-800 dark:text-blue-300">New group</p>
+      <Input value={name} onChange={(e) => setName(e.target.value)} onKeyDown={onKeyDown} placeholder="e.g. Coated" aria-label="New group name" autoFocus />
+      {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
+      <div className="flex gap-2">
+        <Button type="button" onClick={save} disabled={saving}>
+          {saving ? "Creating…" : "Create group"}
+        </Button>
+        <Button type="button" variant="secondary" onClick={onCancel}>
+          Cancel
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function NewSubstrateInline({ onCreated, onCancel }: { onCreated: (id: string) => Promise<void>; onCancel: () => void }) {
   const [name, setName] = useState("");
   const [hardness, setHardness] = useState("");
@@ -147,6 +196,29 @@ export function GradesScreen({ family, title, hideHeader = false }: { family: Gr
   const { data: applications } = useResource<Application>("/applications");
   // Likewise substrates, from the Substrates screen.
   const { data: substrates, reload: reloadSubstrates } = useResource<Substrate>("/substrates");
+
+  // Groups of this family's grades, each shown in its own chart.
+  const { data: sets, reload: reloadSets } = useResource<GradeSet>(`/grade-sets?family=${family}`);
+  const groupField: GlossarySelectField = {
+    key: "setId",
+    label: "Group",
+    options: sets.map((s) => ({ value: s.id, label: s.name })),
+    read: (entry) => (entry.set as GradeSet | null | undefined)?.id,
+    create: {
+      label: "+ New group…",
+      render: (done) => (
+        <NewGroupInline
+          family={family}
+          onCreated={async (id) => {
+            await reloadSets();
+            done(id);
+          }}
+          onCancel={() => done(null)}
+        />
+      ),
+    },
+    emptyHint: "Optional. Each group gets its own chart; without groups there is one chart.",
+  };
 
   const selectFields: GlossarySelectField[] = [
     {
@@ -240,8 +312,7 @@ export function GradesScreen({ family, title, hideHeader = false }: { family: Gr
       hideHeader={hideHeader}
       collapsibleForm
       singular="grade"
-      selectFields={family === "CARBIDE" ? selectFields : []}
-      checkboxFields={family === "CBN" ? [{ key: "coated", label: "Coated" }] : []}
+      selectFields={family === "CARBIDE" ? [groupField, ...selectFields] : [groupField]}
       tagFields={fields}
       extraSection={appGroupsSection}
       renderList={(ctx) => <GradesBoard {...ctx} family={family} />}
