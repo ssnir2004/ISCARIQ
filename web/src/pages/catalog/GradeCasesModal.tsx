@@ -5,7 +5,7 @@ import { ISO513_COLORS } from "../../lib/npaKnowledgeConstants";
 import type { GradeCase, Iso513Group } from "../../lib/types";
 import { Button, Input, Label, Modal, Textarea } from "../../components/ui";
 import { ClipboardImagePaste } from "../../components/npaKnowledge/ClipboardImagePaste";
-import { ALL_SCOPE, caseMatches } from "../../lib/gradeCases";
+import { ALL_SCOPE, caseMatches, caseUrl } from "../../lib/gradeCases";
 
 // Cases (trials / case studies, usually a slide image) for one grade, as seen
 // from one board context: an application (or all) and an ISO 513 group.
@@ -37,6 +37,11 @@ export function GradeCasesModal({
   // Inline title editing for an existing case.
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
+  // The case shown; with several, Previous / Next (or the arrow keys) step
+  // through them. Newest first.
+  const [index, setIndex] = useState(0);
+  const count = cases?.length ?? 0;
+  const current = count > 0 ? Math.min(index, count - 1) : 0;
 
   const load = useCallback(async () => {
     const list = await api.get<GradeCase[]>(`/grade-cases?gradeId=${encodeURIComponent(grade.id)}`);
@@ -48,6 +53,24 @@ export function GradeCasesModal({
   useEffect(() => {
     load().catch((err) => setError(err instanceof ApiError ? err.message : "Failed to load cases"));
   }, [load]);
+
+  function go(step: number) {
+    setEditingId(null);
+    setIndex(Math.max(0, Math.min(count - 1, current + step)));
+  }
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (count < 2 || (e.target instanceof Element && e.target.closest("input, textarea, select, [contenteditable]"))) return;
+      if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+        e.preventDefault();
+        setEditingId(null);
+        setIndex((i) => Math.max(0, Math.min(count - 1, Math.min(i, count - 1) + (e.key === "ArrowRight" ? 1 : -1))));
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [count]);
 
   async function save(e: FormEvent) {
     e.preventDefault();
@@ -71,6 +94,7 @@ export function GradeCasesModal({
       setImage(null);
       setAdding(false);
       await load();
+      setIndex(0); // the new case is the newest
       onChanged();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to save the case");
@@ -166,7 +190,21 @@ export function GradeCasesModal({
         ) : cases.length === 0 ? (
           !adding && <p className="py-6 text-center text-sm text-neutral-500 dark:text-neutral-400">No cases yet for {context}.</p>
         ) : (
-          cases.map((c) => (
+          <>
+          {count > 1 && (
+            <div className="flex items-center justify-center gap-3" data-case-nav>
+              <Button variant="secondary" onClick={() => go(-1)} disabled={current === 0}>
+                ‹ Previous
+              </Button>
+              <span className="text-sm text-neutral-600 tabular-nums dark:text-neutral-300">
+                {current + 1} / {count}
+              </span>
+              <Button variant="secondary" onClick={() => go(1)} disabled={current === count - 1}>
+                Next ›
+              </Button>
+            </div>
+          )}
+          {[cases[current]].map((c) => (
             <div key={c.id} data-case={c.title} className="space-y-2 rounded-lg border border-neutral-200 p-3 dark:border-neutral-700">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -187,7 +225,7 @@ export function GradeCasesModal({
                     </form>
                   ) : (
                     <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">
-                      <Link to={`/cases/${c.id}`} target="_blank" className="hover:underline">
+                      <Link to={caseUrl(c.id, scope, group)} target="_blank" className="hover:underline">
                         {c.title}
                       </Link>
                       <button
@@ -214,7 +252,7 @@ export function GradeCasesModal({
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
                   <Link
-                    to={`/cases/${c.id}`}
+                    to={caseUrl(c.id, scope, group)}
                     target="_blank"
                     className="rounded-lg px-3 py-1.5 text-sm text-blue-600 hover:bg-neutral-100 dark:text-blue-400 dark:hover:bg-neutral-800"
                   >
@@ -227,12 +265,13 @@ export function GradeCasesModal({
               </div>
               {c.notes && <p className="text-sm whitespace-pre-line text-neutral-600 dark:text-neutral-300">{c.notes}</p>}
               {c.image && (
-                <Link to={`/cases/${c.id}`} target="_blank" className="block" title="Open full screen in a new tab">
+                <Link to={caseUrl(c.id, scope, group)} target="_blank" className="block" title="Open full screen in a new tab">
                   <img src={c.image} alt={c.title} className="mx-auto max-h-[55vh] rounded-lg border border-neutral-200 object-contain dark:border-neutral-700" />
                 </Link>
               )}
             </div>
-          ))
+          ))}
+          </>
         )}
       </div>
     </Modal>
