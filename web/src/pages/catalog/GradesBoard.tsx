@@ -1,4 +1,4 @@
-import { useRef, useState, type PointerEvent } from "react";
+import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { api, ApiError } from "../../lib/api";
 import { ISO513_COLORS, MATERIAL_GROUPS } from "../../lib/npaKnowledgeConstants";
 import { useResource } from "../../lib/useResource";
@@ -7,6 +7,7 @@ import { Button, Card } from "../../components/ui";
 import type { Entry, GlossaryListContext } from "./GlossaryPage";
 import { GradesChart } from "./GradesChart";
 import { GradeCasesModal } from "./GradeCasesModal";
+import { GRADE_CASES_CHANGED } from "./GradeFormCases";
 import { GradeSearch } from "./GradeSearch";
 import { GradeCardModal } from "./GradeCardModal";
 import { ALL_SCOPE, caseMatches } from "../../lib/gradeCases";
@@ -117,6 +118,12 @@ export function GradesBoard({ data, startEdit, remove, family }: GlossaryListCon
 
   // Cases (trials) per grade; the list has no images, just enough for counts.
   const { data: cases, reload: reloadCases } = useResource<GradeCase>("/grade-cases");
+  // Cases added from the grade form update the counts here too.
+  useEffect(() => {
+    const onChanged = () => void reloadCases();
+    window.addEventListener(GRADE_CASES_CHANGED, onChanged);
+    return () => window.removeEventListener(GRADE_CASES_CHANGED, onChanged);
+  }, [reloadCases]);
   const [casesFor, setCasesFor] = useState<{ grade: Grade; group: Iso513Group } | null>(null);
   // Grade whose full card is open (picked from the search box).
   const [cardFor, setCardFor] = useState<Grade | null>(null);

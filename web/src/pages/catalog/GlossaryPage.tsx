@@ -63,7 +63,13 @@ export type Entry = GlossaryEntry & Record<string, unknown>;
 export interface GlossaryExtraSection {
   // Values loaded from an entry when editing it.
   read: (entry: Entry) => Record<string, unknown>;
-  render: (ctx: { tags: Record<string, string[]>; values: Record<string, unknown>; setValues: (v: Record<string, unknown>) => void }) => ReactNode;
+  render: (ctx: {
+    tags: Record<string, string[]>;
+    values: Record<string, unknown>;
+    setValues: (v: Record<string, unknown>) => void;
+    // The entry being edited (null when adding a new one).
+    editing: Entry | null;
+  }) => ReactNode;
 }
 
 // Lets a screen replace the default entry list with its own view (e.g. the
@@ -391,7 +397,12 @@ export function GlossaryPage({
                 )}
               </div>
             ))}
-            {extraSection?.render({ tags, values: extraValues, setValues: setExtraValues })}
+            {extraSection?.render({
+              tags,
+              values: extraValues,
+              setValues: setExtraValues,
+              editing: (editingId && data.find((e) => e.id === editingId)) || null,
+            })}
             <div>
               <Label>Image (optional)</Label>
               <div className="flex items-center gap-3">
