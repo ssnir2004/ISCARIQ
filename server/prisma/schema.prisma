@@ -438,6 +438,8 @@ model Grade {
   // a group share one.
   sets         GradeSet[]
   description  String?
+  // Short, important note shown large and bold in the grade's chart block.
+  chartNote    String?
   image        String?
   substrate    Substrate?    @relation(fields: [substrateId], references: [id])
   substrateId  String?

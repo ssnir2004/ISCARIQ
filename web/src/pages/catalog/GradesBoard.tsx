@@ -400,6 +400,7 @@ export function GradesBoard({ data, startEdit, remove, family }: GlossaryListCon
                                   </button>
                                 </span>
                               </div>
+                              {grade.chartNote && <div className="mt-0.5 font-bold text-neutral-900 dark:text-neutral-100">{grade.chartNote}</div>}
                               {grade.description && (
                                 <div className="mt-0.5 line-clamp-2 text-neutral-600 dark:text-neutral-300" title={grade.description}>
                                   {grade.description}

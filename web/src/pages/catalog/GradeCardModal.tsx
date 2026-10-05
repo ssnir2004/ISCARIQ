@@ -53,6 +53,12 @@ export function GradeCardModal({ grade, onClose, onEdit }: { grade: Grade; onClo
             </>
           )}
 
+          {grade.chartNote && (
+            <>
+              <dt className="text-neutral-500 dark:text-neutral-400">Highlight</dt>
+              <dd className="font-bold text-neutral-900 dark:text-neutral-100">{grade.chartNote}</dd>
+            </>
+          )}
           {grade.sets && grade.sets.length > 0 && (
             <>
               <dt className="text-neutral-500 dark:text-neutral-400">Groups</dt>
