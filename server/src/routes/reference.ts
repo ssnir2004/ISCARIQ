@@ -282,6 +282,7 @@ const gradeCrudRouter = glossaryRouter(
   {
     family: gradeFamilySchema.optional(),
     setIds: z.array(z.string().min(1)).optional(),
+    chartNote: z.string().trim().max(200).nullable().optional(),
     substrateId: z.string().min(1).nullable().optional(),
     iso513Groups: z.array(iso513GroupSchema).default([]),
     applicationIds: z.array(z.string().min(1)).default([]),

@@ -314,6 +314,7 @@ export function GradesScreen({ family, title, hideHeader = false }: { family: Gr
       singular="grade"
       selectFields={family === "CARBIDE" ? selectFields : []}
       tagFields={[...fields, groupField]}
+      textFields={[{ key: "chartNote", label: "Chart highlight (shown large and bold in the chart)", placeholder: "e.g. First choice for interrupted cuts" }]}
       extraSection={appGroupsSection}
       renderList={(ctx) => <GradesBoard {...ctx} family={family} />}
     />

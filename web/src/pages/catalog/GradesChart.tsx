@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type PointerEvent } from "react";
+import { Fragment, useEffect, useRef, useState, type PointerEvent } from "react";
 import { api, ApiError } from "../../lib/api";
 import { ISO513_COLORS } from "../../lib/npaKnowledgeConstants";
 import { useResource } from "../../lib/useResource";
@@ -508,10 +508,18 @@ export function GradesChart({
                       style={{ left: `${label.x}%`, top: `${label.y}%`, width: `${label.w}%`, height: `${label.h}%` }}
                     >
                       {block.grades.map((g) => (
-                        <span key={g.id} data-grade-id={g.id} className={`font-bold leading-tight ${block.grades.length > 3 ? "text-xs" : "text-sm"}`}>
-                          {g.name}
-                          {caseCount(g.id) > 0 && <span className="ml-1 text-[10px] font-medium">📷{caseCount(g.id)}</span>}
-                        </span>
+                        <Fragment key={g.id}>
+                          <span data-grade-id={g.id} className={`font-bold leading-tight ${block.grades.length > 3 ? "text-xs" : "text-sm"}`}>
+                            {g.name}
+                            {caseCount(g.id) > 0 && <span className="ml-1 text-[10px] font-medium">📷{caseCount(g.id)}</span>}
+                          </span>
+                          {/* The grade's highlight: large and bold. */}
+                          {g.chartNote && (
+                            <span data-grade-id={g.id} data-chart-note className="mt-0.5 px-1 text-center text-base leading-tight font-extrabold">
+                              {g.chartNote}
+                            </span>
+                          )}
+                        </Fragment>
                       ))}
                       {single?.substrate && <span className="text-[10px] leading-tight opacity-75">{single.substrate.name}</span>}
                     </div>
