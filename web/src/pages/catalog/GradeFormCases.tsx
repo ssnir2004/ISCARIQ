@@ -87,21 +87,27 @@ export function GradeFormCases({
   );
 }
 
-function AddCaseModal({
+// Window for adding a case to a grade; also used by the full-screen case view.
+export function AddCaseModal({
   grade,
   applications,
   groups,
+  initialApplicationId = "",
+  initialGroup = "",
   onClose,
   onSaved,
 }: {
   grade: { id: string; name: string };
   applications: Application[];
   groups: Iso513Group[];
+  // Preselected application / material ("" = all).
+  initialApplicationId?: string;
+  initialGroup?: Iso513Group | "";
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (created: GradeCase) => void;
 }) {
-  const [applicationId, setApplicationId] = useState("");
-  const [group, setGroup] = useState("");
+  const [applicationId, setApplicationId] = useState(initialApplicationId);
+  const [group, setGroup] = useState<string>(initialGroup);
   const [title, setTitle] = useState("");
   const [notes, setNotes] = useState("");
   const [image, setImage] = useState<string | null>(null);
@@ -120,7 +126,7 @@ function AddCaseModal({
     setError(null);
     setSaving(true);
     try {
-      await api.post("/grade-cases", {
+      const created = await api.post<GradeCase>("/grade-cases", {
         gradeId: grade.id,
         applicationId: applicationId || null,
         iso513Group: group || null,
@@ -128,7 +134,7 @@ function AddCaseModal({
         notes: notes.trim() || null,
         image,
       });
-      onSaved();
+      onSaved(created);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to save the case");
       setSaving(false);

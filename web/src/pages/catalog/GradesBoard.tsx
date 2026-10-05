@@ -10,7 +10,8 @@ import { GradeCasesModal } from "./GradeCasesModal";
 import { GRADE_CASES_CHANGED } from "./GradeFormCases";
 import { GradeSearch } from "./GradeSearch";
 import { GradeCardModal } from "./GradeCardModal";
-import { ALL_SCOPE, caseMatches } from "../../lib/gradeCases";
+import { ALL_SCOPE, caseMatches, caseUrl } from "../../lib/gradeCases";
+import { useNavigate } from "react-router-dom";
 import { FAMILY_GROUPS, groupsIn } from "../../lib/gradeGroups";
 
 // Grades laid out in one column per ISO 513 group, each ranked by hand from
@@ -124,11 +125,20 @@ export function GradesBoard({ data, startEdit, remove, family }: GlossaryListCon
     window.addEventListener(GRADE_CASES_CHANGED, onChanged);
     return () => window.removeEventListener(GRADE_CASES_CHANGED, onChanged);
   }, [reloadCases]);
+  const navigate = useNavigate();
   const [casesFor, setCasesFor] = useState<{ grade: Grade; group: Iso513Group } | null>(null);
   // Grade whose full card is open (picked from the search box).
   const [cardFor, setCardFor] = useState<Grade | null>(null);
   const caseCount = (gradeId: string, group: Iso513Group) =>
     cases.filter((c) => c.gradeId === gradeId && caseMatches(c, scope, group)).length;
+
+  // Clicking a grade that has cases opens its newest case full screen; the
+  // Cases button still opens the Cases window.
+  function openFullScreen(grade: Grade, group: Iso513Group) {
+    const caseScope = scope === ALL ? ALL_SCOPE : scope;
+    const first = cases.find((c) => c.gradeId === grade.id && caseMatches(c, caseScope, group));
+    if (first) navigate(caseUrl(first.id, caseScope, group));
+  }
 
   function selectTab(s: string) {
     setStoredTab(s);
@@ -170,7 +180,7 @@ export function GradesBoard({ data, startEdit, remove, family }: GlossaryListCon
     if (drag && !drag.active && !(e.target as HTMLElement).closest("button")) {
       const grade = column.find((g) => g.id === drag.id);
       // Only when there is something to show; new cases are added via the Cases button.
-      if (grade && caseCount(grade.id, drag.group) > 0) setCasesFor({ grade, group: drag.group });
+      if (grade) openFullScreen(grade, drag.group);
       return;
     }
     if (!drag?.active || drag.index === null) return;
@@ -265,7 +275,7 @@ export function GradesBoard({ data, startEdit, remove, family }: GlossaryListCon
               group: chartGroup,
               groupLabel: MATERIAL_GROUPS.find((g) => g.value === chartGroup)?.label ?? chartGroup,
               caseCount: (gradeId: string) => caseCount(gradeId, chartGroup),
-              onOpenCases: (grade: Grade) => setCasesFor({ grade, group: chartGroup }),
+              onOpenCases: (grade: Grade) => openFullScreen(grade, chartGroup),
             };
             // CBN: uncoated and coated grades get separate charts side by side,
             // each with its own saved layout ("~coated" scope).
