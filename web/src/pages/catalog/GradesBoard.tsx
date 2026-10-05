@@ -12,7 +12,7 @@ import { GradeSearch } from "./GradeSearch";
 import { GradeCardModal } from "./GradeCardModal";
 import { ALL_SCOPE, caseMatches, caseUrl } from "../../lib/gradeCases";
 import { useNavigate } from "react-router-dom";
-import { FAMILY_GROUPS, groupsIn } from "../../lib/gradeGroups";
+import { FAMILY_GROUPS, groupsIn, setsIn } from "../../lib/gradeGroups";
 
 // Grades laid out in one column per ISO 513 group, each ranked by hand from
 // Harder (top) to Tougher (bottom) by dragging. There is one board for all
@@ -280,13 +280,14 @@ export function GradesBoard({ data, startEdit, remove, family }: GlossaryListCon
             // Grade groups: each group with grades here gets its own chart
             // (saved layout under scope "~<group id>"), next to one for the
             // grades without a group. No groups: a single chart.
-            const sets = [...new Map(chartGrades.flatMap((g) => g.sets ?? []).map((s) => [s.id, s])).values()].sort((a, b) =>
+            // A grade's groups can differ per material (setsIn).
+            const sets = [...new Map(chartGrades.flatMap((g) => setsIn(g, chartGroup)).map((s) => [s.id, s])).values()].sort((a, b) =>
               a.name.localeCompare(b.name)
             );
             if (sets.length === 0) {
               return <GradesChart key={`${storeScope(scope)}:${chartGroup}`} {...chartProps} scope={storeScope(scope)} grades={chartGrades} />;
             }
-            const ungrouped = chartGrades.filter((g) => !g.sets?.length);
+            const ungrouped = chartGrades.filter((g) => setsIn(g, chartGroup).length === 0);
             return (
               <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
                 {ungrouped.length > 0 && (
@@ -305,7 +306,7 @@ export function GradesBoard({ data, startEdit, remove, family }: GlossaryListCon
                     {...chartProps}
                     scope={`${storeScope(scope)}~${set.id}`}
                     variant={set.name}
-                    grades={chartGrades.filter((g) => g.sets?.some((s) => s.id === set.id))}
+                    grades={chartGrades.filter((g) => setsIn(g, chartGroup).some((s) => s.id === set.id))}
                   />
                 ))}
               </div>
@@ -407,7 +408,7 @@ export function GradesBoard({ data, startEdit, remove, family }: GlossaryListCon
                                 </div>
                               )}
                               {grade.substrate && <div className="mt-0.5 text-neutral-500 dark:text-neutral-400">{grade.substrate.name}</div>}
-                              {grade.sets?.map((set) => (
+                              {setsIn(grade, group).map((set) => (
                                 <span
                                   key={set.id}
                                   className="mt-1 mr-1 inline-block rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-medium text-violet-800 dark:bg-violet-900/40 dark:text-violet-300"

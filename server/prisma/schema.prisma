@@ -437,6 +437,9 @@ model Grade {
   // own chart (a grade in several groups shows in each), and grades without
   // a group share one.
   sets         GradeSet[]
+  // Per-material exceptions to sets (e.g. Coated for K but not for H).
+  // Without a row, every material uses all of the grade's sets.
+  materialSets GradeMaterialSets[]
   description  String?
   // Short, important note shown large and bold in the grade's chart block.
   chartNote    String?
@@ -457,6 +460,18 @@ model Grade {
 
 // The ISO 513 groups a grade is used for in one specific application, when
 // that differs from the grade's full iso513Groups.
+// A grade's groups for one of its materials, where they differ from all of
+// its groups. setIds are GradeSet ids; ids no longer among the grade's sets
+// are ignored.
+model GradeMaterialSets {
+  grade       Grade       @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+  gradeId     String
+  iso513Group Iso513Group
+  setIds      String[]
+
+  @@id([gradeId, iso513Group])
+}
+
 model GradeApplicationGroups {
   grade         Grade         @relation(fields: [gradeId], references: [id], onDelete: Cascade)
   gradeId       String

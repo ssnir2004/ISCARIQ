@@ -1,4 +1,4 @@
-import type { Grade, GradeFamily, Iso513Group } from "./types";
+import type { Grade, GradeFamily, GradeSet, Iso513Group } from "./types";
 import { ALL_SCOPE } from "./gradeCases";
 
 // ISO 513 groups each grade family can be used for (CBN and ceramics:
@@ -17,4 +17,12 @@ export function groupsIn(grade: Pick<Grade, "iso513Groups" | "applicationGroups"
   if (scope === ALL_SCOPE) return grade.iso513Groups;
   const exception = grade.applicationGroups?.find((a) => a.applicationId === scope);
   return exception ? grade.iso513Groups.filter((g) => exception.iso513Groups.includes(g)) : grade.iso513Groups;
+}
+
+// The grade's groups for one material: all of them unless the grade has a
+// per-material exception for it.
+export function setsIn(grade: Pick<Grade, "sets" | "materialSets">, group: Iso513Group): GradeSet[] {
+  const sets = grade.sets ?? [];
+  const row = grade.materialSets?.find((r) => r.iso513Group === group);
+  return row ? sets.filter((s) => row.setIds.includes(s.id)) : sets;
 }

@@ -283,6 +283,9 @@ const gradeCrudRouter = glossaryRouter(
     family: gradeFamilySchema.optional(),
     setIds: z.array(z.string().min(1)).optional(),
     chartNote: z.string().trim().max(200).nullable().optional(),
+    // { [material]: setIds } for materials where the grade is in only some of
+    // its groups.
+    materialSets: z.record(z.string(), z.array(z.string().min(1))).optional(),
     substrateId: z.string().min(1).nullable().optional(),
     iso513Groups: z.array(iso513GroupSchema).default([]),
     applicationIds: z.array(z.string().min(1)).default([]),
@@ -291,13 +294,24 @@ const gradeCrudRouter = glossaryRouter(
     applicationGroups: z.record(z.string(), z.array(iso513GroupSchema)).optional(),
   },
   {
-    include: { applications: { orderBy: { name: "asc" } }, substrate: true, applicationGroups: true, sets: { orderBy: { name: "asc" } } },
+    include: { applications: { orderBy: { name: "asc" } }, substrate: true, applicationGroups: true, sets: { orderBy: { name: "asc" } }, materialSets: true },
     // ?family=CBN lists one family's grades (each has its own screen).
     listWhere: (req) => {
       const family = gradeFamilySchema.safeParse(req.query.family);
       return family.success ? { family: family.data } : undefined;
     },
-    mapData: ({ applicationIds, substrateId, setIds, applicationGroups, ...data }, mode) => {
+    mapData: ({ applicationIds, substrateId, setIds, applicationGroups, materialSets, ...data }, mode) => {
+      if (materialSets !== undefined) {
+        // Keep only real exceptions: materials the grade has, groups it has,
+        // and lists that don't simply equal all of its groups.
+        const groups: string[] | undefined = data.iso513Groups;
+        const sets: string[] | undefined = setIds;
+        const rows = Object.entries(materialSets as Record<string, string[]>)
+          .filter(([g]) => iso513GroupSchema.safeParse(g).success && (!groups || groups.includes(g)))
+          .map(([iso513Group, list]) => ({ iso513Group, setIds: [...new Set(sets ? list.filter((id) => sets.includes(id)) : list)] }))
+          .filter((r) => !sets || r.setIds.length !== sets.length);
+        data.materialSets = mode === "create" ? { create: rows } : { deleteMany: {}, create: rows };
+      }
       if (applicationGroups !== undefined) {
         // Keep only real exceptions: applications the grade has, groups it
         // has, and lists that don't simply equal all of its groups.
