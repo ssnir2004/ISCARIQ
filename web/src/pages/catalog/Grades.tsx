@@ -8,7 +8,7 @@ import { GradeFormCases } from "./GradeFormCases";
 import { ISO513_COLORS, MATERIAL_GROUPS } from "../../lib/npaKnowledgeConstants";
 import { FAMILY_GROUPS } from "../../lib/gradeGroups";
 import { useResource } from "../../lib/useResource";
-import type { Application, Grade, GradeFamily, GradeSet, Iso513Group, Substrate } from "../../lib/types";
+import type { Application, Grade, GradeFamily, GradeSet, GradeType, Iso513Group, Substrate } from "../../lib/types";
 
 type AppGroups = Record<string, Iso513Group[]>;
 
@@ -151,8 +151,23 @@ function MaterialGroupsMatrix({
   );
 }
 
-// Inline form under the Groups field for creating a group on the spot.
-function NewGroupInline({ family, onCreated, onCancel }: { family: GradeFamily; onCreated: (id: string) => Promise<void>; onCancel: () => void }) {
+// Inline form for creating a group (or type) of this family on the spot,
+// under its field in the grade form.
+function NewGroupInline({
+  family,
+  resource = "/grade-sets",
+  noun = "group",
+  placeholder = "e.g. Coated",
+  onCreated,
+  onCancel,
+}: {
+  family: GradeFamily;
+  resource?: string;
+  noun?: string;
+  placeholder?: string;
+  onCreated: (id: string) => Promise<void>;
+  onCancel: () => void;
+}) {
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -165,10 +180,10 @@ function NewGroupInline({ family, onCreated, onCancel }: { family: GradeFamily; 
     setError(null);
     setSaving(true);
     try {
-      const created = await api.post<GradeSet>("/grade-sets", { name: name.trim(), family });
+      const created = await api.post<{ id: string }>(resource, { name: name.trim(), family });
       await onCreated(created.id);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to create the group");
+      setError(err instanceof ApiError ? err.message : `Failed to create the ${noun}`);
       setSaving(false);
     }
   }
@@ -185,12 +200,12 @@ function NewGroupInline({ family, onCreated, onCancel }: { family: GradeFamily; 
 
   return (
     <div className="mt-2 space-y-2 rounded-lg border border-blue-200 bg-blue-50/50 p-3 dark:border-blue-900 dark:bg-blue-950/20">
-      <p className="text-xs font-medium text-blue-800 dark:text-blue-300">New group</p>
-      <Input value={name} onChange={(e) => setName(e.target.value)} onKeyDown={onKeyDown} placeholder="e.g. Coated" aria-label="New group name" autoFocus />
+      <p className="text-xs font-medium text-blue-800 dark:text-blue-300">New {noun}</p>
+      <Input value={name} onChange={(e) => setName(e.target.value)} onKeyDown={onKeyDown} placeholder={placeholder} aria-label={`New ${noun} name`} autoFocus />
       {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
       <div className="flex gap-2">
         <Button type="button" onClick={save} disabled={saving}>
-          {saving ? "Creating…" : "Create group"}
+          {saving ? "Creating…" : `Create ${noun}`}
         </Button>
         <Button type="button" variant="secondary" onClick={onCancel}>
           Cancel
@@ -289,6 +304,32 @@ export function GradesScreen({ family, title, hideHeader = false }: { family: Gr
       ),
     },
     emptyHint: "Optional. Each group gets its own chart (a grade can be in several); without groups there is one chart.",
+  };
+
+  // Types of this family's grades (e.g. ceramic ALUMINA); the map groups by them.
+  const { data: types, reload: reloadTypes } = useResource<GradeType>(`/grade-types?family=${family}`);
+  const typeField: GlossarySelectField = {
+    key: "typeId",
+    label: "Type",
+    options: types.map((t) => ({ value: t.id, label: t.name })),
+    read: (entry) => (entry.type as GradeType | null | undefined)?.id,
+    create: {
+      label: "+ New type…",
+      render: (done) => (
+        <NewGroupInline
+          family={family}
+          resource="/grade-types"
+          noun="type"
+          placeholder="e.g. ALUMINA"
+          onCreated={async (id) => {
+            await reloadTypes();
+            done(id);
+          }}
+          onCancel={() => done(null)}
+        />
+      ),
+    },
+    emptyHint: "Optional. What the grade is made of (e.g. ALUMINA); the Map view groups grades by type.",
   };
 
   const selectFields: GlossarySelectField[] = [
@@ -390,7 +431,7 @@ export function GradesScreen({ family, title, hideHeader = false }: { family: Gr
       hideHeader={hideHeader}
       collapsibleForm
       singular="grade"
-      selectFields={family === "CARBIDE" ? selectFields : []}
+      selectFields={family === "CARBIDE" ? [typeField, ...selectFields] : [typeField]}
       tagFields={[...fields, groupField]}
       textFields={[{ key: "chartNote", label: "Chart highlight (shown large and bold in the chart)", placeholder: "e.g. First choice for interrupted cuts" }]}
       extraSection={appGroupsSection}

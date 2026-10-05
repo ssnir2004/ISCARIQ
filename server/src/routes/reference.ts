@@ -282,6 +282,7 @@ const gradeCrudRouter = glossaryRouter(
   {
     family: gradeFamilySchema.optional(),
     setIds: z.array(z.string().min(1)).optional(),
+    typeId: z.string().min(1).nullable().optional(),
     chartNote: z.string().trim().max(200).nullable().optional(),
     // { [material]: setIds } for materials where the grade is in only some of
     // its groups.
@@ -294,13 +295,15 @@ const gradeCrudRouter = glossaryRouter(
     applicationGroups: z.record(z.string(), z.array(iso513GroupSchema)).optional(),
   },
   {
-    include: { applications: { orderBy: { name: "asc" } }, substrate: true, applicationGroups: true, sets: { orderBy: { name: "asc" } }, materialSets: true },
+    include: { applications: { orderBy: { name: "asc" } }, substrate: true, applicationGroups: true, sets: { orderBy: { name: "asc" } }, materialSets: true, type: true },
     // ?family=CBN lists one family's grades (each has its own screen).
     listWhere: (req) => {
       const family = gradeFamilySchema.safeParse(req.query.family);
       return family.success ? { family: family.data } : undefined;
     },
-    mapData: ({ applicationIds, substrateId, setIds, applicationGroups, materialSets, ...data }, mode) => {
+    mapData: ({ applicationIds, substrateId, setIds, typeId, applicationGroups, materialSets, ...data }, mode) => {
+      if (typeId) data.type = { connect: { id: typeId } };
+      else if (typeId === null && mode === "update") data.type = { disconnect: true };
       if (materialSets !== undefined) {
         // Keep only real exceptions: materials the grade has, groups it has,
         // and lists that don't simply equal all of its groups.
@@ -356,50 +359,77 @@ async function checkGradeSet(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
-export const gradeRouter = Router();
-gradeRouter.post("/", checkFamilyGroups, checkGradeSet);
-gradeRouter.patch("/:id", checkFamilyGroups, checkGradeSet);
-gradeRouter.use(gradeCrudRouter);
-
-// Grade groups (GradeSet), per family: GET ?family=CBN, POST { name, family },
-// PATCH { name }, DELETE (its grades become ungrouped).
-export const gradeSetRouter = Router();
-const gradeSetName = z.string().trim().min(1, "Name is required");
-
-gradeSetRouter.get("/", async (req, res) => {
-  const family = gradeFamilySchema.safeParse(req.query.family);
-  res.json(await prisma.gradeSet.findMany({ where: family.success ? { family: family.data } : undefined, orderBy: { name: "asc" } }));
-});
-
-async function saveGradeSet(res: Response, save: () => Promise<unknown>, name: string) {
-  try {
-    res.json(await save());
-  } catch (e) {
-    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
-      return res.status(409).json({ error: `A group named "${name}" already exists.` });
-    }
-    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2025") return res.status(404).json({ error: "Not found" });
-    throw e;
-  }
+// A grade's type must exist and belong to the grade's family.
+async function checkGradeType(req: Request, res: Response, next: NextFunction) {
+  const typeId = req.body?.typeId;
+  if (typeof typeId !== "string" || !typeId) return next();
+  let family: string | undefined = req.body?.family;
+  if (!family && req.params.id) family = (await prisma.grade.findUnique({ where: { id: req.params.id }, select: { family: true } }))?.family;
+  const type = await prisma.gradeType.findUnique({ where: { id: typeId } });
+  if (!type) return res.status(400).json({ error: "That type no longer exists." });
+  if (type.family !== (family ?? "CARBIDE")) return res.status(400).json({ error: `"${type.name}" is a type of ${type.family} grades.` });
+  next();
 }
 
-gradeSetRouter.post("/", async (req, res) => {
-  const parsed = z.object({ name: gradeSetName, family: gradeFamilySchema }).safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid group" });
-  res.status(201);
-  await saveGradeSet(res, () => prisma.gradeSet.create({ data: parsed.data }), parsed.data.name);
-});
+export const gradeRouter = Router();
+gradeRouter.post("/", checkFamilyGroups, checkGradeSet, checkGradeType);
+gradeRouter.patch("/:id", checkFamilyGroups, checkGradeSet, checkGradeType);
+gradeRouter.use(gradeCrudRouter);
 
-gradeSetRouter.patch("/:id", async (req, res) => {
-  const parsed = z.object({ name: gradeSetName }).safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid group" });
-  await saveGradeSet(res, () => prisma.gradeSet.update({ where: { id: req.params.id }, data: parsed.data }), parsed.data.name);
-});
+// Per-family name lists managed from the grade form: GET ?family=CBN,
+// POST { name, family }, PATCH { name }, DELETE (grades lose it).
+type FamilyListDelegate = {
+  findMany(args: object): Promise<unknown>;
+  create(args: { data: { name: string; family: GradeFamily } }): Promise<unknown>;
+  update(args: { where: { id: string }; data: { name: string } }): Promise<unknown>;
+  deleteMany(args: { where: { id: string } }): Promise<unknown>;
+};
 
-gradeSetRouter.delete("/:id", async (req, res) => {
-  await prisma.gradeSet.deleteMany({ where: { id: req.params.id } });
-  res.status(204).end();
-});
+function familyListRouter(delegate: FamilyListDelegate, noun: string) {
+  const router = Router();
+  const nameSchema = z.string().trim().min(1, "Name is required");
+
+  async function save(res: Response, run: () => Promise<unknown>, name: string) {
+    try {
+      res.json(await run());
+    } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+        return res.status(409).json({ error: `A ${noun} named "${name}" already exists.` });
+      }
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2025") return res.status(404).json({ error: "Not found" });
+      throw e;
+    }
+  }
+
+  router.get("/", async (req, res) => {
+    const family = gradeFamilySchema.safeParse(req.query.family);
+    res.json(await delegate.findMany({ where: family.success ? { family: family.data } : undefined, orderBy: { name: "asc" } }));
+  });
+
+  router.post("/", async (req, res) => {
+    const parsed = z.object({ name: nameSchema, family: gradeFamilySchema }).safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message ?? `Invalid ${noun}` });
+    res.status(201);
+    await save(res, () => delegate.create({ data: parsed.data }), parsed.data.name);
+  });
+
+  router.patch("/:id", async (req, res) => {
+    const parsed = z.object({ name: nameSchema }).safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message ?? `Invalid ${noun}` });
+    await save(res, () => delegate.update({ where: { id: req.params.id }, data: parsed.data }), parsed.data.name);
+  });
+
+  router.delete("/:id", async (req, res) => {
+    await delegate.deleteMany({ where: { id: req.params.id } });
+    res.status(204).end();
+  });
+  return router;
+}
+
+// Grade groups (GradeSet): each group gets its own chart.
+export const gradeSetRouter = familyListRouter(prisma.gradeSet as unknown as FamilyListDelegate, "group");
+// Grade types (GradeType): the Grades map has a box per type.
+export const gradeTypeRouter = familyListRouter(prisma.gradeType as unknown as FamilyListDelegate, "type");
 
 // Trials / case studies per grade. The list omits the (large) image so the
 // Grades screen can show counts cheaply; GET /:id returns it.
