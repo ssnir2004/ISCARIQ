@@ -193,6 +193,14 @@ export interface Substrate extends GlossaryEntry {
 // Each family has its own Grades screen; carbide grades also have a substrate.
 export type GradeFamily = "CARBIDE" | "CBN" | "CERAMIC" | "PCD";
 
+// A rule of thumb for choosing grades of one family.
+export interface GradeRule {
+  id: string;
+  family: GradeFamily;
+  text: string;
+  position: number;
+}
+
 // What a grade is made of within its family (e.g. ceramic "ALUMINA").
 export interface GradeType {
   id: string;

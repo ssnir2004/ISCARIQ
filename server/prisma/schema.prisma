@@ -542,6 +542,18 @@ model GradeType {
   @@unique([family, name])
 }
 
+// A rule of thumb for choosing grades of one family, shown as a numbered
+// list on that family's Grades tab.
+model GradeRule {
+  id        String      @id @default(cuid())
+  family    GradeFamily
+  text      String
+  position  Int         @default(0)
+  createdAt DateTime    @default(now())
+
+  @@index([family, position])
+}
+
 model GradeChartBox {
   scope       String
   iso513Group Iso513Group
