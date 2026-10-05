@@ -196,6 +196,13 @@ export function GradesChart({
   }, []);
 
   const savedFor = (gradeId: string) => savedBoxes.find((b) => b.scope === scope && b.iso513Group === group && b.gradeId === gradeId);
+  // A grade group's chart ("<board>~<group id>") starts from the board's
+  // plain chart: a grade not yet placed here keeps its position from there
+  // (position and stacking only; merges stay per chart), so assigning grades
+  // to a group doesn't lose their arrangement. Moving it saves its own box.
+  const baseScope = scope.replace(/~[^~]+$/, "");
+  const baseFor = (gradeId: string) =>
+    baseScope === scope ? undefined : savedBoxes.find((b) => b.scope === baseScope && b.iso513Group === group && b.gradeId === gradeId);
 
   // Group grades into blocks: merged grades share their mergeId's block.
   const blocks: Block[] = [];
@@ -215,6 +222,9 @@ export function GradesChart({
       const saved = savedFor(block.grades[0].id);
       if (saved) return saved;
     }
+    // Also after a reset, so a group chart resets to the plain chart's layout.
+    const base = baseFor(block.grades[0].id);
+    if (base) return { x: base.x, y: base.y, w: base.w, h: base.h };
     return defaultBox(block.index, grades.length);
   }
 
@@ -338,7 +348,7 @@ export function GradesChart({
   }
 
   // Saved stacking order of a block (higher = in front); default 0.
-  const zOf = (block: Block) => localZ[block.key] ?? savedFor(block.grades[0].id)?.z ?? 0;
+  const zOf = (block: Block) => localZ[block.key] ?? savedFor(block.grades[0].id)?.z ?? baseFor(block.grades[0].id)?.z ?? 0;
   // Draw order: by z, then board order. Index in this list = layer.
   const stack = [...blocks].sort((a, b) => zOf(a) - zOf(b) || a.index - b.index);
 
