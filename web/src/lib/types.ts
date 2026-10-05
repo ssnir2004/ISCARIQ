@@ -193,10 +193,19 @@ export interface Substrate extends GlossaryEntry {
 // Each family has its own Grades screen; carbide grades also have a substrate.
 export type GradeFamily = "CARBIDE" | "CBN" | "CERAMIC" | "PCD";
 
+// A user-defined group of grades within one family (e.g. "Coated").
+export interface GradeSet {
+  id: string;
+  name: string;
+  family: GradeFamily;
+}
+
 export interface Grade extends GlossaryEntry {
   family: GradeFamily;
-  // CBN only: coated grades get their own chart next to the uncoated one.
-  coated: boolean;
+  // Optional group within the family (e.g. "Coated"); each group gets its
+  // own chart.
+  setId?: string | null;
+  set?: GradeSet | null;
   substrate?: Substrate | null;
   iso513Groups: Iso513Group[];
   applications: Application[];

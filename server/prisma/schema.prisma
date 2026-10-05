@@ -433,8 +433,10 @@ model Grade {
   id           String        @id @default(cuid())
   name         String        @unique
   family       GradeFamily   @default(CARBIDE)
-  // CBN grades can be coated; they get their own chart next to the uncoated one.
-  coated       Boolean       @default(false)
+  // Optional group within the family (e.g. "Coated"); each group gets its
+  // own chart, and grades without a group share one.
+  set          GradeSet?     @relation(fields: [setId], references: [id], onDelete: SetNull)
+  setId        String?
   description  String?
   image        String?
   substrate    Substrate?    @relation(fields: [substrateId], references: [id])
@@ -496,6 +498,18 @@ model GradeColumnOrder {
 // or an Application id) and ISO 513 group. x/y/w/h are percentages of the
 // chart area, measured from its top-left corner; the box spans the grade's
 // range. Grades without a box are laid out from the board's ranking.
+// A user-defined group of grades within one family (e.g. "Coated" CBN
+// grades). On the charts each group has its own chart (board scope suffix
+// "~<id>"); grades without a group share the plain one.
+model GradeSet {
+  id     String      @id @default(cuid())
+  name   String
+  family GradeFamily
+  grades Grade[]
+
+  @@unique([family, name])
+}
+
 model GradeChartBox {
   scope       String
   iso513Group Iso513Group
