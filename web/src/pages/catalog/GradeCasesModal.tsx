@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError } from "../../lib/api";
 import { ISO513_COLORS } from "../../lib/npaKnowledgeConstants";
-import type { GradeCase, Iso513Group } from "../../lib/types";
+import type { Application, GradeCase, Iso513Group } from "../../lib/types";
+import { AddCaseModal } from "./GradeFormCases";
 import { Button, Input, Label, Modal, Textarea } from "../../components/ui";
 import { ClipboardImagePaste } from "../../components/npaKnowledge/ClipboardImagePaste";
 import { ALL_SCOPE, caseMatches, caseUrl } from "../../lib/gradeCases";
@@ -18,7 +19,7 @@ export function GradeCasesModal({
   onClose,
   onChanged,
 }: {
-  grade: { id: string; name: string };
+  grade: { id: string; name: string; applications?: Application[]; iso513Groups?: Iso513Group[] };
   scope: string;
   scopeName: string;
   group: Iso513Group;
@@ -37,6 +38,8 @@ export function GradeCasesModal({
   // Inline title editing for an existing case.
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
+  // Case open in the full edit window (application, material, notes, image).
+  const [editingCase, setEditingCase] = useState<GradeCase | null>(null);
   // The case shown; with several, Previous / Next (or the arrow keys) step
   // through them. Newest first.
   const [index, setIndex] = useState(0);
@@ -235,6 +238,13 @@ export function GradeCasesModal({
                       >
                         Edit title
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingCase(c)}
+                        className="ml-2 text-xs font-normal text-blue-600 hover:underline dark:text-blue-400"
+                      >
+                        Edit
+                      </button>
                     </h3>
                   )}
                   <div className="mt-1 flex flex-wrap gap-1.5 text-xs">
@@ -274,6 +284,20 @@ export function GradeCasesModal({
           </>
         )}
       </div>
+      {editingCase && (
+        <AddCaseModal
+          grade={grade}
+          applications={grade.applications ?? []}
+          groups={grade.iso513Groups ?? []}
+          existing={editingCase}
+          onClose={() => setEditingCase(null)}
+          onSaved={async () => {
+            setEditingCase(null);
+            await load();
+            onChanged();
+          }}
+        />
+      )}
     </Modal>
   );
 }
