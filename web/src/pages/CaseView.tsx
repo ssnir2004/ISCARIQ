@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
 import { ISO513_COLORS } from "../lib/npaKnowledgeConstants";
-import type { GradeCase } from "../lib/types";
+import type { GradeCase, Iso513Group } from "../lib/types";
+import { caseMatches, caseUrl } from "../lib/gradeCases";
 
 // Close the tab this case was opened in (from the Cases window); if the
 // browser refuses because the tab wasn't opened by script, go back instead.
@@ -18,8 +19,29 @@ export function CaseView() {
   const [item, setItem] = useState<GradeCase | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [actualSize, setActualSize] = useState(false);
+  const navigate = useNavigate();
+  // Board context the case was opened from (if any): Previous / Next step
+  // through the same cases; otherwise through all of the grade's cases.
+  const [params] = useSearchParams();
+  const scope = params.get("scope") ?? undefined;
+  const group = (params.get("group") as Iso513Group | null) ?? undefined;
+  const [siblings, setSiblings] = useState<string[]>([]);
+  const gradeId = item?.gradeId;
 
   useEffect(() => {
+    if (!gradeId) return;
+    api
+      .get<GradeCase[]>(`/grade-cases?gradeId=${encodeURIComponent(gradeId)}`)
+      .then((list) => setSiblings(list.filter((c) => !scope || !group || caseMatches(c, scope, group)).map((c) => c.id)))
+      .catch(() => setSiblings([]));
+  }, [gradeId, scope, group]);
+
+  const position = id ? siblings.indexOf(id) : -1;
+  const prevId = position > 0 ? siblings[position - 1] : null;
+  const nextId = position >= 0 && position < siblings.length - 1 ? siblings[position + 1] : null;
+
+  useEffect(() => {
+    setActualSize(false);
     api
       .get<GradeCase>(`/grade-cases/${id}`)
       .then((c) => {
@@ -32,10 +54,12 @@ export function CaseView() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") closeView();
+      const target = e.key === "ArrowLeft" ? prevId : e.key === "ArrowRight" ? nextId : null;
+      if (target) navigate(caseUrl(target, scope, group), { replace: true });
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [prevId, nextId, scope, group, navigate]);
 
   return (
     <div className="flex h-screen flex-col bg-neutral-950 text-neutral-100">
@@ -62,6 +86,29 @@ export function CaseView() {
           <div className="text-sm text-neutral-400">{error ?? "Loading…"}</div>
         )}
         <div className="flex shrink-0 items-center gap-2 text-sm">
+          {siblings.length > 1 && position >= 0 && (
+            <div className="flex items-center gap-1" data-case-nav>
+              <button
+                type="button"
+                disabled={!prevId}
+                onClick={() => prevId && navigate(caseUrl(prevId, scope, group), { replace: true })}
+                className="rounded-lg px-3 py-1.5 text-neutral-300 hover:bg-neutral-800 disabled:opacity-30 disabled:hover:bg-transparent"
+              >
+                ‹ Previous
+              </button>
+              <span className="text-neutral-400 tabular-nums">
+                {position + 1} / {siblings.length}
+              </span>
+              <button
+                type="button"
+                disabled={!nextId}
+                onClick={() => nextId && navigate(caseUrl(nextId, scope, group), { replace: true })}
+                className="rounded-lg px-3 py-1.5 text-neutral-300 hover:bg-neutral-800 disabled:opacity-30 disabled:hover:bg-transparent"
+              >
+                Next ›
+              </button>
+            </div>
+          )}
           {item?.image && (
             <button type="button" onClick={() => setActualSize((v) => !v)} className="rounded-lg px-3 py-1.5 text-neutral-300 hover:bg-neutral-800">
               {actualSize ? "Fit to screen" : "Actual size"}
