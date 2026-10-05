@@ -155,6 +155,7 @@ export function GlossaryPage({
   extraSection,
   listPath,
   createValues,
+  hideHeader = false,
 }: {
   resource: string;
   title: string;
@@ -172,6 +173,8 @@ export function GlossaryPage({
   listPath?: string;
   // Values added to every new entry (e.g. a grade's family).
   createValues?: Record<string, unknown>;
+  // Omit the page title (e.g. when shown inside a tab that already names it).
+  hideHeader?: boolean;
 }) {
   const formRef = useRef<HTMLDivElement>(null);
   const { data, reload } = useResource<Entry>(listPath ?? resource);
@@ -288,7 +291,7 @@ export function GlossaryPage({
 
   return (
     <div className={renderList ? "" : "max-w-3xl"}>
-      <PageHeader title={title} />
+      {!hideHeader && <PageHeader title={title} />}
       <div ref={formRef} className="max-w-3xl scroll-mt-4">
         <Card className="mb-6 p-4">
           <form onSubmit={onSubmit} className="grid grid-cols-1 gap-4">

@@ -1,7 +1,7 @@
-import { useState, type KeyboardEvent } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState, type KeyboardEvent } from "react";
+import { Link, Navigate, NavLink, useParams } from "react-router-dom";
 import { api, ApiError } from "../../lib/api";
-import { Button, Input, Label } from "../../components/ui";
+import { Button, Input, Label, PageHeader } from "../../components/ui";
 import { GlossaryPage, type GlossaryExtraSection, type GlossarySelectField, type GlossaryTagField } from "./GlossaryPage";
 import { GradesBoard } from "./GradesBoard";
 import { ISO513_COLORS, MATERIAL_GROUPS } from "../../lib/npaKnowledgeConstants";
@@ -141,7 +141,7 @@ function NewSubstrateInline({ onCreated, onCancel }: { onCreated: (id: string) =
 
 // One Grades screen per family (Carbide, CBN, Ceramic, PCD). They share the
 // whole interface; only carbide grades have a substrate.
-export function GradesScreen({ family, title }: { family: GradeFamily; title: string }) {
+export function GradesScreen({ family, title, hideHeader = false }: { family: GradeFamily; title: string; hideHeader?: boolean }) {
   // Applications are managed on their own screen, so new ones show up here automatically.
   const { data: applications } = useResource<Application>("/applications");
   // Likewise substrates, from the Substrates screen.
@@ -226,6 +226,7 @@ export function GradesScreen({ family, title }: { family: GradeFamily; title: st
       listPath={`/grades?family=${family}`}
       createValues={{ family }}
       title={title}
+      hideHeader={hideHeader}
       singular="grade"
       selectFields={family === "CARBIDE" ? selectFields : []}
       checkboxFields={family === "CBN" ? [{ key: "coated", label: "Coated" }] : []}
@@ -236,7 +237,62 @@ export function GradesScreen({ family, title }: { family: GradeFamily; title: st
   );
 }
 
-export const Grades = () => <GradesScreen family="CARBIDE" title="Grades" />;
-export const GradesCbn = () => <GradesScreen family="CBN" title="Grades (CBN)" />;
-export const GradesCeramic = () => <GradesScreen family="CERAMIC" title="Grades (Ceramic)" />;
-export const GradesPcd = () => <GradesScreen family="PCD" title="Grades (PCD)" />;
+// One "Grades" page with a tab per grade family; each tab is that family's
+// Grades screen. The tab is part of the URL (/catalog/grades/<slug>).
+const GRADE_TABS: { slug: string; family: GradeFamily; label: string }[] = [
+  { slug: "sc", family: "CARBIDE", label: "Grades (SC)" },
+  { slug: "cbn", family: "CBN", label: "Grades (CBN)" },
+  { slug: "ceramic", family: "CERAMIC", label: "Grades (Ceramic)" },
+  { slug: "pcd", family: "PCD", label: "Grades (PCD)" },
+];
+
+const LAST_TAB_KEY = "iscariq.grades.familyTab";
+
+export function GradesHub() {
+  const { slug } = useParams();
+  const tab = GRADE_TABS.find((t) => t.slug === slug);
+
+  useEffect(() => {
+    if (!tab) return;
+    try {
+      localStorage.setItem(LAST_TAB_KEY, tab.slug);
+    } catch {
+      // storage unavailable: the tab just isn't remembered
+    }
+  }, [tab]);
+
+  if (!tab) {
+    // /catalog/grades (or an unknown tab): go to the last tab used, else SC.
+    let last = "sc";
+    try {
+      last = localStorage.getItem(LAST_TAB_KEY) ?? "sc";
+    } catch {
+      // ignore
+    }
+    return <Navigate to={`/catalog/grades/${GRADE_TABS.some((t) => t.slug === last) ? last : "sc"}`} replace />;
+  }
+
+  return (
+    <div>
+      <PageHeader title="Grades" />
+      <div role="tablist" aria-label="Grade families" className="mb-6 flex flex-wrap gap-2">
+        {GRADE_TABS.map((t) => (
+          <NavLink
+            key={t.slug}
+            to={`/catalog/grades/${t.slug}`}
+            role="tab"
+            aria-selected={t.slug === tab.slug}
+            className={`rounded-lg border px-4 py-2 text-sm font-medium ${
+              t.slug === tab.slug
+                ? "border-blue-600 bg-blue-600 text-white"
+                : "border-neutral-300 text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
+            }`}
+          >
+            {t.label}
+          </NavLink>
+        ))}
+      </div>
+      <GradesScreen key={tab.family} family={tab.family} title={tab.label} hideHeader />
+    </div>
+  );
+}
