@@ -90,12 +90,15 @@ export function GradesBoard({ data, startEdit, remove, family }: GlossaryListCon
   const { data: applications } = useResource<Application>("/applications");
   const [storedTab, setStoredTab] = useState(() => readStored(TAB_STORAGE_KEY + keySuffix, ALL));
   const [view, setView] = useState<View>(() => (readStored(VIEW_STORAGE_KEY + keySuffix, "table") === "chart" ? "chart" : "table"));
-  const [chartGroup, setChartGroup] = useState<Iso513Group>(() => {
+  const [storedChartGroup, setChartGroup] = useState<Iso513Group>(() => {
     const g = readStored(CHART_GROUP_STORAGE_KEY + keySuffix, "P");
     return FAMILY_GROUPS[family].includes(g as Iso513Group) ? (g as Iso513Group) : FAMILY_GROUPS[family][0];
   });
-  // Fall back to "All" if the remembered application no longer exists.
-  const scope = storedTab === ALL || applications.some((a) => a.id === storedTab) ? storedTab : ALL;
+  const inScope = (s: string) => (s === ALL ? grades : grades.filter((g) => g.applications.some((a) => a.id === s)));
+  // Only applications that have grades get a tab.
+  const tabApps = applications.filter((a) => inScope(a.id).length > 0).sort((a, b) => a.name.localeCompare(b.name));
+  // Fall back to "All" if the remembered application no longer exists or has no grades.
+  const scope = storedTab === ALL || tabApps.some((a) => a.id === storedTab) ? storedTab : ALL;
   // Orders changed in this session (by orderKey), applied optimistically before the save returns.
   const [localOrders, setLocalOrders] = useState<Record<string, string[] | undefined>>({});
   const [dragging, setDragging] = useState<Dragging | null>(null);
@@ -106,8 +109,10 @@ export function GradesBoard({ data, startEdit, remove, family }: GlossaryListCon
     localOrders[orderKey(s, g)] ?? savedOrders.find((o) => o.scope === storeScope(s) && o.iso513Group === g)?.gradeIds;
   const savedFor = (g: Iso513Group) => orderFor(scope, g) ?? (scope === ALL ? undefined : orderFor(ALL, g));
 
-  const inScope = (s: string) => (s === ALL ? grades : grades.filter((g) => g.applications.some((a) => a.id === s)));
   const boardGrades = inScope(scope);
+  // Only materials that have grades in this tab get a column / chart choice.
+  const visibleGroups = familyGroups.filter((g) => boardGrades.some((x) => groupsIn(x, scope).includes(g.value)));
+  const chartGroup = visibleGroups.some((g) => g.value === storedChartGroup) ? storedChartGroup : (visibleGroups[0]?.value ?? storedChartGroup);
   const unassigned = boardGrades.filter((g) => groupsIn(g, scope).length === 0);
 
   // Cases (trials) per grade; the list has no images, just enough for counts.
@@ -187,7 +192,7 @@ export function GradesBoard({ data, startEdit, remove, family }: GlossaryListCon
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-2 border-b border-neutral-200 dark:border-neutral-800">
         <div role="tablist" className="flex flex-wrap gap-1">
-          {[{ id: ALL, name: "All" }, ...[...applications].sort((a, b) => a.name.localeCompare(b.name))].map((tab) => (
+          {[{ id: ALL, name: "All" }, ...tabApps].map((tab) => (
             <button
               key={tab.id}
               type="button"
@@ -225,10 +230,12 @@ export function GradesBoard({ data, startEdit, remove, family }: GlossaryListCon
         </div>
       </div>
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
-      {view === "chart" ? (
+      {visibleGroups.length === 0 ? (
+        boardGrades.length === 0 && <p className="py-8 text-center text-sm text-neutral-500 dark:text-neutral-400">No grades yet.</p>
+      ) : view === "chart" ? (
         <div className="space-y-3">
           <div className="flex flex-wrap gap-2">
-            {familyGroups.map((g) => (
+            {visibleGroups.map((g) => (
               <button
                 key={g.value}
                 type="button"
@@ -292,9 +299,9 @@ export function GradesBoard({ data, startEdit, remove, family }: GlossaryListCon
           <div className="flex-1 overflow-x-auto">
             <div
               className="grid gap-2"
-              style={{ gridTemplateColumns: `repeat(${familyGroups.length}, minmax(0, 1fr))`, minWidth: familyGroups.length * 120 }}
+              style={{ gridTemplateColumns: `repeat(${visibleGroups.length}, minmax(0, 1fr))`, minWidth: visibleGroups.length * 120 }}
             >
-              {familyGroups.map(({ value: group, label }) => {
+              {visibleGroups.map(({ value: group, label }) => {
                 const column = orderColumn(group, boardGrades, savedFor(group), scope);
                 const dropIndex = dragging?.active && dragging.group === group ? dragging.index : null;
                 return (
