@@ -433,10 +433,10 @@ model Grade {
   id           String        @id @default(cuid())
   name         String        @unique
   family       GradeFamily   @default(CARBIDE)
-  // Optional group within the family (e.g. "Coated"); each group gets its
-  // own chart, and grades without a group share one.
-  set          GradeSet?     @relation(fields: [setId], references: [id], onDelete: SetNull)
-  setId        String?
+  // Optional groups within the family (e.g. "Coated"); each group gets its
+  // own chart (a grade in several groups shows in each), and grades without
+  // a group share one.
+  sets         GradeSet[]
   description  String?
   image        String?
   substrate    Substrate?    @relation(fields: [substrateId], references: [id])

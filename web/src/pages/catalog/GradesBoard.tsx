@@ -280,13 +280,13 @@ export function GradesBoard({ data, startEdit, remove, family }: GlossaryListCon
             // Grade groups: each group with grades here gets its own chart
             // (saved layout under scope "~<group id>"), next to one for the
             // grades without a group. No groups: a single chart.
-            const sets = [...new Map(chartGrades.filter((g) => g.set).map((g) => [g.set!.id, g.set!])).values()].sort((a, b) =>
+            const sets = [...new Map(chartGrades.flatMap((g) => g.sets ?? []).map((s) => [s.id, s])).values()].sort((a, b) =>
               a.name.localeCompare(b.name)
             );
             if (sets.length === 0) {
               return <GradesChart key={`${storeScope(scope)}:${chartGroup}`} {...chartProps} scope={storeScope(scope)} grades={chartGrades} />;
             }
-            const ungrouped = chartGrades.filter((g) => !g.set);
+            const ungrouped = chartGrades.filter((g) => !g.sets?.length);
             return (
               <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
                 {ungrouped.length > 0 && (
@@ -305,7 +305,7 @@ export function GradesBoard({ data, startEdit, remove, family }: GlossaryListCon
                     {...chartProps}
                     scope={`${storeScope(scope)}~${set.id}`}
                     variant={set.name}
-                    grades={chartGrades.filter((g) => g.set?.id === set.id)}
+                    grades={chartGrades.filter((g) => g.sets?.some((s) => s.id === set.id))}
                   />
                 ))}
               </div>
@@ -406,11 +406,14 @@ export function GradesBoard({ data, startEdit, remove, family }: GlossaryListCon
                                 </div>
                               )}
                               {grade.substrate && <div className="mt-0.5 text-neutral-500 dark:text-neutral-400">{grade.substrate.name}</div>}
-                              {grade.set && (
-                                <span className="mt-1 inline-block rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-medium text-violet-800 dark:bg-violet-900/40 dark:text-violet-300">
-                                  {grade.set.name}
+                              {grade.sets?.map((set) => (
+                                <span
+                                  key={set.id}
+                                  className="mt-1 mr-1 inline-block rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-medium text-violet-800 dark:bg-violet-900/40 dark:text-violet-300"
+                                >
+                                  {set.name}
                                 </span>
-                              )}
+                              ))}
                               {/* Other applications only: the current tab's application is implied. */}
                               {grade.applications.some((a) => a.id !== scope) && (
                                 <div className="mt-1 flex flex-wrap gap-1">

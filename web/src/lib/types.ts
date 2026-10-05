@@ -202,10 +202,9 @@ export interface GradeSet {
 
 export interface Grade extends GlossaryEntry {
   family: GradeFamily;
-  // Optional group within the family (e.g. "Coated"); each group gets its
-  // own chart.
-  setId?: string | null;
-  set?: GradeSet | null;
+  // Optional groups within the family (e.g. "Coated"); each group gets its
+  // own chart, and a grade in several groups shows in each.
+  sets?: GradeSet[];
   substrate?: Substrate | null;
   iso513Groups: Iso513Group[];
   applications: Application[];

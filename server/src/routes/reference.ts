@@ -281,7 +281,7 @@ const gradeCrudRouter = glossaryRouter(
   prisma.grade,
   {
     family: gradeFamilySchema.optional(),
-    setId: z.string().min(1).nullable().optional(),
+    setIds: z.array(z.string().min(1)).optional(),
     substrateId: z.string().min(1).nullable().optional(),
     iso513Groups: z.array(iso513GroupSchema).default([]),
     applicationIds: z.array(z.string().min(1)).default([]),
@@ -290,13 +290,13 @@ const gradeCrudRouter = glossaryRouter(
     applicationGroups: z.record(z.string(), z.array(iso513GroupSchema)).optional(),
   },
   {
-    include: { applications: { orderBy: { name: "asc" } }, substrate: true, applicationGroups: true, set: true },
+    include: { applications: { orderBy: { name: "asc" } }, substrate: true, applicationGroups: true, sets: { orderBy: { name: "asc" } } },
     // ?family=CBN lists one family's grades (each has its own screen).
     listWhere: (req) => {
       const family = gradeFamilySchema.safeParse(req.query.family);
       return family.success ? { family: family.data } : undefined;
     },
-    mapData: ({ applicationIds, substrateId, setId, applicationGroups, ...data }, mode) => {
+    mapData: ({ applicationIds, substrateId, setIds, applicationGroups, ...data }, mode) => {
       if (applicationGroups !== undefined) {
         // Keep only real exceptions: applications the grade has, groups it
         // has, and lists that don't simply equal all of its groups.
@@ -318,22 +318,26 @@ const gradeCrudRouter = glossaryRouter(
       // Relation writes (applications) require the relation form here too.
       if (substrateId) data.substrate = { connect: { id: substrateId } };
       else if (substrateId === null && mode === "update") data.substrate = { disconnect: true };
-      if (setId) data.set = { connect: { id: setId } };
-      else if (setId === null && mode === "update") data.set = { disconnect: true };
+      if (setIds !== undefined) {
+        const ids = [...new Set(setIds as string[])].map((id) => ({ id }));
+        data.sets = mode === "create" ? { connect: ids } : { set: ids };
+      }
       return data;
     },
   }
 );
 
-// A grade's group must belong to the grade's family.
+// A grade's groups must exist and belong to the grade's family.
 async function checkGradeSet(req: Request, res: Response, next: NextFunction) {
-  const setId = req.body?.setId;
-  if (typeof setId !== "string" || !setId) return next();
+  const setIds = req.body?.setIds;
+  if (!Array.isArray(setIds) || setIds.length === 0) return next();
   let family: string | undefined = req.body?.family;
   if (!family && req.params.id) family = (await prisma.grade.findUnique({ where: { id: req.params.id }, select: { family: true } }))?.family;
-  const set = await prisma.gradeSet.findUnique({ where: { id: setId } });
-  if (!set) return res.status(400).json({ error: "That group no longer exists." });
-  if (set.family !== (family ?? "CARBIDE")) return res.status(400).json({ error: `"${set.name}" is a group of ${set.family} grades.` });
+  const ids = setIds.filter((id): id is string => typeof id === "string");
+  const sets = await prisma.gradeSet.findMany({ where: { id: { in: ids } } });
+  if (sets.length !== new Set(ids).size) return res.status(400).json({ error: "A selected group no longer exists." });
+  const wrong = sets.find((s) => s.family !== (family ?? "CARBIDE"));
+  if (wrong) return res.status(400).json({ error: `"${wrong.name}" is a group of ${wrong.family} grades.` });
   next();
 }
 

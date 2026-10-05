@@ -53,10 +53,10 @@ export function GradeCardModal({ grade, onClose, onEdit }: { grade: Grade; onClo
             </>
           )}
 
-          {grade.set && (
+          {grade.sets && grade.sets.length > 0 && (
             <>
-              <dt className="text-neutral-500 dark:text-neutral-400">Group</dt>
-              <dd className="text-neutral-900 dark:text-neutral-100">{grade.set.name}</dd>
+              <dt className="text-neutral-500 dark:text-neutral-400">Groups</dt>
+              <dd className="text-neutral-900 dark:text-neutral-100">{grade.sets.map((s) => s.name).join(", ")}</dd>
             </>
           )}
 
