@@ -1,11 +1,11 @@
-import { Fragment, useEffect, useRef, useState, type PointerEvent } from "react";
+import { Fragment, useEffect, useId, useRef, useState, type PointerEvent } from "react";
 import { api, ApiError } from "../../lib/api";
 import { ISO513_COLORS } from "../../lib/npaKnowledgeConstants";
 import { useResource } from "../../lib/useResource";
 import type { Grade, GradeChartBox, Iso513Group } from "../../lib/types";
 import { Button } from "../../components/ui";
 
-// Speed (y, up) / Tough (x, right) chart for one board scope and ISO 513
+// Cutting speed (y, up) / Toughness (x, right) chart for one board scope and ISO 513
 // group. Each block spans a range: drag it to move, drag the corner handle to
 // resize. A block is one grade, or several grades merged into one box (they
 // share a mergeId and a box). Positions are percentages of the plot area,
@@ -83,19 +83,69 @@ function boundingBox(boxes: Box[]): Box {
   return { x: round(x), y: round(y), w: round(w), h: round(h) };
 }
 
+// Axis color (blue, as in the product catalog charts).
+const AXIS_COLOR = "#4472C4";
+
 function Arrowhead({ direction }: { direction: "up" | "right" }) {
   return (
     <svg
       aria-hidden
       viewBox="0 0 12 12"
-      className={`absolute h-3 w-3 fill-neutral-500 dark:fill-neutral-400 ${
-        direction === "up" ? "-top-3 -left-[7px]" : "-right-3 -bottom-[7px]"
-      }`}
+      className={`absolute h-3.5 w-3.5 ${direction === "up" ? "-top-3.5 -left-[8.5px]" : "-right-3.5 -bottom-[8.5px]"}`}
+      fill={AXIS_COLOR}
     >
       <path d={direction === "up" ? "M6 0 L12 12 L0 12 Z" : "M12 6 L0 0 L0 12 Z"} />
     </svg>
   );
 }
+
+// A round workpiece lying on its side, seen from the end: plain (continuous
+// cut) or with 4 / 8 lengthwise grooves (light / heavy interrupted cut).
+function WorkpieceIcon({ grooves }: { grooves: 0 | 4 | 8 }) {
+  // Safe for url(#…) references.
+  const id = useId().replace(/[^a-zA-Z0-9_-]/g, "");
+  const cx = 18, cy = 20, rx = 9, ry = 14; // end face
+  const notches = Array.from({ length: grooves }, (_, i) => ((i + 0.5) * 2 * Math.PI) / grooves);
+  // Grooves seen along the body: the notches on the visible (front) half.
+  const bodyLines = notches.map((a) => cy + ry * Math.sin(a)).filter((y, i) => Math.cos(notches[i]) < 0.2 && Math.abs(y - cy) < ry - 2);
+  return (
+    <svg aria-hidden viewBox="0 0 84 40" className="h-14 w-28">
+      <defs>
+        <linearGradient id={`${id}-body`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#eef0f3" />
+          <stop offset="0.45" stopColor="#c7ccd3" />
+          <stop offset="1" stopColor="#8f97a3" />
+        </linearGradient>
+      </defs>
+      {/* body with a rounded far end */}
+      <path d={`M${cx} ${cy - ry} H76 A5 ${ry} 0 0 1 76 ${cy + ry} H${cx} Z`} fill={`url(#${id}-body)`} stroke="#9aa1ab" strokeWidth="0.8" />
+      {bodyLines.map((y, i) => (
+        <line key={i} x1={cx} x2="77" y1={y} y2={y} stroke="#6f7782" strokeWidth="2.2" strokeLinecap="round" />
+      ))}
+      {/* end face */}
+      <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill="#dfe3e8" stroke="#9aa1ab" strokeWidth="0.8" />
+      {notches.map((a, i) => (
+        <line
+          key={i}
+          x1={cx + rx * Math.cos(a)}
+          y1={cy + ry * Math.sin(a)}
+          x2={cx + rx * 0.45 * Math.cos(a)}
+          y2={cy + ry * 0.45 * Math.sin(a)}
+          stroke="#5f6772"
+          strokeWidth="2.4"
+          strokeLinecap="round"
+        />
+      ))}
+    </svg>
+  );
+}
+
+// Toughness axis markers: the kinds of cut, from continuous to heavily interrupted.
+const CUT_TYPES: { grooves: 0 | 4 | 8; label: string }[] = [
+  { grooves: 0, label: "Continuous cut" },
+  { grooves: 4, label: "Light interrupted cut" },
+  { grooves: 8, label: "Heavy interrupted cut" },
+];
 
 export function GradesChart({
   scope,
@@ -427,11 +477,13 @@ export function GradesChart({
 
       <div className="flex gap-2">
         {/* Y axis label */}
-        <div className="flex w-5 items-center justify-center">
-          <span className="rotate-180 text-sm font-semibold text-neutral-700 [writing-mode:vertical-rl] dark:text-neutral-300">Speed</span>
+        <div className="flex w-6 items-center justify-center">
+          <span className="rotate-180 text-base font-bold whitespace-nowrap text-neutral-900 [writing-mode:vertical-rl] dark:text-neutral-100">
+            Cutting speed Vc (m/min)
+          </span>
         </div>
         <div className="flex-1">
-          <div className="relative border-b-2 border-l-2 border-neutral-500 dark:border-neutral-400">
+          <div className="relative border-b-[3px] border-l-[3px]" style={{ borderColor: AXIS_COLOR }}>
             <Arrowhead direction="up" />
             <Arrowhead direction="right" />
             <div
@@ -566,8 +618,18 @@ export function GradesChart({
               })}
             </div>
           </div>
-          {/* X axis label */}
-          <div className="mt-1 text-center text-sm font-semibold text-neutral-700 dark:text-neutral-300">Tough</div>
+          {/* X axis: kinds of cut along the toughness axis, and its label */}
+          <div className="mt-2 flex items-start gap-2" data-x-axis>
+            <div className="grid flex-1 grid-cols-3">
+              {CUT_TYPES.map((c) => (
+                <div key={c.label} className="flex flex-col items-center gap-1">
+                  <WorkpieceIcon grooves={c.grooves} />
+                  <span className="max-w-[7rem] text-center text-sm leading-tight font-bold text-neutral-900 dark:text-neutral-100">{c.label}</span>
+                </div>
+              ))}
+            </div>
+            <span className="pt-2 text-base font-bold text-neutral-900 dark:text-neutral-100">Toughness</span>
+          </div>
         </div>
       </div>
     </div>
