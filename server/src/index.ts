@@ -34,6 +34,7 @@ import {
   gradeChartRouter,
   substrateRouter,
   gradeSetRouter,
+  gradeTypeRouter,
   gradeCaseRouter,
   coatingRouter,
   toolRouter,
@@ -72,6 +73,7 @@ app.use("/api/grade-order", gradeOrderRouter);
 app.use("/api/grade-chart", gradeChartRouter);
 app.use("/api/substrates", substrateRouter);
 app.use("/api/grade-sets", gradeSetRouter);
+app.use("/api/grade-types", gradeTypeRouter);
 app.use("/api/grade-cases", gradeCaseRouter);
 app.use("/api/coatings", coatingRouter);
 app.use("/api/tools", toolRouter);

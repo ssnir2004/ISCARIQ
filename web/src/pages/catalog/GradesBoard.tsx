@@ -6,6 +6,7 @@ import type { Application, Grade, GradeCase, GradeColumnOrder, GradeFamily, Iso5
 import { Button, Card } from "../../components/ui";
 import type { Entry, GlossaryListContext } from "./GlossaryPage";
 import { GradesChart } from "./GradesChart";
+import { GradesMap } from "./GradesMap";
 import { GradeCasesModal } from "./GradeCasesModal";
 import { GRADE_CASES_CHANGED } from "./GradeFormCases";
 import { GradeSearch } from "./GradeSearch";
@@ -30,7 +31,8 @@ const TAB_STORAGE_KEY = "iscariq.grades.boardTab";
 const VIEW_STORAGE_KEY = "iscariq.grades.view";
 const CHART_GROUP_STORAGE_KEY = "iscariq.grades.chartGroup";
 
-type View = "table" | "chart";
+type View = "table" | "chart" | "map";
+const VIEWS: View[] = ["table", "chart", "map"];
 
 function readStored(key: string, fallback: string): string {
   try {
@@ -91,7 +93,10 @@ export function GradesBoard({ data, startEdit, remove, family }: GlossaryListCon
   const { data: savedOrders } = useResource<GradeColumnOrder>("/grade-order");
   const { data: applications } = useResource<Application>("/applications");
   const [storedTab, setStoredTab] = useState(() => readStored(TAB_STORAGE_KEY + keySuffix, ALL));
-  const [view, setView] = useState<View>(() => (readStored(VIEW_STORAGE_KEY + keySuffix, "table") === "chart" ? "chart" : "table"));
+  const [view, setView] = useState<View>(() => {
+    const v = readStored(VIEW_STORAGE_KEY + keySuffix, "table");
+    return VIEWS.includes(v as View) ? (v as View) : "table";
+  });
   const [storedChartGroup, setChartGroup] = useState<Iso513Group>(() => {
     const g = readStored(CHART_GROUP_STORAGE_KEY + keySuffix, "P");
     return FAMILY_GROUPS[family].includes(g as Iso513Group) ? (g as Iso513Group) : FAMILY_GROUPS[family][0];
@@ -230,7 +235,7 @@ export function GradesBoard({ data, startEdit, remove, family }: GlossaryListCon
         <div className="flex items-end gap-2">
           <GradeSearch grades={grades} onPick={setCardFor} />
           <div className="mb-1.5 inline-flex rounded-lg border border-neutral-200 p-0.5 text-sm dark:border-neutral-700">
-            {(["table", "chart"] as View[]).map((v) => (
+            {VIEWS.map((v) => (
               <button
                 key={v}
                 type="button"
@@ -249,6 +254,12 @@ export function GradesBoard({ data, startEdit, remove, family }: GlossaryListCon
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
       {visibleGroups.length === 0 ? (
         boardGrades.length === 0 && <p className="py-8 text-center text-sm text-neutral-500 dark:text-neutral-400">No grades yet.</p>
+      ) : view === "map" ? (
+        <GradesMap
+          groups={visibleGroups.map((g) => g.value)}
+          columnFor={(group) => orderColumn(group, boardGrades, savedFor(group), scope)}
+          onPick={setCardFor}
+        />
       ) : view === "chart" ? (
         <div className="space-y-3">
           <div className="flex flex-wrap gap-2">

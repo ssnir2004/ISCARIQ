@@ -437,6 +437,10 @@ model Grade {
   // own chart (a grade in several groups shows in each), and grades without
   // a group share one.
   sets         GradeSet[]
+  // What the grade is made of within its family (e.g. ceramic ALUMINA,
+  // SiAlON); the Grades map groups grades by it.
+  type         GradeType?    @relation(fields: [typeId], references: [id], onDelete: SetNull)
+  typeId       String?
   // Per-material exceptions to sets (e.g. Coated for K but not for H).
   // Without a row, every material uses all of the grade's sets.
   materialSets GradeMaterialSets[]
@@ -519,6 +523,17 @@ model GradeColumnOrder {
 // grades). On the charts each group has its own chart (board scope suffix
 // "~<id>"); grades without a group share the plain one.
 model GradeSet {
+  id     String      @id @default(cuid())
+  name   String
+  family GradeFamily
+  grades Grade[]
+
+  @@unique([family, name])
+}
+
+// A grade's type within one family (e.g. ceramic "ALUMINA"), managed from
+// the grade form; one per grade. The Grades map has a box per type.
+model GradeType {
   id     String      @id @default(cuid())
   name   String
   family GradeFamily
