@@ -431,6 +431,51 @@ export const gradeSetRouter = familyListRouter(prisma.gradeSet as unknown as Fam
 // Grade types (GradeType): the Grades map has a box per type.
 export const gradeTypeRouter = familyListRouter(prisma.gradeType as unknown as FamilyListDelegate, "type");
 
+// Rules of thumb per grade family: GET ?family=CBN (in order), POST
+// { family, text } (added last), PATCH /:id { text }, DELETE /:id,
+// PUT /order { family, ids } (new order).
+export const gradeRuleRouter = Router();
+const ruleText = z.string().trim().min(1, "Write the rule").max(1000);
+
+gradeRuleRouter.get("/", async (req, res) => {
+  const family = gradeFamilySchema.safeParse(req.query.family);
+  res.json(
+    await prisma.gradeRule.findMany({
+      where: family.success ? { family: family.data } : undefined,
+      orderBy: [{ position: "asc" }, { createdAt: "asc" }],
+    })
+  );
+});
+
+gradeRuleRouter.post("/", async (req, res) => {
+  const parsed = z.object({ family: gradeFamilySchema, text: ruleText }).safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid rule" });
+  const last = await prisma.gradeRule.aggregate({ where: { family: parsed.data.family }, _max: { position: true } });
+  res.status(201).json(await prisma.gradeRule.create({ data: { ...parsed.data, position: (last._max.position ?? -1) + 1 } }));
+});
+
+gradeRuleRouter.put("/order", async (req, res) => {
+  const parsed = z.object({ family: gradeFamilySchema, ids: z.array(z.string().min(1)) }).safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "Invalid order" });
+  await prisma.$transaction(
+    parsed.data.ids.map((id, position) => prisma.gradeRule.updateMany({ where: { id, family: parsed.data.family }, data: { position } }))
+  );
+  res.status(204).end();
+});
+
+gradeRuleRouter.patch("/:id", async (req, res) => {
+  const parsed = z.object({ text: ruleText }).safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid rule" });
+  const { count } = await prisma.gradeRule.updateMany({ where: { id: req.params.id }, data: parsed.data });
+  if (count === 0) return res.status(404).json({ error: "Not found" });
+  res.json(await prisma.gradeRule.findUnique({ where: { id: req.params.id } }));
+});
+
+gradeRuleRouter.delete("/:id", async (req, res) => {
+  await prisma.gradeRule.deleteMany({ where: { id: req.params.id } });
+  res.status(204).end();
+});
+
 // Trials / case studies per grade. The list omits the (large) image so the
 // Grades screen can show counts cheaply; GET /:id returns it.
 export const gradeCaseRouter = Router();
