@@ -207,6 +207,8 @@ export interface Grade extends GlossaryEntry {
   // Optional groups within the family (e.g. "Coated"); each group gets its
   // own chart, and a grade in several groups shows in each.
   sets?: GradeSet[];
+  // Materials where the grade is in only some of its groups.
+  materialSets?: { iso513Group: Iso513Group; setIds: string[] }[];
   substrate?: Substrate | null;
   iso513Groups: Iso513Group[];
   applications: Application[];

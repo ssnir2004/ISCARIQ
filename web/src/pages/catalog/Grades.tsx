@@ -80,9 +80,78 @@ function ApplicationGroupsMatrix({
   );
 }
 
-// Inline "new substrate" form shown inside the grade form. It is not a
-// <form> (it sits inside the grade's form), so Enter is handled by hand.
-// Inline form under the Group select for creating a group on the spot.
+// Groups per material: for a grade with several materials and groups,
+// untick a group the grade doesn't belong to for a given material (its own
+// chart then leaves it out). Unticked cells are saved as exceptions.
+type MaterialSets = Record<string, string[]>;
+
+function MaterialGroupsMatrix({
+  groups,
+  sets,
+  value,
+  onChange,
+}: {
+  groups: Iso513Group[];
+  sets: GradeSet[];
+  value: MaterialSets;
+  onChange: (v: MaterialSets) => void;
+}) {
+  if (groups.length < 2 || sets.length === 0) return null;
+  const orderedGroups = MATERIAL_GROUPS.filter((g) => groups.includes(g.value)).map((g) => g.value);
+  const checked = (g: Iso513Group, setId: string) => (value[g] ? value[g].includes(setId) : true);
+
+  function toggle(g: Iso513Group, setId: string) {
+    const current = sets.map((s) => s.id).filter((id) => checked(g, id));
+    const next = current.includes(setId) ? current.filter((x) => x !== setId) : [...current, setId];
+    const copy = { ...value };
+    if (next.length === sets.length) delete copy[g];
+    else copy[g] = next;
+    onChange(copy);
+  }
+
+  return (
+    <div>
+      <Label>Groups per material</Label>
+      <p className="mb-1.5 text-xs text-neutral-500 dark:text-neutral-400">Untick a group the grade isn't in for a specific material.</p>
+      <table className="text-sm" data-material-sets-matrix>
+        <thead>
+          <tr>
+            <th />
+            {sets.map((s) => (
+              <th key={s.id} className="px-2 pb-1 text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                {s.name}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {orderedGroups.map((g) => (
+            <tr key={g}>
+              <td className="pr-3">
+                <span className="inline-block w-7 rounded text-center text-xs font-semibold text-neutral-900" style={{ backgroundColor: ISO513_COLORS[g] }}>
+                  {g}
+                </span>
+              </td>
+              {sets.map((s) => (
+                <td key={s.id} className="px-2 text-center">
+                  <input
+                    type="checkbox"
+                    aria-label={`${g} ${s.name}`}
+                    checked={checked(g, s.id)}
+                    onChange={() => toggle(g, s.id)}
+                    className="h-4 w-4 accent-blue-600"
+                  />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// Inline form under the Groups field for creating a group on the spot.
 function NewGroupInline({ family, onCreated, onCancel }: { family: GradeFamily; onCreated: (id: string) => Promise<void>; onCancel: () => void }) {
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -131,6 +200,8 @@ function NewGroupInline({ family, onCreated, onCancel }: { family: GradeFamily; 
   );
 }
 
+// Inline "new substrate" form shown inside the grade form. It is not a
+// <form> (it sits inside the grade's form), so Enter is handled by hand.
 function NewSubstrateInline({ onCreated, onCancel }: { onCreated: (id: string) => Promise<void>; onCancel: () => void }) {
   const [name, setName] = useState("");
   const [hardness, setHardness] = useState("");
@@ -280,6 +351,7 @@ export function GradesScreen({ family, title, hideHeader = false }: { family: Gr
       applicationGroups: Object.fromEntries(
         ((entry.applicationGroups as Grade["applicationGroups"]) ?? []).map((r) => [r.applicationId, r.iso513Groups])
       ),
+      materialSets: Object.fromEntries(((entry.materialSets as Grade["materialSets"]) ?? []).map((r) => [r.iso513Group, r.setIds])),
     }),
     render: ({ tags, values, setValues, editing }) => (
       <>
@@ -288,6 +360,12 @@ export function GradesScreen({ family, title, hideHeader = false }: { family: Gr
           groups={(tags.iso513Groups ?? []) as Iso513Group[]}
           value={(values.applicationGroups as AppGroups) ?? {}}
           onChange={(v) => setValues({ ...values, applicationGroups: v })}
+        />
+        <MaterialGroupsMatrix
+          groups={(tags.iso513Groups ?? []) as Iso513Group[]}
+          sets={sets.filter((s) => (tags.setIds ?? []).includes(s.id))}
+          value={(values.materialSets as MaterialSets) ?? {}}
+          onChange={(v) => setValues({ ...values, materialSets: v })}
         />
         {/* Cases can be added only to a saved grade, i.e. while editing it. */}
         {editing && (
