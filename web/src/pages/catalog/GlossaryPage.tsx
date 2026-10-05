@@ -19,6 +19,9 @@ export interface GlossaryTagField {
   read?: (entry: Entry) => string[];
   // Shown under the field when it has no options to pick from.
   emptyHint?: ReactNode;
+  // Lets the user create a new option on the spot (see GlossarySelectField);
+  // `done` receives the new option's value to select it, or null.
+  create?: { label: string; render: (done: (value: string | null) => void) => ReactNode };
 }
 
 // A single-line optional text or number field (e.g. a Substrate's hardness).
@@ -391,8 +394,24 @@ export function GlossaryPage({
             {tagFields.map((field) => (
               <div key={field.key}>
                 <Label>{field.label}</Label>
-                <TagToggles field={field} value={tags[field.key] ?? []} onChange={(update) => setTags((t) => ({ ...t, [field.key]: update(t[field.key] ?? []) }))} />
-                {field.options.length === 0 && field.emptyHint && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <TagToggles field={field} value={tags[field.key] ?? []} onChange={(update) => setTags((t) => ({ ...t, [field.key]: update(t[field.key] ?? []) }))} />
+                  {field.create && creatingKey !== field.key && (
+                    <button
+                      type="button"
+                      onClick={() => setCreatingKey(field.key)}
+                      className="rounded-full border border-dashed border-neutral-300 px-2.5 py-1 text-xs text-blue-600 hover:bg-neutral-50 dark:border-neutral-600 dark:text-blue-400 dark:hover:bg-neutral-800"
+                    >
+                      {field.create.label}
+                    </button>
+                  )}
+                </div>
+                {creatingKey === field.key &&
+                  field.create?.render((value) => {
+                    setCreatingKey(null);
+                    if (value) setTags((t) => ({ ...t, [field.key]: [...new Set([...(t[field.key] ?? []), value])] }));
+                  })}
+                {field.options.length === 0 && field.emptyHint && creatingKey !== field.key && (
                   <p className="text-xs text-neutral-500 dark:text-neutral-400">{field.emptyHint}</p>
                 )}
               </div>

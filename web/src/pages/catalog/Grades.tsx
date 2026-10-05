@@ -199,11 +199,11 @@ export function GradesScreen({ family, title, hideHeader = false }: { family: Gr
 
   // Groups of this family's grades, each shown in its own chart.
   const { data: sets, reload: reloadSets } = useResource<GradeSet>(`/grade-sets?family=${family}`);
-  const groupField: GlossarySelectField = {
-    key: "setId",
-    label: "Group",
+  const groupField: GlossaryTagField = {
+    key: "setIds",
+    label: "Groups",
     options: sets.map((s) => ({ value: s.id, label: s.name })),
-    read: (entry) => (entry.set as GradeSet | null | undefined)?.id,
+    read: (entry) => ((entry.sets as GradeSet[] | undefined) ?? []).map((s) => s.id),
     create: {
       label: "+ New group…",
       render: (done) => (
@@ -217,7 +217,7 @@ export function GradesScreen({ family, title, hideHeader = false }: { family: Gr
         />
       ),
     },
-    emptyHint: "Optional. Each group gets its own chart; without groups there is one chart.",
+    emptyHint: "Optional. Each group gets its own chart (a grade can be in several); without groups there is one chart.",
   };
 
   const selectFields: GlossarySelectField[] = [
@@ -312,8 +312,8 @@ export function GradesScreen({ family, title, hideHeader = false }: { family: Gr
       hideHeader={hideHeader}
       collapsibleForm
       singular="grade"
-      selectFields={family === "CARBIDE" ? [groupField, ...selectFields] : [groupField]}
-      tagFields={fields}
+      selectFields={family === "CARBIDE" ? selectFields : []}
+      tagFields={[...fields, groupField]}
       extraSection={appGroupsSection}
       renderList={(ctx) => <GradesBoard {...ctx} family={family} />}
     />
