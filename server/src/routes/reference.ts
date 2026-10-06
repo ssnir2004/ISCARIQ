@@ -578,6 +578,113 @@ gradeRecommendationRouter.delete("/:id", async (req, res) => {
   res.status(204).end();
 });
 
+// Tool families (ToolLine): GET ?family= (lines with grades of that family)
+// or ?gradeId=, POST, PATCH /:id, DELETE /:id.
+export const toolLineRouter = Router();
+
+const toolLineInclude = {
+  grades: { select: { id: true, name: true, family: true }, orderBy: { name: "asc" } },
+  applications: { select: { id: true, name: true }, orderBy: { name: "asc" } },
+  subApplication: true,
+} as const;
+
+const toolLineSchema = z.object({
+  name: z.string().trim().min(1, "Name is required").max(100),
+  gradeIds: z.array(z.string().min(1)).min(1, "Choose at least one grade"),
+  applicationIds: z.array(z.string().min(1)).default([]),
+  subApplicationId: z.string().min(1).nullable().optional(),
+  insert: z.string().trim().max(100).nullable().optional(),
+  image: z.string().startsWith("data:image/", "Image must be an uploaded picture").nullable().optional(),
+  notes: z.string().trim().max(2000).nullable().optional(),
+});
+
+function toolLineData({ gradeIds, applicationIds, subApplicationId, ...rest }: z.infer<typeof toolLineSchema>, mode: "create" | "update") {
+  const grades = [...new Set(gradeIds)].map((id) => ({ id }));
+  const applications = [...new Set(applicationIds)].map((id) => ({ id }));
+  return {
+    ...rest,
+    insert: rest.insert || null,
+    notes: rest.notes || null,
+    image: rest.image || null,
+    grades: mode === "create" ? { connect: grades } : { set: grades },
+    applications: mode === "create" ? { connect: applications } : { set: applications },
+    subApplication: subApplicationId ? { connect: { id: subApplicationId } } : mode === "update" ? { disconnect: true } : undefined,
+  };
+}
+
+async function saveToolLine(res: Response, run: () => Promise<unknown>, name: string) {
+  try {
+    res.json(await run());
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      return res.status(409).json({ error: `A tool named "${name}" already exists.` });
+    }
+    if (e instanceof Prisma.PrismaClientKnownRequestError && (e.code === "P2025" || e.code === "P2018")) {
+      return res.status(400).json({ error: "A selected grade, application or sub-application no longer exists." });
+    }
+    throw e;
+  }
+}
+
+toolLineRouter.get("/", async (req, res) => {
+  const family = gradeFamilySchema.safeParse(req.query.family);
+  const gradeId = typeof req.query.gradeId === "string" ? req.query.gradeId : undefined;
+  res.json(
+    await prisma.toolLine.findMany({
+      where: {
+        ...(family.success ? { grades: { some: { family: family.data } } } : {}),
+        ...(gradeId ? { grades: { some: { id: gradeId } } } : {}),
+      },
+      include: toolLineInclude,
+      orderBy: { name: "asc" },
+    })
+  );
+});
+
+toolLineRouter.post("/", async (req, res) => {
+  const parsed = toolLineSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid tool" });
+  res.status(201);
+  await saveToolLine(res, () => prisma.toolLine.create({ data: toolLineData(parsed.data, "create"), include: toolLineInclude }), parsed.data.name);
+});
+
+toolLineRouter.patch("/:id", async (req, res) => {
+  const parsed = toolLineSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid tool" });
+  const exists = await prisma.toolLine.findUnique({ where: { id: req.params.id }, select: { id: true } });
+  if (!exists) return res.status(404).json({ error: "Not found" });
+  await saveToolLine(
+    res,
+    () => prisma.toolLine.update({ where: { id: req.params.id }, data: toolLineData(parsed.data, "update"), include: toolLineInclude }),
+    parsed.data.name
+  );
+});
+
+toolLineRouter.delete("/:id", async (req, res) => {
+  await prisma.toolLine.deleteMany({ where: { id: req.params.id } });
+  res.status(204).end();
+});
+
+// Sub-applications for tool lines: GET (all), POST { name }.
+export const toolSubApplicationRouter = Router();
+
+toolSubApplicationRouter.get("/", async (_req, res) => {
+  res.json(await prisma.toolSubApplication.findMany({ orderBy: { name: "asc" } }));
+});
+
+toolSubApplicationRouter.post("/", async (req, res) => {
+  const parsed = z.object({ name: z.string().trim().min(1, "Name is required").max(100) }).safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid name" });
+  try {
+    res.status(201).json(await prisma.toolSubApplication.create({ data: parsed.data }));
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      return res.status(409).json({ error: `"${parsed.data.name}" already exists.` });
+    }
+    throw e;
+  }
+});
+
 // Trials / case studies per grade. The list omits the (large) image so the
 // Grades screen can show counts cheaply; GET /:id returns it.
 export const gradeCaseRouter = Router();

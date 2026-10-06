@@ -8,6 +8,7 @@ import type { Entry, GlossaryListContext } from "./GlossaryPage";
 import { GradesChart } from "./GradesChart";
 import { GradesMap } from "./GradesMap";
 import { GradeConditions } from "./GradeConditions";
+import { GradeTools } from "./GradeTools";
 import { GradeCasesModal } from "./GradeCasesModal";
 import { GRADE_CASES_CHANGED } from "./GradeFormCases";
 import { GradeSearch } from "./GradeSearch";
@@ -32,8 +33,8 @@ const TAB_STORAGE_KEY = "iscariq.grades.boardTab";
 const VIEW_STORAGE_KEY = "iscariq.grades.view";
 const CHART_GROUP_STORAGE_KEY = "iscariq.grades.chartGroup";
 
-type View = "table" | "chart" | "map" | "conditions";
-const VIEWS: View[] = ["table", "chart", "map", "conditions"];
+type View = "table" | "chart" | "map" | "conditions" | "tools";
+const VIEWS: View[] = ["table", "chart", "map", "conditions", "tools"];
 
 function readStored(key: string, fallback: string): string {
   try {
@@ -253,7 +254,9 @@ export function GradesBoard({ data, startEdit, remove, family }: GlossaryListCon
         </div>
       </div>
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
-      {view === "conditions" ? (
+      {view === "tools" ? (
+        <GradeTools family={family} scope={scope === ALL ? ALL_SCOPE : scope} grades={grades} onPick={setCardFor} />
+      ) : view === "conditions" ? (
         <GradeConditions family={family} scope={scope === ALL ? ALL_SCOPE : scope} grades={grades} onPick={setCardFor} />
       ) : visibleGroups.length === 0 ? (
         boardGrades.length === 0 && <p className="py-8 text-center text-sm text-neutral-500 dark:text-neutral-400">No grades yet.</p>

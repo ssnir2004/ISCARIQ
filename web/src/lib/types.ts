@@ -211,6 +211,23 @@ export interface GradeRecommendation {
   position: number;
 }
 
+// A tool family (e.g. F45SN) suited to some grades in some applications.
+export interface ToolSubApplication {
+  id: string;
+  name: string;
+}
+
+export interface ToolLine {
+  id: string;
+  name: string;
+  grades: { id: string; name: string; family: GradeFamily }[];
+  applications: { id: string; name: string }[];
+  subApplication: ToolSubApplication | null;
+  insert: string | null;
+  image: string | null;
+  notes: string | null;
+}
+
 // A rule of thumb for choosing grades of one family.
 export interface GradeRule {
   id: string;
