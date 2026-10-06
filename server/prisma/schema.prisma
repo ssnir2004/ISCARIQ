@@ -184,6 +184,7 @@ model Material {
   // category with the same iso513Group.
   isCategory     Boolean     @default(false)
   cuttingConditions CuttingCondition[]
+  gradeRecommendations GradeRecommendation[]
   insertMatches     InsertProblemMatch[]
   npas              Npa[]
 }
@@ -407,6 +408,7 @@ model Application {
   grades      Grade[]
   gradeCases  GradeCase[]
   gradeGroups GradeApplicationGroups[]
+  gradeRecommendations GradeRecommendation[]
 }
 
 // Carbide substrate a grade is built on, managed on the Substrates screen.
@@ -444,6 +446,7 @@ model Grade {
   // Per-material exceptions to sets (e.g. Coated for K but not for H).
   // Without a row, every material uses all of the grade's sets.
   materialSets GradeMaterialSets[]
+  recommendations GradeRecommendation[]
   description  String?
   // Short, important note shown large and bold in the grade's chart block.
   chartNote    String?
@@ -552,6 +555,32 @@ model GradeRule {
   createdAt DateTime    @default(now())
 
   @@index([family, position])
+}
+
+// A recommended cutting condition for some grades of one family: work
+// material (usually a subcategory, e.g. Gray cast iron), applications,
+// rough and/or finish, cutting speed Vc (m/min: min / recommended / max) and
+// coolant (dry and/or wet). Shown in the Grades "Conditions" view and on
+// grade cards.
+model GradeRecommendation {
+  id           String        @id @default(cuid())
+  family       GradeFamily
+  material     Material      @relation(fields: [materialId], references: [id], onDelete: Restrict)
+  materialId   String
+  grades       Grade[]
+  applications Application[]
+  rough        Boolean       @default(false)
+  finish       Boolean       @default(false)
+  vcMin        Float?
+  vcRec        Float?
+  vcMax        Float?
+  dry          Boolean       @default(false)
+  wet          Boolean       @default(false)
+  notes        String?
+  position     Int           @default(0)
+  createdAt    DateTime      @default(now())
+
+  @@index([family])
 }
 
 model GradeChartBox {

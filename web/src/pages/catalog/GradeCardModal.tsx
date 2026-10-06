@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../lib/api";
 import { ISO513_COLORS, MATERIAL_GROUPS } from "../../lib/npaKnowledgeConstants";
-import type { Grade, GradeCase } from "../../lib/types";
+import type { Grade, GradeCase, GradeRecommendation } from "../../lib/types";
+import { coolantLabel, operationLabel, vcText } from "../../lib/gradeRecommendations";
 import { Button, Modal } from "../../components/ui";
 import { groupsIn } from "../../lib/gradeGroups";
 
@@ -10,6 +11,14 @@ import { groupsIn } from "../../lib/gradeGroups";
 // about it in one place, including its cases across all applications.
 export function GradeCardModal({ grade, onClose, onEdit }: { grade: Grade; onClose: () => void; onEdit: () => void }) {
   const [cases, setCases] = useState<GradeCase[] | null>(null);
+  const [recs, setRecs] = useState<GradeRecommendation[] | null>(null);
+
+  useEffect(() => {
+    api
+      .get<GradeRecommendation[]>(`/grade-recommendations?gradeId=${encodeURIComponent(grade.id)}`)
+      .then(setRecs)
+      .catch(() => setRecs([]));
+  }, [grade.id]);
 
   useEffect(() => {
     api
@@ -93,6 +102,30 @@ export function GradeCardModal({ grade, onClose, onEdit }: { grade: Grade; onClo
                         {g}
                       </span>
                     ))}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </dd>
+
+          <dt className="text-neutral-500 dark:text-neutral-400">Cutting conditions</dt>
+          <dd data-card-conditions>
+            {recs === null ? (
+              <span className="text-neutral-400">Loading…</span>
+            ) : recs.length === 0 ? (
+              "—"
+            ) : (
+              <ul className="space-y-1">
+                {recs.map((r) => (
+                  <li key={r.id} className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                    <span className="rounded px-1.5 text-xs font-semibold text-neutral-900" style={{ backgroundColor: ISO513_COLORS[r.material.iso513Group] }}>
+                      {r.material.iso513Group}
+                    </span>
+                    <span className="font-medium text-neutral-900 dark:text-neutral-100">{r.material.name}</span>
+                    <span className="text-xs text-neutral-500 dark:text-neutral-400">
+                      {[r.applications.map((a) => a.name).join("/"), operationLabel(r), coolantLabel(r)].filter(Boolean).join(" · ")}
+                    </span>
+                    {vcText(r) && <span className="font-semibold tabular-nums">Vc {vcText(r)} m/min</span>}
                   </li>
                 ))}
               </ul>
