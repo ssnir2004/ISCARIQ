@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../lib/api";
 import { ISO513_COLORS, MATERIAL_GROUPS } from "../../lib/npaKnowledgeConstants";
-import type { Grade, GradeCase, GradeRecommendation } from "../../lib/types";
+import type { Grade, GradeCase, GradeRecommendation, ToolLine } from "../../lib/types";
 import { coolantLabel, operationLabel, vcText } from "../../lib/gradeRecommendations";
 import { Button, Modal } from "../../components/ui";
 import { groupsIn } from "../../lib/gradeGroups";
@@ -12,6 +12,14 @@ import { groupsIn } from "../../lib/gradeGroups";
 export function GradeCardModal({ grade, onClose, onEdit }: { grade: Grade; onClose: () => void; onEdit: () => void }) {
   const [cases, setCases] = useState<GradeCase[] | null>(null);
   const [recs, setRecs] = useState<GradeRecommendation[] | null>(null);
+  const [tools, setTools] = useState<ToolLine[] | null>(null);
+
+  useEffect(() => {
+    api
+      .get<ToolLine[]>(`/tool-lines?gradeId=${encodeURIComponent(grade.id)}`)
+      .then(setTools)
+      .catch(() => setTools([]));
+  }, [grade.id]);
 
   useEffect(() => {
     api
@@ -126,6 +134,26 @@ export function GradeCardModal({ grade, onClose, onEdit }: { grade: Grade; onClo
                       {[r.applications.map((a) => a.name).join("/"), operationLabel(r), coolantLabel(r)].filter(Boolean).join(" · ")}
                     </span>
                     {vcText(r) && <span className="font-semibold tabular-nums">Vc {vcText(r)} m/min</span>}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </dd>
+
+          <dt className="text-neutral-500 dark:text-neutral-400">Tools</dt>
+          <dd data-card-tools>
+            {tools === null ? (
+              <span className="text-neutral-400">Loading…</span>
+            ) : tools.length === 0 ? (
+              "—"
+            ) : (
+              <ul className="space-y-1">
+                {tools.map((t) => (
+                  <li key={t.id} className="flex flex-wrap items-center gap-x-2">
+                    <span className="font-semibold text-neutral-900 dark:text-neutral-100">{t.name}</span>
+                    <span className="text-xs text-neutral-500 dark:text-neutral-400">
+                      {[t.applications.map((a) => a.name).join("/"), t.subApplication?.name, t.insert && `Insert ${t.insert}`].filter(Boolean).join(" · ")}
+                    </span>
                   </li>
                 ))}
               </ul>

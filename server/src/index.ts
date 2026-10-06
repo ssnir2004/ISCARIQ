@@ -37,6 +37,8 @@ import {
   gradeTypeRouter,
   gradeRuleRouter,
   gradeRecommendationRouter,
+  toolLineRouter,
+  toolSubApplicationRouter,
   gradeCaseRouter,
   coatingRouter,
   toolRouter,
@@ -78,6 +80,8 @@ app.use("/api/grade-sets", gradeSetRouter);
 app.use("/api/grade-types", gradeTypeRouter);
 app.use("/api/grade-rules", gradeRuleRouter);
 app.use("/api/grade-recommendations", gradeRecommendationRouter);
+app.use("/api/tool-lines", toolLineRouter);
+app.use("/api/tool-sub-applications", toolSubApplicationRouter);
 app.use("/api/grade-cases", gradeCaseRouter);
 app.use("/api/coatings", coatingRouter);
 app.use("/api/tools", toolRouter);

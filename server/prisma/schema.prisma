@@ -409,6 +409,7 @@ model Application {
   gradeCases  GradeCase[]
   gradeGroups GradeApplicationGroups[]
   gradeRecommendations GradeRecommendation[]
+  toolLines   ToolLine[]
 }
 
 // Carbide substrate a grade is built on, managed on the Substrates screen.
@@ -447,6 +448,7 @@ model Grade {
   // Without a row, every material uses all of the grade's sets.
   materialSets GradeMaterialSets[]
   recommendations GradeRecommendation[]
+  toolLines    ToolLine[]
   description  String?
   // Short, important note shown large and bold in the grade's chart block.
   chartNote    String?
@@ -581,6 +583,31 @@ model GradeRecommendation {
   createdAt    DateTime      @default(now())
 
   @@index([family])
+}
+
+// A tool family (e.g. the F45SN face mill) suited to some grades in some
+// applications. Shown in the Grades "Tools" view of each family its grades
+// belong to, and on those grades' cards. Not a catalog item (see Tool).
+model ToolLine {
+  id               String              @id @default(cuid())
+  name             String              @unique
+  grades           Grade[]
+  applications     Application[]
+  // e.g. Face Mill / Shoulder Mill.
+  subApplication   ToolSubApplication? @relation(fields: [subApplicationId], references: [id], onDelete: SetNull)
+  subApplicationId String?
+  // The insert it takes, e.g. "SNGN".
+  insert           String?
+  image            String?
+  notes            String?
+  createdAt        DateTime            @default(now())
+}
+
+// Sub-applications for tool lines (e.g. Face Mill), managed from the tool form.
+model ToolSubApplication {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  toolLines ToolLine[]
 }
 
 model GradeChartBox {
