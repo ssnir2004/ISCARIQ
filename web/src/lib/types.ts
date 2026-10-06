@@ -193,6 +193,24 @@ export interface Substrate extends GlossaryEntry {
 // Each family has its own Grades screen; carbide grades also have a substrate.
 export type GradeFamily = "CARBIDE" | "CBN" | "CERAMIC" | "PCD";
 
+// A recommended cutting condition for some grades of one family. Vc in m/min.
+export interface GradeRecommendation {
+  id: string;
+  family: GradeFamily;
+  material: Material;
+  grades: { id: string; name: string }[];
+  applications: { id: string; name: string }[];
+  rough: boolean;
+  finish: boolean;
+  vcMin: number | null;
+  vcRec: number | null;
+  vcMax: number | null;
+  dry: boolean;
+  wet: boolean;
+  notes: string | null;
+  position: number;
+}
+
 // A rule of thumb for choosing grades of one family.
 export interface GradeRule {
   id: string;

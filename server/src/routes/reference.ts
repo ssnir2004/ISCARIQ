@@ -476,6 +476,108 @@ gradeRuleRouter.delete("/:id", async (req, res) => {
   res.status(204).end();
 });
 
+// Recommended cutting conditions (GradeRecommendation): GET ?family= or
+// ?gradeId=, POST, PATCH /:id, DELETE /:id. Grades must be of the
+// recommendation's family and the material one its grades can be used for.
+export const gradeRecommendationRouter = Router();
+
+const recommendationInclude = {
+  material: true,
+  grades: { select: { id: true, name: true }, orderBy: { name: "asc" } },
+  applications: { select: { id: true, name: true }, orderBy: { name: "asc" } },
+} as const;
+
+const recommendationSchema = z
+  .object({
+    family: gradeFamilySchema,
+    materialId: z.string().min(1, "Choose a work material"),
+    gradeIds: z.array(z.string().min(1)).min(1, "Choose at least one grade"),
+    applicationIds: z.array(z.string().min(1)).default([]),
+    rough: z.boolean().default(false),
+    finish: z.boolean().default(false),
+    vcMin: z.number().positive().nullable().optional(),
+    vcRec: z.number().positive().nullable().optional(),
+    vcMax: z.number().positive().nullable().optional(),
+    dry: z.boolean().default(false),
+    wet: z.boolean().default(false),
+    notes: z.string().trim().max(1000).nullable().optional(),
+  })
+  .refine((r) => !(r.vcMin && r.vcRec && r.vcMin > r.vcRec) && !(r.vcRec && r.vcMax && r.vcRec > r.vcMax) && !(r.vcMin && r.vcMax && r.vcMin > r.vcMax), {
+    message: "Cutting speeds must be min ≤ recommended ≤ max",
+  });
+
+type RecommendationInput = z.infer<typeof recommendationSchema>;
+
+async function checkRecommendation(data: RecommendationInput) {
+  const material = await prisma.material.findUnique({ where: { id: data.materialId } });
+  if (!material) return "That work material no longer exists.";
+  if (!FAMILY_GROUPS[data.family].includes(material.iso513Group)) {
+    return `${data.family} grades aren't used for ${material.name} (ISO ${material.iso513Group}).`;
+  }
+  const grades = await prisma.grade.findMany({ where: { id: { in: data.gradeIds } }, select: { family: true } });
+  if (grades.length !== new Set(data.gradeIds).size) return "A selected grade no longer exists.";
+  if (grades.some((g) => g.family !== data.family)) return `All grades must be ${data.family} grades.`;
+  return null;
+}
+
+function recommendationData({ gradeIds, applicationIds, ...rest }: RecommendationInput, mode: "create" | "update") {
+  const grades = [...new Set(gradeIds)].map((id) => ({ id }));
+  const applications = [...new Set(applicationIds)].map((id) => ({ id }));
+  return {
+    ...rest,
+    notes: rest.notes || null,
+    grades: mode === "create" ? { connect: grades } : { set: grades },
+    applications: mode === "create" ? { connect: applications } : { set: applications },
+  };
+}
+
+gradeRecommendationRouter.get("/", async (req, res) => {
+  const family = gradeFamilySchema.safeParse(req.query.family);
+  const gradeId = typeof req.query.gradeId === "string" ? req.query.gradeId : undefined;
+  res.json(
+    await prisma.gradeRecommendation.findMany({
+      where: { ...(family.success ? { family: family.data } : {}), ...(gradeId ? { grades: { some: { id: gradeId } } } : {}) },
+      include: recommendationInclude,
+      orderBy: [{ position: "asc" }, { createdAt: "asc" }],
+    })
+  );
+});
+
+gradeRecommendationRouter.post("/", async (req, res) => {
+  const parsed = recommendationSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid recommendation" });
+  const problem = await checkRecommendation(parsed.data);
+  if (problem) return res.status(400).json({ error: problem });
+  const last = await prisma.gradeRecommendation.aggregate({ where: { family: parsed.data.family }, _max: { position: true } });
+  res.status(201).json(
+    await prisma.gradeRecommendation.create({
+      data: { ...recommendationData(parsed.data, "create"), position: (last._max.position ?? -1) + 1 },
+      include: recommendationInclude,
+    })
+  );
+});
+
+gradeRecommendationRouter.patch("/:id", async (req, res) => {
+  const parsed = recommendationSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid recommendation" });
+  const problem = await checkRecommendation(parsed.data);
+  if (problem) return res.status(400).json({ error: problem });
+  const exists = await prisma.gradeRecommendation.findUnique({ where: { id: req.params.id }, select: { id: true } });
+  if (!exists) return res.status(404).json({ error: "Not found" });
+  res.json(
+    await prisma.gradeRecommendation.update({
+      where: { id: req.params.id },
+      data: recommendationData(parsed.data, "update"),
+      include: recommendationInclude,
+    })
+  );
+});
+
+gradeRecommendationRouter.delete("/:id", async (req, res) => {
+  await prisma.gradeRecommendation.deleteMany({ where: { id: req.params.id } });
+  res.status(204).end();
+});
+
 // Trials / case studies per grade. The list omits the (large) image so the
 // Grades screen can show counts cheaply; GET /:id returns it.
 export const gradeCaseRouter = Router();
