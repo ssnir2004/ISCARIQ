@@ -116,6 +116,22 @@ export function GradeCardModal({ grade, onClose, onEdit }: { grade: Grade; onClo
             )}
           </dd>
 
+          {grade.competitors && grade.competitors.length > 0 && (
+            <>
+              <dt className="text-neutral-500 dark:text-neutral-400">Competes with</dt>
+              <dd data-card-competes>
+                <ul className="space-y-0.5">
+                  {grade.competitors.map((c, i) => (
+                    <li key={i}>
+                      {c.brand && <span className="text-neutral-500 dark:text-neutral-400">{c.brand} · </span>}
+                      <span className="font-semibold text-neutral-900 dark:text-neutral-100">{c.name}</span>
+                    </li>
+                  ))}
+                </ul>
+              </dd>
+            </>
+          )}
+
           <dt className="text-neutral-500 dark:text-neutral-400">Cutting conditions</dt>
           <dd data-card-conditions>
             {recs === null ? (

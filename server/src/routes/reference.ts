@@ -284,6 +284,8 @@ const gradeCrudRouter = glossaryRouter(
     setIds: z.array(z.string().min(1)).optional(),
     typeId: z.string().min(1).nullable().optional(),
     chartNote: z.string().trim().max(200).nullable().optional(),
+    // Competitor grades it replaces, in order; rows without a name are dropped.
+    competitors: z.array(z.object({ brand: z.string().trim().max(100).default(""), name: z.string().trim().max(100) })).optional(),
     // { [material]: setIds } for materials where the grade is in only some of
     // its groups.
     materialSets: z.record(z.string(), z.array(z.string().min(1))).optional(),
@@ -295,13 +297,19 @@ const gradeCrudRouter = glossaryRouter(
     applicationGroups: z.record(z.string(), z.array(iso513GroupSchema)).optional(),
   },
   {
-    include: { applications: { orderBy: { name: "asc" } }, substrate: true, applicationGroups: true, sets: { orderBy: { name: "asc" } }, materialSets: true, type: true },
+    include: { applications: { orderBy: { name: "asc" } }, substrate: true, applicationGroups: true, sets: { orderBy: { name: "asc" } }, materialSets: true, type: true, competitors: { orderBy: { position: "asc" } } },
     // ?family=CBN lists one family's grades (each has its own screen).
     listWhere: (req) => {
       const family = gradeFamilySchema.safeParse(req.query.family);
       return family.success ? { family: family.data } : undefined;
     },
-    mapData: ({ applicationIds, substrateId, setIds, typeId, applicationGroups, materialSets, ...data }, mode) => {
+    mapData: ({ applicationIds, substrateId, setIds, typeId, applicationGroups, materialSets, competitors, ...data }, mode) => {
+      if (competitors !== undefined) {
+        const rows = (competitors as { brand: string; name: string }[])
+          .filter((c) => c.name)
+          .map((c, position) => ({ brand: c.brand, name: c.name, position }));
+        data.competitors = mode === "create" ? { create: rows } : { deleteMany: {}, create: rows };
+      }
       if (typeId) data.type = { connect: { id: typeId } };
       else if (typeId === null && mode === "update") data.type = { disconnect: true };
       if (materialSets !== undefined) {
@@ -372,6 +380,11 @@ async function checkGradeType(req: Request, res: Response, next: NextFunction) {
 }
 
 export const gradeRouter = Router();
+// Competitor brands already used (suggestions in the grade form).
+gradeRouter.get("/competitor-brands", async (_req, res) => {
+  const rows = await prisma.gradeCompetitor.findMany({ distinct: ["brand"], select: { brand: true }, orderBy: { brand: "asc" } });
+  res.json(rows.map((r) => r.brand).filter(Boolean));
+});
 gradeRouter.post("/", checkFamilyGroups, checkGradeSet, checkGradeType);
 gradeRouter.patch("/:id", checkFamilyGroups, checkGradeSet, checkGradeType);
 gradeRouter.use(gradeCrudRouter);

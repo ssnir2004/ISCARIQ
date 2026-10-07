@@ -453,6 +453,8 @@ model Grade {
   materialSets GradeMaterialSets[]
   recommendations GradeRecommendation[]
   toolLines    ToolLine[]
+  // Competitor grades this grade replaces (e.g. Kennametal KY3500).
+  competitors  GradeCompetitor[]
   description  String?
   // Short, important note shown large and bold in the grade's chart block.
   chartNote    String?
@@ -612,6 +614,19 @@ model ToolSubApplication {
   id        String     @id @default(cuid())
   name      String     @unique
   toolLines ToolLine[]
+}
+
+// A competitor's grade that an ISCAR grade replaces, e.g. Sandvik CC6190
+// for IS26. Edited in the grade form; searchable on the Grades screen.
+model GradeCompetitor {
+  id       String @id @default(cuid())
+  grade    Grade  @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+  gradeId  String
+  brand    String
+  name     String
+  position Int    @default(0)
+
+  @@index([gradeId])
 }
 
 model GradeChartBox {
