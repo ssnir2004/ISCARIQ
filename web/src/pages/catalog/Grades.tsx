@@ -496,7 +496,7 @@ export function GradesScreen({ family, title, hideHeader = false }: { family: Gr
 // One "Grades" page with a tab per grade family; each tab is that family's
 // Grades screen. The tab is part of the URL (/catalog/grades/<slug>).
 const GRADE_TABS: { slug: string; family: GradeFamily; label: string }[] = [
-  { slug: "sc", family: "CARBIDE", label: "Grades (SC)" },
+  { slug: "sc", family: "CARBIDE", label: "Grades (Carbide)" },
   { slug: "cbn", family: "CBN", label: "Grades (CBN)" },
   { slug: "ceramic", family: "CERAMIC", label: "Grades (Ceramic)" },
   { slug: "pcd", family: "PCD", label: "Grades (PCD)" },
