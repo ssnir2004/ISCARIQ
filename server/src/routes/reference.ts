@@ -509,17 +509,24 @@ const recommendationSchema = z
     gradeIds: z.array(z.string().min(1)).min(1, "Choose at least one grade"),
     applicationIds: z.array(z.string().min(1)).default([]),
     rough: z.boolean().default(false),
+    semiFinish: z.boolean().default(false),
     finish: z.boolean().default(false),
     vcMin: z.number().positive().nullable().optional(),
     vcRec: z.number().positive().nullable().optional(),
     vcMax: z.number().positive().nullable().optional(),
+    apMin: z.number().positive().nullable().optional(),
+    apMax: z.number().positive().nullable().optional(),
+    feedMin: z.number().positive().nullable().optional(),
+    feedMax: z.number().positive().nullable().optional(),
     dry: z.boolean().default(false),
     wet: z.boolean().default(false),
     notes: z.string().trim().max(1000).nullable().optional(),
   })
   .refine((r) => !(r.vcMin && r.vcRec && r.vcMin > r.vcRec) && !(r.vcRec && r.vcMax && r.vcRec > r.vcMax) && !(r.vcMin && r.vcMax && r.vcMin > r.vcMax), {
     message: "Cutting speeds must be min ≤ recommended ≤ max",
-  });
+  })
+  .refine((r) => !(r.apMin && r.apMax && r.apMin > r.apMax), { message: "Depth of cut must be min ≤ max" })
+  .refine((r) => !(r.feedMin && r.feedMax && r.feedMin > r.feedMax), { message: "Feed must be min ≤ max" });
 
 type RecommendationInput = z.infer<typeof recommendationSchema>;
 

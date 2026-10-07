@@ -5,7 +5,7 @@ import { ISO513_COLORS, MATERIAL_GROUPS } from "../../lib/npaKnowledgeConstants"
 import { FAMILY_GROUPS } from "../../lib/gradeGroups";
 import { ALL_SCOPE } from "../../lib/gradeCases";
 import type { Application, Grade, GradeFamily, GradeRecommendation, Iso513Group, Material } from "../../lib/types";
-import { coolantLabel, num, operationLabel, recommendationsFor } from "../../lib/gradeRecommendations";
+import { coolantLabel, num, operationLabel, rangeText, recommendationsFor } from "../../lib/gradeRecommendations";
 import { Button, Input, Label, Modal, Select, Textarea } from "../../components/ui";
 
 // Recommended cutting conditions for a family's grades, as a table per ISO
@@ -51,7 +51,7 @@ export function GradeConditions({
   return (
     <div className="space-y-4" data-grade-conditions>
       <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-neutral-500 dark:text-neutral-400">Cutting speed Vc in m/min: min / recommended / max.</p>
+        <p className="text-sm text-neutral-500 dark:text-neutral-400">V in m/min (recommended in bold), DOC in mm, f in mm/rev.</p>
         <Button onClick={() => setEditing("new")}>+ Add recommendation</Button>
       </div>
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
@@ -63,6 +63,11 @@ export function GradeConditions({
           // Keep each work material's rows together, in the order they were added.
           .sort((a, b) => a.material.name.localeCompare(b.material.name) || a.position - b.position);
         if (groupRows.length === 0) return null;
+        // Columns no row of this block uses are left out.
+        const hasDoc = groupRows.some((r) => r.apMin != null || r.apMax != null);
+        const hasFeed = groupRows.some((r) => r.feedMin != null || r.feedMax != null);
+        const hasCoolant = groupRows.some((r) => r.dry || r.wet);
+        const cell = "border-b border-neutral-200 px-2 py-2 dark:border-neutral-700";
         return (
           <div key={group.value} data-conditions-group={group.value}>
             <div className="mb-1 rounded-lg px-3 py-1.5 text-sm font-semibold text-neutral-900" style={{ backgroundColor: group.color }}>
@@ -76,10 +81,10 @@ export function GradeConditions({
                     <th className="border-b border-neutral-200 px-2 py-1.5 font-medium dark:border-neutral-700">Application</th>
                     <th className="border-b border-neutral-200 px-2 py-1.5 font-medium dark:border-neutral-700">Operation</th>
                     <th className="border-b border-neutral-200 px-2 py-1.5 font-medium dark:border-neutral-700">Grade</th>
-                    <th colSpan={3} className="border-b border-neutral-200 px-2 py-1.5 text-center font-medium dark:border-neutral-700">
-                      Cutting speed (m/min)
-                    </th>
-                    <th className="border-b border-neutral-200 px-2 py-1.5 font-medium dark:border-neutral-700">Coolant</th>
+                    <th className="border-b border-neutral-200 px-2 py-1.5 text-center font-medium dark:border-neutral-700">V (m/min)</th>
+                    {hasDoc && <th className="border-b border-neutral-200 px-2 py-1.5 text-center font-medium dark:border-neutral-700">DOC (mm)</th>}
+                    {hasFeed && <th className="border-b border-neutral-200 px-2 py-1.5 text-center font-medium dark:border-neutral-700">f (mm/rev)</th>}
+                    {hasCoolant && <th className="border-b border-neutral-200 px-2 py-1.5 font-medium dark:border-neutral-700">Coolant</th>}
                     <th className="border-b border-neutral-200 dark:border-neutral-700" />
                   </tr>
                 </thead>
@@ -96,7 +101,7 @@ export function GradeConditions({
                             </td>
                           )}
                           <td className="border-b border-neutral-200 px-2 py-2 dark:border-neutral-700">{r.applications.map((a) => a.name).join("/") || "Any"}</td>
-                          <td className="border-b border-neutral-200 px-2 py-2 whitespace-pre-line dark:border-neutral-700">{operationLabel(r).replace(" / ", "\n")}</td>
+                          <td className="border-b border-neutral-200 px-2 py-2 whitespace-pre-line dark:border-neutral-700">{operationLabel(r).replaceAll(" / ", "\n")}</td>
                           <td className="border-b border-neutral-200 px-2 py-2 dark:border-neutral-700">
                             {r.grades.map((g, gi) => (
                               <Fragment key={g.id}>
@@ -108,10 +113,21 @@ export function GradeConditions({
                             ))}
                             {r.notes && <div className="text-xs whitespace-pre-line text-neutral-500 dark:text-neutral-400">{r.notes}</div>}
                           </td>
-                          <td className="border-b border-neutral-200 px-2 py-2 text-right tabular-nums dark:border-neutral-700">{num(r.vcMin)}</td>
-                          <td className="border-b border-neutral-200 px-2 py-2 text-center text-base font-extrabold tabular-nums dark:border-neutral-700">{num(r.vcRec)}</td>
-                          <td className="border-b border-neutral-200 px-2 py-2 tabular-nums dark:border-neutral-700">{num(r.vcMax)}</td>
-                          <td className="border-b border-neutral-200 px-2 py-2 dark:border-neutral-700">{coolantLabel(r)}</td>
+                          <td className={`${cell} text-center whitespace-nowrap tabular-nums`} data-vc>
+                            {r.vcRec != null ? (
+                              // min  REC  max, with the recommended speed in bold.
+                              <span className="inline-flex items-baseline gap-2">
+                                <span>{num(r.vcMin)}</span>
+                                <span className="text-base font-extrabold">{num(r.vcRec)}</span>
+                                <span>{num(r.vcMax)}</span>
+                              </span>
+                            ) : (
+                              <span className="text-base font-extrabold">{rangeText(r.vcMin, r.vcMax)}</span>
+                            )}
+                          </td>
+                          {hasDoc && <td className={`${cell} text-center whitespace-nowrap tabular-nums`}>{rangeText(r.apMin, r.apMax) || "-"}</td>}
+                          {hasFeed && <td className={`${cell} text-center whitespace-nowrap tabular-nums`}>{rangeText(r.feedMin, r.feedMax) || "-"}</td>}
+                          {hasCoolant && <td className={cell}>{coolantLabel(r)}</td>}
                           <td className="border-b border-neutral-200 px-2 py-2 text-right whitespace-nowrap dark:border-neutral-700">
                             <span className="opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
                               <button type="button" onClick={() => setEditing(r)} className="px-1.5 text-xs text-blue-600 hover:underline dark:text-blue-400">
@@ -186,9 +202,12 @@ function RecommendationModal({
   const [materialId, setMaterialId] = useState(existing?.material.id ?? "");
   const [applicationIds, setApplicationIds] = useState<string[]>(existing ? existing.applications.map((a) => a.id) : defaultApplicationId ? [defaultApplicationId] : []);
   const [rough, setRough] = useState(existing?.rough ?? false);
+  const [semiFinish, setSemiFinish] = useState(existing?.semiFinish ?? false);
   const [finish, setFinish] = useState(existing?.finish ?? false);
   const [gradeIds, setGradeIds] = useState<string[]>(existing ? existing.grades.map((g) => g.id) : []);
   const [vc, setVc] = useState({ min: num(existing?.vcMin), rec: num(existing?.vcRec), max: num(existing?.vcMax) });
+  const [ap, setAp] = useState({ min: num(existing?.apMin), max: num(existing?.apMax) });
+  const [feed, setFeed] = useState({ min: num(existing?.feedMin), max: num(existing?.feedMax) });
   const [dry, setDry] = useState(existing?.dry ?? false);
   const [wet, setWet] = useState(existing?.wet ?? false);
   const [notes, setNotes] = useState(existing?.notes ?? "");
@@ -213,10 +232,15 @@ function RecommendationModal({
       gradeIds,
       applicationIds,
       rough,
+      semiFinish,
       finish,
       vcMin: toNumber(vc.min),
       vcRec: toNumber(vc.rec),
       vcMax: toNumber(vc.max),
+      apMin: toNumber(ap.min),
+      apMax: toNumber(ap.max),
+      feedMin: toNumber(feed.min),
+      feedMax: toNumber(feed.max),
       dry,
       wet,
       notes: notes.trim() || null,
@@ -270,6 +294,9 @@ function RecommendationModal({
               <Chip on={rough} onClick={() => setRough((v) => !v)}>
                 Rough
               </Chip>
+              <Chip on={semiFinish} onClick={() => setSemiFinish((v) => !v)}>
+                Semi-finish
+              </Chip>
               <Chip on={finish} onClick={() => setFinish((v) => !v)}>
                 Finish
               </Chip>
@@ -299,7 +326,7 @@ function RecommendationModal({
           </div>
         </div>
         <div>
-          <Label>Cutting speed Vc (m/min)</Label>
+          <Label>V (m/min) — recommended is optional</Label>
           <div className="grid grid-cols-3 gap-2">
             <Input type="number" min="0" step="any" placeholder="Min" aria-label="Vc min" value={vc.min} onChange={(e) => setVc({ ...vc, min: e.target.value })} />
             <Input
@@ -313,6 +340,22 @@ function RecommendationModal({
               className="font-bold"
             />
             <Input type="number" min="0" step="any" placeholder="Max" aria-label="Vc max" value={vc.max} onChange={(e) => setVc({ ...vc, max: e.target.value })} />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label>DOC (mm)</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <Input type="number" min="0" step="any" placeholder="Min" aria-label="DOC min" value={ap.min} onChange={(e) => setAp({ ...ap, min: e.target.value })} />
+              <Input type="number" min="0" step="any" placeholder="Max" aria-label="DOC max" value={ap.max} onChange={(e) => setAp({ ...ap, max: e.target.value })} />
+            </div>
+          </div>
+          <div>
+            <Label>f (mm/rev)</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <Input type="number" min="0" step="any" placeholder="Min" aria-label="Feed min" value={feed.min} onChange={(e) => setFeed({ ...feed, min: e.target.value })} />
+              <Input type="number" min="0" step="any" placeholder="Max" aria-label="Feed max" value={feed.max} onChange={(e) => setFeed({ ...feed, max: e.target.value })} />
+            </div>
           </div>
         </div>
         <div>

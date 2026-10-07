@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { api } from "../../lib/api";
 import { ISO513_COLORS, MATERIAL_GROUPS } from "../../lib/npaKnowledgeConstants";
 import type { Grade, GradeCase, GradeRecommendation, ToolLine } from "../../lib/types";
-import { coolantLabel, operationLabel, vcText } from "../../lib/gradeRecommendations";
+import { coolantLabel, operationLabel, rangeText, vcText } from "../../lib/gradeRecommendations";
 import { Button, Modal } from "../../components/ui";
 import { groupsIn } from "../../lib/gradeGroups";
 
@@ -150,6 +150,8 @@ export function GradeCardModal({ grade, onClose, onEdit }: { grade: Grade; onClo
                       {[r.applications.map((a) => a.name).join("/"), operationLabel(r), coolantLabel(r)].filter(Boolean).join(" · ")}
                     </span>
                     {vcText(r) && <span className="font-semibold tabular-nums">Vc {vcText(r)} m/min</span>}
+                    {rangeText(r.apMin, r.apMax) && <span className="tabular-nums">DOC {rangeText(r.apMin, r.apMax)} mm</span>}
+                    {rangeText(r.feedMin, r.feedMax) && <span className="tabular-nums">f {rangeText(r.feedMin, r.feedMax)} mm/rev</span>}
                   </li>
                 ))}
               </ul>

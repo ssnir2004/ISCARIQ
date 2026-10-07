@@ -203,10 +203,16 @@ export interface GradeRecommendation {
   grades: { id: string; name: string }[];
   applications: { id: string; name: string }[];
   rough: boolean;
+  semiFinish: boolean;
   finish: boolean;
   vcMin: number | null;
   vcRec: number | null;
   vcMax: number | null;
+  // Depth of cut (mm) and feed (mm/rev) ranges.
+  apMin: number | null;
+  apMax: number | null;
+  feedMin: number | null;
+  feedMax: number | null;
   dry: boolean;
   wet: boolean;
   notes: string | null;
