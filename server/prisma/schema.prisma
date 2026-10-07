@@ -570,8 +570,9 @@ model GradeRule {
 
 // A recommended cutting condition for some grades of one family: work
 // material (usually a subcategory, e.g. Gray cast iron), applications,
-// rough and/or finish, cutting speed Vc (m/min: min / recommended / max) and
-// coolant (dry and/or wet). Shown in the Grades "Conditions" view and on
+// rough / semi-finish / finish, cutting speed Vc (m/min: min / recommended /
+// max), depth of cut (mm) and feed (mm/rev) ranges, and coolant (dry and/or
+// wet). Shown in the Grades "Conditions" view and on
 // grade cards.
 model GradeRecommendation {
   id           String        @id @default(cuid())
@@ -581,10 +582,16 @@ model GradeRecommendation {
   grades       Grade[]
   applications Application[]
   rough        Boolean       @default(false)
+  semiFinish   Boolean       @default(false)
   finish       Boolean       @default(false)
   vcMin        Float?
   vcRec        Float?
   vcMax        Float?
+  // Depth of cut (mm) and feed (mm/rev) ranges.
+  apMin        Float?
+  apMax        Float?
+  feedMin      Float?
+  feedMax      Float?
   dry          Boolean       @default(false)
   wet          Boolean       @default(false)
   notes        String?
