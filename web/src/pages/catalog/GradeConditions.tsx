@@ -6,7 +6,7 @@ import { FAMILY_GROUPS } from "../../lib/gradeGroups";
 import { ALL_SCOPE } from "../../lib/gradeCases";
 import type { Application, Grade, GradeFamily, GradeRecommendation, Iso513Group, Material } from "../../lib/types";
 import { coolantLabel, num, operationLabel, rangeText, recommendationsFor } from "../../lib/gradeRecommendations";
-import { Button, Input, Label, Modal, Select, Textarea } from "../../components/ui";
+import { Button, Input, Label, Modal, Textarea } from "../../components/ui";
 
 // Recommended cutting conditions for a family's grades, as a table per ISO
 // material (like the catalog's "Recommended Cutting Conditions" slides):
@@ -199,7 +199,9 @@ function RecommendationModal({
 }) {
   const { data: materials } = useResource<Material>("/materials");
   const { data: applications } = useResource<Application>("/applications");
-  const [materialId, setMaterialId] = useState(existing?.material.id ?? "");
+  // Several work materials can be chosen: the recommendation is saved once
+  // per material (editing keeps this row for one of them and adds the rest).
+  const [materialIds, setMaterialIds] = useState<string[]>(existing ? [existing.material.id] : []);
   const [applicationIds, setApplicationIds] = useState<string[]>(existing ? existing.applications.map((a) => a.id) : defaultApplicationId ? [defaultApplicationId] : []);
   const [rough, setRough] = useState(existing?.rough ?? false);
   const [semiFinish, setSemiFinish] = useState(existing?.semiFinish ?? false);
@@ -215,10 +217,10 @@ function RecommendationModal({
   const [saving, setSaving] = useState(false);
 
   const familyGroups = FAMILY_GROUPS[family];
-  const material = materials.find((m) => m.id === materialId);
-  // Grades for the chosen material's ISO group (plus any already chosen).
+  const chosenGroups = [...new Set(materials.filter((m) => materialIds.includes(m.id)).map((m) => m.iso513Group))];
+  // Grades for the chosen materials' ISO groups (plus any already chosen).
   const gradeOptions = grades
-    .filter((g) => !material || g.iso513Groups.includes(material.iso513Group) || gradeIds.includes(g.id))
+    .filter((g) => chosenGroups.length === 0 || g.iso513Groups.some((x) => chosenGroups.includes(x)) || gradeIds.includes(g.id))
     .sort((a, b) => a.name.localeCompare(b.name));
   const toggle = (list: string[], id: string) => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
   const toNumber = (v: string) => (v.trim() === "" ? null : Number(v));
@@ -226,9 +228,13 @@ function RecommendationModal({
   async function save() {
     setError(null);
     setSaving(true);
+    if (materialIds.length === 0) {
+      setError("Choose at least one work material");
+      setSaving(false);
+      return;
+    }
     const body = {
       family,
-      materialId,
       gradeIds,
       applicationIds,
       rough,
@@ -245,9 +251,13 @@ function RecommendationModal({
       wet,
       notes: notes.trim() || null,
     };
+    // This row keeps its own material if still chosen; the others get new rows.
+    const own = existing ? (materialIds.includes(existing.material.id) ? existing.material.id : materialIds[0]) : null;
     try {
-      if (existing) await api.patch(`/grade-recommendations/${existing.id}`, body);
-      else await api.post("/grade-recommendations", body);
+      if (existing && own) await api.patch(`/grade-recommendations/${existing.id}`, { ...body, materialId: own });
+      for (const materialId of materialIds.filter((id) => id !== own)) {
+        await api.post("/grade-recommendations", { ...body, materialId });
+      }
       onSaved();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to save");
@@ -260,21 +270,26 @@ function RecommendationModal({
       <div className="space-y-3" data-recommendation-form>
         <div>
           <Label>Work material</Label>
-          <Select value={materialId} onChange={(e) => setMaterialId(e.target.value)} aria-label="Work material">
-            <option value="">Choose…</option>
+          <div className="space-y-1.5" data-material-choices>
             {MATERIAL_GROUPS.filter((g) => familyGroups.includes(g.value)).map((g) => (
-              <optgroup key={g.value} label={g.label}>
+              <div key={g.value} className="flex flex-wrap items-center gap-1.5">
+                <span className="w-7 shrink-0 rounded text-center text-xs font-semibold text-neutral-900" style={{ backgroundColor: g.color }} title={g.label}>
+                  {g.value}
+                </span>
                 {materials
                   .filter((m) => m.iso513Group === g.value)
                   .sort((a, b) => Number(b.isCategory) - Number(a.isCategory) || a.name.localeCompare(b.name))
                   .map((m) => (
-                    <option key={m.id} value={m.id}>
+                    <Chip key={m.id} on={materialIds.includes(m.id)} onClick={() => setMaterialIds((l) => toggle(l, m.id))}>
                       {m.isCategory ? `${m.name} (all)` : m.name}
-                    </option>
+                    </Chip>
                   ))}
-              </optgroup>
+              </div>
             ))}
-          </Select>
+          </div>
+          {materialIds.length > 1 && (
+            <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">Saved as {materialIds.length} rows, one per work material.</p>
+          )}
         </div>
         <div>
           <Label>Application</Label>
@@ -318,7 +333,7 @@ function RecommendationModal({
           <Label>Grades</Label>
           <div className="flex flex-wrap gap-2">
             {gradeOptions.map((g) => (
-              <Chip key={g.id} on={gradeIds.includes(g.id)} onClick={() => setGradeIds((l) => toggle(l, g.id))} color={material ? ISO513_COLORS[material.iso513Group as Iso513Group] : undefined}>
+              <Chip key={g.id} on={gradeIds.includes(g.id)} onClick={() => setGradeIds((l) => toggle(l, g.id))} color={chosenGroups.length === 1 ? ISO513_COLORS[chosenGroups[0] as Iso513Group] : undefined}>
                 {g.name}
               </Chip>
             ))}
