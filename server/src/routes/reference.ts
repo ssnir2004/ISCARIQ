@@ -121,6 +121,7 @@ materialRouter.use(crudRouter({
     commonUse: z.string().optional(),
     keyProperties: z.string().optional(),
     hardness: z.string().optional(),
+    image: z.string().startsWith("data:image/", "Image must be an uploaded picture").nullable().optional(),
   }),
   updateSchema: z.object({
     iso513Group: iso513GroupSchema.optional(),
@@ -129,6 +130,7 @@ materialRouter.use(crudRouter({
     commonUse: z.string().optional(),
     keyProperties: z.string().optional(),
     hardness: z.string().optional(),
+    image: z.string().startsWith("data:image/", "Image must be an uploaded picture").nullable().optional(),
   }),
   orderBy: [{ iso513Group: "asc" }, { isCategory: "desc" }, { name: "asc" }],
 }));
