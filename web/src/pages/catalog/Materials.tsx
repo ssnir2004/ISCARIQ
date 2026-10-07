@@ -3,7 +3,8 @@ import { useResource } from "../../lib/useResource";
 import { api, ApiError } from "../../lib/api";
 import { ISO513_COLORS, MATERIAL_GROUPS } from "../../lib/npaKnowledgeConstants";
 import type { Iso513Group, Material } from "../../lib/types";
-import { Button, Card, Input, Iso513Badge, Label, PageHeader, Select } from "../../components/ui";
+import { Button, Card, Input, Iso513Badge, Label, Modal, PageHeader, Select } from "../../components/ui";
+import { ClipboardImagePaste } from "../../components/npaKnowledge/ClipboardImagePaste";
 
 const EMPTY_FORM = {
   iso513Group: "P" as Iso513Group,
@@ -37,6 +38,9 @@ export function Materials() {
   const [editing, setEditing] = useState<Material | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // A category's picture: edited in the form, viewed from its header.
+  const [image, setImage] = useState<string | null>(null);
+  const [viewing, setViewing] = useState<Material | null>(null);
   const formRef = useRef<HTMLDivElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
 
@@ -66,6 +70,7 @@ export function Materials() {
       keyProperties: m.keyProperties ?? "",
       hardness: m.hardness ?? "",
     });
+    setImage(m.image ?? null);
     setEditing(m);
     setError(null);
     focusForm(!m.isCategory);
@@ -85,7 +90,7 @@ export function Materials() {
       if (editing) {
         // A category's name and group are fixed, so only send its descriptive fields.
         const { iso513Group: _group, name: _name, ...details } = form;
-        await api.patch(`/materials/${editing.id}`, editing.isCategory ? details : form);
+        await api.patch(`/materials/${editing.id}`, editing.isCategory ? { ...details, image } : form);
       } else {
         await api.post("/materials", form);
       }
@@ -165,6 +170,12 @@ export function Materials() {
               <Label>Key properties</Label>
               <Input value={form.keyProperties} onChange={(e) => setForm({ ...form, keyProperties: e.target.value })} />
             </div>
+            {editingCategory && (
+              <div className="col-span-3">
+                <Label>Image (optional)</Label>
+                <ClipboardImagePaste value={image} onChange={setImage} />
+              </div>
+            )}
             {error && <p className="col-span-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
             <div className="col-span-3 flex gap-2">
               <Button type="submit" disabled={submitting}>
@@ -180,6 +191,12 @@ export function Materials() {
         </Card>
       </div>
 
+      {viewing?.image && (
+        <Modal title={`${viewing.iso513Group} — ${viewing.name}`} onClose={() => setViewing(null)} wide>
+          <img src={viewing.image} alt={viewing.name} className="mx-auto max-h-[75vh] rounded-lg object-contain" />
+        </Modal>
+      )}
+
       <div className="space-y-3">
         {MATERIAL_GROUPS.map(({ value: g }) => {
           const category = categoryOf(g);
@@ -193,6 +210,22 @@ export function Materials() {
                       <Iso513Badge group={g} />
                     </span>
                     <span className="font-semibold text-neutral-900 dark:text-neutral-100">{categoryName(g)}</span>
+                    {category?.image && (
+                      <button
+                        type="button"
+                        onClick={() => setViewing(category)}
+                        className="ml-2 inline-flex align-middle text-neutral-500 hover:text-blue-600 dark:text-neutral-400 dark:hover:text-blue-400"
+                        aria-label={`View ${categoryName(g)} image`}
+                        title="View image"
+                        data-category-image={g}
+                      >
+                        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                          <rect x="3" y="3" width="18" height="18" rx="2" />
+                          <circle cx="8.5" cy="8.5" r="1.5" />
+                          <path d="m21 15-5-5L5 21" />
+                        </svg>
+                      </button>
+                    )}
                     {category?.hardness && <span className="ml-2 text-neutral-500 dark:text-neutral-400">({category.hardness})</span>}
                     {category?.description && <span className="ml-2 text-neutral-500 dark:text-neutral-400">— {category.description}</span>}
                   </div>

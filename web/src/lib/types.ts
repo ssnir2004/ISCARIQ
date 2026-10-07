@@ -121,6 +121,8 @@ export interface Material {
   commonUse?: string | null;
   keyProperties?: string | null;
   hardness?: string | null;
+  // Picture of the material family (ISO 513 categories).
+  image?: string | null;
   // True for the six fixed ISO 513 top-level categories; other materials are
   // subcategories of the category with the same iso513Group.
   isCategory: boolean;

@@ -183,6 +183,9 @@ model Material {
   commonUse      String?
   keyProperties  String?
   hardness       String?
+  // Picture of the material family, viewed from its header on the
+  // Materials screen (set on the ISO 513 categories).
+  image          String?
   // One fixed top-level category per ISO 513 group (seeded with id
   // "iso513-<group>"); every other material is a subcategory of the
   // category with the same iso513Group.
