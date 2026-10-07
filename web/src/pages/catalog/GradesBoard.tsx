@@ -419,6 +419,11 @@ export function GradesBoard({ data, startEdit, remove, family }: GlossaryListCon
                                 </span>
                               </div>
                               {grade.chartNote && <div className="mt-0.5 font-bold text-neutral-900 dark:text-neutral-100">{grade.chartNote}</div>}
+                              {grade.competitors && grade.competitors.length > 0 && (
+                                <div className="mt-0.5 text-neutral-500 dark:text-neutral-400" data-card-competitors>
+                                  vs {grade.competitors.map((c) => c.name).join(", ")}
+                                </div>
+                              )}
                               {grade.description && (
                                 <div className="mt-0.5 line-clamp-2 text-neutral-600 dark:text-neutral-300" title={grade.description}>
                                   {grade.description}

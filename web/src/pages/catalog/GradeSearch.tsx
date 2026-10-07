@@ -1,8 +1,9 @@
 import { useState, type KeyboardEvent } from "react";
 import type { Grade } from "../../lib/types";
 
-// Search box for the Grades screen: type part of a grade name, pick a match
-// (click, or arrows + Enter) to open its card.
+// Search box for the Grades screen: type part of a grade name (or of a
+// competitor grade it replaces), pick a match (click, or arrows + Enter) to
+// open its card.
 export function GradeSearch({ grades, onPick }: { grades: Grade[]; onPick: (grade: Grade) => void }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -11,11 +12,16 @@ export function GradeSearch({ grades, onPick }: { grades: Grade[]; onPick: (grad
   const q = query.trim().toLowerCase();
   const matches = q
     ? grades
-        .filter((g) => g.name.toLowerCase().includes(q) || (g.description ?? "").toLowerCase().includes(q))
+        .filter((g) => g.name.toLowerCase().includes(q) || (g.description ?? "").toLowerCase().includes(q) || !!competitorMatch(g))
         // Names starting with the query first, then by name.
         .sort((a, b) => Number(!a.name.toLowerCase().startsWith(q)) - Number(!b.name.toLowerCase().startsWith(q)) || a.name.localeCompare(b.name))
         .slice(0, 8)
     : [];
+
+  // The competitor grade (if any) whose name matches the query.
+  function competitorMatch(g: Grade) {
+    return g.competitors?.find((c) => c.name.toLowerCase().includes(q));
+  }
 
   function pick(grade: Grade) {
     onPick(grade);
@@ -75,7 +81,19 @@ export function GradeSearch({ grades, onPick }: { grades: Grade[]; onPick: (grad
                 className={`cursor-pointer px-3 py-1.5 ${i === active ? "bg-blue-50 dark:bg-blue-900/30" : ""}`}
               >
                 <span className="font-medium text-neutral-900 dark:text-neutral-100">{g.name}</span>
-                {g.description && <span className="ml-2 truncate text-xs text-neutral-500 dark:text-neutral-400">{g.description}</span>}
+                {(() => {
+                  // Found through a competitor grade: say which one it replaces.
+                  const c = !g.name.toLowerCase().includes(q) ? competitorMatch(g) : undefined;
+                  if (c) {
+                    return (
+                      <span className="ml-2 text-xs text-blue-700 dark:text-blue-300" data-search-replaces>
+                        replaces {c.brand ? `${c.brand} ` : ""}
+                        {c.name}
+                      </span>
+                    );
+                  }
+                  return g.description && <span className="ml-2 truncate text-xs text-neutral-500 dark:text-neutral-400">{g.description}</span>;
+                })()}
               </li>
             ))
           )}

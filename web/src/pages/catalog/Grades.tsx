@@ -152,6 +152,49 @@ function MaterialGroupsMatrix({
   );
 }
 
+// Competitor grades the grade replaces, as brand + grade rows. Brands
+// already used elsewhere are suggested.
+type CompetitorRow = { brand: string; name: string };
+
+function CompetitorsEditor({ value, brands, onChange }: { value: CompetitorRow[]; brands: string[]; onChange: (v: CompetitorRow[]) => void }) {
+  const rows = value.length > 0 ? value : [];
+  const set = (i: number, patch: Partial<CompetitorRow>) => onChange(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+  return (
+    <div data-competitors-editor>
+      <Label>Competitors</Label>
+      <p className="mb-1.5 text-xs text-neutral-500 dark:text-neutral-400">Competitor grades this grade replaces.</p>
+      <datalist id="competitor-brands">
+        {brands.map((b) => (
+          <option key={b} value={b} />
+        ))}
+      </datalist>
+      <div className="space-y-1.5">
+        {rows.map((r, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <Input list="competitor-brands" value={r.brand} onChange={(e) => set(i, { brand: e.target.value })} placeholder="Brand (e.g. Sandvik)" aria-label="Competitor brand" className="max-w-48" />
+            <Input value={r.name} onChange={(e) => set(i, { name: e.target.value })} placeholder="Grade (e.g. CC6190)" aria-label="Competitor grade" className="max-w-48" />
+            <button
+              type="button"
+              onClick={() => onChange(rows.filter((_, j) => j !== i))}
+              className="rounded px-2 py-1 text-sm text-neutral-500 hover:bg-neutral-100 hover:text-red-600 dark:hover:bg-neutral-800"
+              aria-label="Remove competitor"
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={() => onChange([...rows, { brand: rows[rows.length - 1]?.brand ?? "", name: "" }])}
+          className="rounded-full border border-dashed border-neutral-300 px-2.5 py-1 text-xs text-blue-600 hover:bg-neutral-50 dark:border-neutral-600 dark:text-blue-400 dark:hover:bg-neutral-800"
+        >
+          + Add competitor
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // Inline form for creating a group (or type) of this family on the spot,
 // under its field in the grade form.
 function NewGroupInline({
@@ -307,6 +350,9 @@ export function GradesScreen({ family, title, hideHeader = false }: { family: Gr
     emptyHint: "Optional. Each group gets its own chart (a grade can be in several); without groups there is one chart.",
   };
 
+  // Competitor brands used so far, suggested in the Competitors rows.
+  const { data: brands } = useResource<string>("/grades/competitor-brands");
+
   // Types of this family's grades (e.g. ceramic ALUMINA); the map groups by them.
   const { data: types, reload: reloadTypes } = useResource<GradeType>(`/grade-types?family=${family}`);
   const typeField: GlossarySelectField = {
@@ -394,6 +440,7 @@ export function GradesScreen({ family, title, hideHeader = false }: { family: Gr
         ((entry.applicationGroups as Grade["applicationGroups"]) ?? []).map((r) => [r.applicationId, r.iso513Groups])
       ),
       materialSets: Object.fromEntries(((entry.materialSets as Grade["materialSets"]) ?? []).map((r) => [r.iso513Group, r.setIds])),
+      competitors: ((entry.competitors as Grade["competitors"]) ?? []).map((c) => ({ brand: c.brand, name: c.name })),
     }),
     render: ({ tags, values, setValues, editing }) => (
       <>
@@ -408,6 +455,11 @@ export function GradesScreen({ family, title, hideHeader = false }: { family: Gr
           sets={sets.filter((s) => (tags.setIds ?? []).includes(s.id))}
           value={(values.materialSets as MaterialSets) ?? {}}
           onChange={(v) => setValues({ ...values, materialSets: v })}
+        />
+        <CompetitorsEditor
+          value={(values.competitors as CompetitorRow[]) ?? []}
+          brands={brands}
+          onChange={(v) => setValues({ ...values, competitors: v })}
         />
         {/* Cases can be added only to a saved grade, i.e. while editing it. */}
         {editing && (

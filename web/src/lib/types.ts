@@ -254,6 +254,8 @@ export interface Grade extends GlossaryEntry {
   family: GradeFamily;
   // Short, important note shown large and bold in the grade's chart block.
   chartNote?: string | null;
+  // Competitor grades it replaces.
+  competitors?: { brand: string; name: string }[];
   // Optional groups within the family (e.g. "Coated"); each group gets its
   // own chart, and a grade in several groups shows in each.
   sets?: GradeSet[];
