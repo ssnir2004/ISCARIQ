@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { GlossaryPage, type Entry, type GlossaryListContext } from "./catalog/GlossaryPage";
-import { Button, Modal } from "../components/ui";
+import { GlossaryPage, type Entry, type GlossaryExtraSection, type GlossaryListContext } from "./catalog/GlossaryPage";
+import { Button, Label, Modal } from "../components/ui";
+import { ClipboardImagePaste } from "../components/npaKnowledge/ClipboardImagePaste";
 
 // IMC group companies (ISCAR's parent group): name, field of activity,
 // location and a picture of the building, as cards grouped by country.
@@ -45,7 +46,10 @@ function CompanyCards({ data, startEdit, remove }: GlossaryListContext) {
                       <div className="flex h-40 items-center justify-center bg-neutral-100 text-xs text-neutral-400 dark:bg-neutral-800">No image</div>
                     )}
                     <div className="flex flex-1 flex-col gap-1 p-3 text-sm">
-                      <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100">{c.name}</h3>
+                      <div className="flex items-center gap-2">
+                        {str(c.logo) && <img src={str(c.logo)} alt={`${c.name} logo`} className="h-8 max-w-24 shrink-0 object-contain" data-imc-logo />}
+                        <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100">{c.name}</h3>
+                      </div>
                       {str(c.activity) && <p className="font-medium text-blue-700 dark:text-blue-300">{str(c.activity)}</p>}
                       {where && <p className="text-neutral-600 dark:text-neutral-300">📍 {where}</p>}
                       {c.description && <p className="text-xs whitespace-pre-line text-neutral-500 dark:text-neutral-400">{c.description}</p>}
@@ -78,6 +82,17 @@ function CompanyCards({ data, startEdit, remove }: GlossaryListContext) {
   );
 }
 
+// The logo, as its own image field in the form (the main image is the building).
+const logoSection: GlossaryExtraSection = {
+  read: (entry) => ({ logo: str(entry.logo) || null }),
+  render: ({ values, setValues }) => (
+    <div>
+      <Label>Logo (optional)</Label>
+      <ClipboardImagePaste value={(values.logo as string | null) ?? null} onChange={(logo) => setValues({ ...values, logo })} />
+    </div>
+  ),
+};
+
 export function Imc() {
   return (
     <GlossaryPage
@@ -91,6 +106,7 @@ export function Imc() {
         { key: "city", label: "City", placeholder: "e.g. Tefen" },
         { key: "website", label: "Website (optional)", placeholder: "e.g. www.iscar.com" },
       ]}
+      extraSection={logoSection}
       renderList={(ctx) => <CompanyCards {...ctx} />}
     />
   );
