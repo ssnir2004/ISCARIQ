@@ -963,6 +963,7 @@ export const imcCompanyRouter = glossaryRouter(prisma.imcCompany, {
   country: z.string().trim().max(100).nullable().optional(),
   city: z.string().trim().max(100).nullable().optional(),
   website: z.string().trim().max(300).nullable().optional(),
+  logo: z.string().startsWith("data:image/", "Logo must be an uploaded picture").nullable().optional(),
 });
 
 export const testReportRouter = crudRouter({

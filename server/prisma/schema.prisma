@@ -667,6 +667,8 @@ model ImcCompany {
   country     String?
   city        String?
   website     String?
+  // Company logo (the image is the building).
+  logo        String?
 }
 
 model Coating {
