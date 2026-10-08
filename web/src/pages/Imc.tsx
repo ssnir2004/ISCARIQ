@@ -38,6 +38,10 @@ function CompanyCards({ data, startEdit, remove }: GlossaryListContext) {
                     className="group flex flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900"
                     data-imc-company={c.name}
                   >
+                    {/* Company name on top of the card. */}
+                    <h3 className="border-b border-neutral-200 px-3 py-2 text-base font-bold text-neutral-900 dark:border-neutral-800 dark:text-neutral-100" data-imc-name>
+                      {c.name}
+                    </h3>
                     {c.image ? (
                       <button type="button" onClick={() => setZoom(c)} title="Enlarge" className="block">
                         <img src={c.image} alt={`${c.name} building`} className="h-40 w-full object-cover" />
@@ -46,10 +50,7 @@ function CompanyCards({ data, startEdit, remove }: GlossaryListContext) {
                       <div className="flex h-40 items-center justify-center bg-neutral-100 text-xs text-neutral-400 dark:bg-neutral-800">No image</div>
                     )}
                     <div className="flex flex-1 flex-col gap-1 p-3 text-sm">
-                      <div className="flex items-center gap-2">
-                        {str(c.logo) && <img src={str(c.logo)} alt={`${c.name} logo`} className="h-8 max-w-24 shrink-0 object-contain" data-imc-logo />}
-                        <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100">{c.name}</h3>
-                      </div>
+                      {str(c.logo) && <img src={str(c.logo)} alt={`${c.name} logo`} className="h-8 max-w-32 self-start object-contain" data-imc-logo />}
                       {str(c.activity) && <p className="font-medium text-blue-700 dark:text-blue-300">{str(c.activity)}</p>}
                       {where && <p className="text-neutral-600 dark:text-neutral-300">📍 {where}</p>}
                       {c.description && <p className="text-xs whitespace-pre-line text-neutral-500 dark:text-neutral-400">{c.description}</p>}
