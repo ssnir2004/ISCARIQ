@@ -1,25 +1,26 @@
 import { useState, type KeyboardEvent } from "react";
-import { api, ApiError } from "../../lib/api";
-import { useResource } from "../../lib/useResource";
-import type { GradeFamily, GradeRule } from "../../lib/types";
-import { Button, Card, Textarea } from "../../components/ui";
+import { api, ApiError } from "../lib/api";
+import { useResource } from "../lib/useResource";
+import type { Rule } from "../lib/types";
+import { Button, Card, Textarea } from "./ui";
 
-const OPEN_KEY = "iscariq.grades.rulesOpen.";
+const OPEN_KEY = "iscariq.rulesOpen.";
 
-function readOpen(family: GradeFamily) {
+function readOpen(scope: string) {
   try {
-    return localStorage.getItem(OPEN_KEY + family) !== "0";
+    return localStorage.getItem(OPEN_KEY + scope) !== "0";
   } catch {
     return true;
   }
 }
 
-// Rules of thumb for one grade family: a numbered list shown on the family's
-// Grades tab, with add, edit, delete and reorder. Collapsible (remembered
-// per family). Text may be in any language (dir="auto").
-export function GradeRules({ family }: { family: GradeFamily }) {
-  const { data: rules, reload } = useResource<GradeRule>(`/grade-rules?family=${family}`);
-  const [open, setOpen] = useState(() => readOpen(family));
+// Rules of thumb: a numbered list with add, edit, delete and reorder, for
+// one list (scope): "grades:<family>" on a Grades tab, "imc" on the IMC
+// screen. Collapsible (remembered per list). Text may be in any language
+// (dir="auto").
+export function RulesOfThumb({ scope }: { scope: string }) {
+  const { data: rules, reload } = useResource<Rule>(`/rules?scope=${encodeURIComponent(scope)}`);
+  const [open, setOpen] = useState(() => readOpen(scope));
   const [draft, setDraft] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
@@ -29,7 +30,7 @@ export function GradeRules({ family }: { family: GradeFamily }) {
   function toggle() {
     setOpen((o) => {
       try {
-        localStorage.setItem(OPEN_KEY + family, o ? "0" : "1");
+        localStorage.setItem(OPEN_KEY + scope, o ? "0" : "1");
       } catch {
         // not remembered
       }
@@ -55,25 +56,25 @@ export function GradeRules({ family }: { family: GradeFamily }) {
   async function add() {
     const text = draft.trim();
     if (!text) return;
-    if (await run(() => api.post("/grade-rules", { family, text }), "Failed to add the rule")) setDraft("");
+    if (await run(() => api.post("/rules", { scope, text }), "Failed to add the rule")) setDraft("");
   }
 
   async function saveEdit() {
     const text = editText.trim();
     if (!editingId || !text) return;
-    if (await run(() => api.patch(`/grade-rules/${editingId}`, { text }), "Failed to save the rule")) setEditingId(null);
+    if (await run(() => api.patch(`/rules/${editingId}`, { text }), "Failed to save the rule")) setEditingId(null);
   }
 
-  function remove(rule: GradeRule) {
+  function remove(rule: Rule) {
     if (!confirm("Delete this rule?")) return;
-    run(() => api.delete(`/grade-rules/${rule.id}`), "Failed to delete the rule");
+    run(() => api.delete(`/rules/${rule.id}`), "Failed to delete the rule");
   }
 
   function move(index: number, step: number) {
     const ids = rules.map((r) => r.id);
     const [id] = ids.splice(index, 1);
     ids.splice(index + step, 0, id);
-    run(() => api.put("/grade-rules/order", { family, ids }), "Failed to reorder");
+    run(() => api.put("/rules/order", { scope, ids }), "Failed to reorder");
   }
 
   // Enter saves; Shift+Enter starts a new line.

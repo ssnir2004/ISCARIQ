@@ -446,49 +446,70 @@ export const gradeSetRouter = familyListRouter(prisma.gradeSet as unknown as Fam
 // Grade types (GradeType): the Grades map has a box per type.
 export const gradeTypeRouter = familyListRouter(prisma.gradeType as unknown as FamilyListDelegate, "type");
 
-// Rules of thumb per grade family: GET ?family=CBN (in order), POST
-// { family, text } (added last), PATCH /:id { text }, DELETE /:id,
-// PUT /order { family, ids } (new order).
-export const gradeRuleRouter = Router();
+// Rules of thumb, per list ("grades:<family>" for a Grades tab, "imc" for
+// the IMC screen): GET ?scope= (in order), POST { scope, text } (added
+// last), PATCH /:id { text }, DELETE /:id, PUT /order { scope, ids }.
+export const ruleRouter = Router();
 const ruleText = z.string().trim().min(1, "Write the rule").max(1000);
+const ruleScope = z.string().regex(/^[A-Za-z0-9:._-]{1,50}$/, "Invalid list");
 
-gradeRuleRouter.get("/", async (req, res) => {
-  const family = gradeFamilySchema.safeParse(req.query.family);
-  res.json(
-    await prisma.gradeRule.findMany({
-      where: family.success ? { family: family.data } : undefined,
-      orderBy: [{ position: "asc" }, { createdAt: "asc" }],
-    })
-  );
+ruleRouter.get("/", async (req, res) => {
+  const scope = ruleScope.safeParse(req.query.scope);
+  if (!scope.success) return res.status(400).json({ error: "Invalid list" });
+  res.json(await prisma.rule.findMany({ where: { scope: scope.data }, orderBy: [{ position: "asc" }, { createdAt: "asc" }] }));
 });
 
-gradeRuleRouter.post("/", async (req, res) => {
-  const parsed = z.object({ family: gradeFamilySchema, text: ruleText }).safeParse(req.body);
+ruleRouter.post("/", async (req, res) => {
+  const parsed = z.object({ scope: ruleScope, text: ruleText }).safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid rule" });
-  const last = await prisma.gradeRule.aggregate({ where: { family: parsed.data.family }, _max: { position: true } });
-  res.status(201).json(await prisma.gradeRule.create({ data: { ...parsed.data, position: (last._max.position ?? -1) + 1 } }));
+  const last = await prisma.rule.aggregate({ where: { scope: parsed.data.scope }, _max: { position: true } });
+  res.status(201).json(await prisma.rule.create({ data: { ...parsed.data, position: (last._max.position ?? -1) + 1 } }));
 });
 
-gradeRuleRouter.put("/order", async (req, res) => {
-  const parsed = z.object({ family: gradeFamilySchema, ids: z.array(z.string().min(1)) }).safeParse(req.body);
+ruleRouter.put("/order", async (req, res) => {
+  const parsed = z.object({ scope: ruleScope, ids: z.array(z.string().min(1)) }).safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Invalid order" });
   await prisma.$transaction(
-    parsed.data.ids.map((id, position) => prisma.gradeRule.updateMany({ where: { id, family: parsed.data.family }, data: { position } }))
+    parsed.data.ids.map((id, position) => prisma.rule.updateMany({ where: { id, scope: parsed.data.scope }, data: { position } }))
   );
   res.status(204).end();
 });
 
-gradeRuleRouter.patch("/:id", async (req, res) => {
+ruleRouter.patch("/:id", async (req, res) => {
   const parsed = z.object({ text: ruleText }).safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid rule" });
-  const { count } = await prisma.gradeRule.updateMany({ where: { id: req.params.id }, data: parsed.data });
+  const { count } = await prisma.rule.updateMany({ where: { id: req.params.id }, data: parsed.data });
   if (count === 0) return res.status(404).json({ error: "Not found" });
-  res.json(await prisma.gradeRule.findUnique({ where: { id: req.params.id } }));
+  res.json(await prisma.rule.findUnique({ where: { id: req.params.id } }));
 });
 
-gradeRuleRouter.delete("/:id", async (req, res) => {
-  await prisma.gradeRule.deleteMany({ where: { id: req.params.id } });
+ruleRouter.delete("/:id", async (req, res) => {
+  await prisma.rule.deleteMany({ where: { id: req.params.id } });
   res.status(204).end();
+});
+
+// App-wide settings by key: GET /:key -> { key, value } (value null when
+// unset), PUT /:key { value } (null clears it).
+export const settingRouter = Router();
+const settingKey = z.string().regex(/^[a-z0-9._-]{1,50}$/);
+
+settingRouter.get("/:key", async (req, res) => {
+  const key = settingKey.safeParse(req.params.key);
+  if (!key.success) return res.status(400).json({ error: "Invalid setting" });
+  const row = await prisma.appSetting.findUnique({ where: { key: key.data } });
+  res.json({ key: key.data, value: row?.value ?? null });
+});
+
+settingRouter.put("/:key", async (req, res) => {
+  const key = settingKey.safeParse(req.params.key);
+  const body = z.object({ value: z.string().max(10_000_000).nullable() }).safeParse(req.body);
+  if (!key.success || !body.success) return res.status(400).json({ error: "Invalid setting" });
+  if (body.data.value === null) {
+    await prisma.appSetting.deleteMany({ where: { key: key.data } });
+  } else {
+    await prisma.appSetting.upsert({ where: { key: key.data }, create: { key: key.data, value: body.data.value }, update: { value: body.data.value } });
+  }
+  res.json({ key: key.data, value: body.data.value });
 });
 
 // Recommended cutting conditions (GradeRecommendation): GET ?family= or
@@ -964,6 +985,7 @@ export const imcCompanyRouter = glossaryRouter(prisma.imcCompany, {
   city: z.string().trim().max(100).nullable().optional(),
   website: z.string().trim().max(300).nullable().optional(),
   logo: z.string().startsWith("data:image/", "Logo must be an uploaded picture").nullable().optional(),
+  groupName: z.string().trim().max(100).nullable().optional(),
 });
 
 export const testReportRouter = crudRouter({

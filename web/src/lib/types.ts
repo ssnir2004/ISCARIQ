@@ -236,10 +236,10 @@ export interface ToolLine {
   notes: string | null;
 }
 
-// A rule of thumb for choosing grades of one family.
-export interface GradeRule {
+// A rule of thumb in one list ("grades:<family>" or "imc").
+export interface Rule {
   id: string;
-  family: GradeFamily;
+  scope: string;
   text: string;
   position: number;
 }

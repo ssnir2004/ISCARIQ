@@ -556,16 +556,23 @@ model GradeType {
   @@unique([family, name])
 }
 
-// A rule of thumb for choosing grades of one family, shown as a numbered
-// list on that family's Grades tab.
-model GradeRule {
-  id        String      @id @default(cuid())
-  family    GradeFamily
+// A rule of thumb, shown as a numbered list on a Grades tab or the IMC
+// screen.
+model Rule {
+  id        String   @id @default(cuid())
+  // Which list it belongs to: "grades:<family>" (a Grades tab) or "imc".
+  scope     String
   text      String
-  position  Int         @default(0)
-  createdAt DateTime    @default(now())
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
 
-  @@index([family, position])
+  @@index([scope, position])
+}
+
+// Single app-wide values by key (e.g. "imc.logo", the IMC page logo).
+model AppSetting {
+  key   String @id
+  value String
 }
 
 // A recommended cutting condition for some grades of one family: work
@@ -669,6 +676,8 @@ model ImcCompany {
   website     String?
   // Company logo (the image is the building).
   logo        String?
+  // Group on the IMC screen (each group is a row of cards).
+  groupName   String?
 }
 
 model Coating {
