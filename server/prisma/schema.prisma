@@ -678,6 +678,8 @@ model ImcCompany {
   logo        String?
   // Group on the IMC screen (each group is a row of cards).
   groupName   String?
+  // Year the company became part of IMC.
+  imcSince    Int?
 }
 
 model Coating {

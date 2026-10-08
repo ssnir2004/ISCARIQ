@@ -55,6 +55,11 @@ function CompanyCards({ data, startEdit, remove }: GlossaryListContext) {
                       )}
                       {str(c.activity) && <p className="font-medium text-blue-700 dark:text-blue-300">{str(c.activity)}</p>}
                       {where && <p className="text-neutral-600 dark:text-neutral-300">📍 {where}</p>}
+                      {typeof c.imcSince === "number" && (
+                        <p className="text-neutral-600 dark:text-neutral-300" data-imc-since>
+                          IMC since <span className="font-semibold">{c.imcSince}</span>
+                        </p>
+                      )}
                       {c.description && <p className="text-xs whitespace-pre-line text-neutral-500 dark:text-neutral-400">{c.description}</p>}
                       {site && (
                         <a href={websiteHref(site)} target="_blank" rel="noreferrer" className="truncate text-xs text-blue-600 hover:underline dark:text-blue-400">
@@ -172,6 +177,7 @@ export function Imc() {
           { key: "country", label: "Country", placeholder: "e.g. Israel" },
           { key: "city", label: "City", placeholder: "e.g. Tefen" },
           { key: "website", label: "Website (optional)", placeholder: "e.g. www.iscar.com" },
+          { key: "imcSince", label: "Part of IMC since (year)", type: "number", placeholder: "e.g. 2006" },
         ]}
         extraSection={logoSection}
         renderList={(ctx) => <CompanyCards {...ctx} />}

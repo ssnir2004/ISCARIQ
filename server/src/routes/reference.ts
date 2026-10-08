@@ -986,6 +986,7 @@ export const imcCompanyRouter = glossaryRouter(prisma.imcCompany, {
   website: z.string().trim().max(300).nullable().optional(),
   logo: z.string().startsWith("data:image/", "Logo must be an uploaded picture").nullable().optional(),
   groupName: z.string().trim().max(100).nullable().optional(),
+  imcSince: z.number().int("Enter a year").min(1800, "Enter a year").max(2100, "Enter a year").nullable().optional(),
 });
 
 export const testReportRouter = crudRouter({
