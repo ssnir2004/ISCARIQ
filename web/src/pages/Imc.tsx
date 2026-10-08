@@ -55,7 +55,12 @@ function CompanyCards({ data, startEdit, remove }: GlossaryListContext) {
                       <div className="flex h-40 items-center justify-center bg-neutral-100 text-xs text-neutral-400 dark:bg-neutral-800">No image</div>
                     )}
                     <div className="flex flex-1 flex-col gap-1 p-3 text-sm">
-                      {str(c.logo) && <img src={str(c.logo)} alt={`${c.name} logo`} className="h-8 max-w-32 self-start object-contain" data-imc-logo />}
+                      {/* White backing so dark (transparent) logos stay visible in dark mode. */}
+                      {str(c.logo) && (
+                        <span className="self-start rounded-md bg-white px-2 py-1 ring-1 ring-neutral-200 dark:ring-neutral-700">
+                          <img src={str(c.logo)} alt={`${c.name} logo`} className="h-8 max-w-36 object-contain" data-imc-logo />
+                        </span>
+                      )}
                       {str(c.activity) && <p className="font-medium text-blue-700 dark:text-blue-300">{str(c.activity)}</p>}
                       {where && <p className="text-neutral-600 dark:text-neutral-300">📍 {where}</p>}
                       {c.description && <p className="text-xs whitespace-pre-line text-neutral-500 dark:text-neutral-400">{c.description}</p>}
@@ -127,7 +132,11 @@ function ImcHeader() {
 
   return (
     <div className="mb-4 flex items-center gap-4" data-imc-header>
-      {logo && <img src={logo} alt="IMC logo" className="h-14 max-w-56 object-contain" data-imc-page-logo />}
+      {logo && (
+        <span className="rounded-lg bg-white px-3 py-1.5 ring-1 ring-neutral-200 dark:ring-neutral-700">
+          <img src={logo} alt="IMC logo" className="h-14 max-w-56 object-contain" data-imc-page-logo />
+        </span>
+      )}
       <h1 className="text-2xl font-semibold text-neutral-900 dark:text-neutral-100">IMC</h1>
       <Button
         variant="ghost"
