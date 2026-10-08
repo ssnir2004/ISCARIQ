@@ -49,6 +49,7 @@ function CompanyViews(ctx: GlossaryListContext) {
     country: str(c.country) || null,
     logo: str(c.logo) || null,
     imcSince: typeof c.imcSince === "number" ? c.imcSince : null,
+    description: str(c.description) || null,
   }));
 
   function choose(v: View) {

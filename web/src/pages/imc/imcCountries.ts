@@ -4,7 +4,14 @@ import en from "i18n-iso-countries/langs/en.json";
 countries.registerLocale(en);
 
 // What the IMC views need of a company.
-export type ImcCompanyLite = { id: string; name: string; country?: string | null; logo?: string | null; imcSince?: number | null };
+export type ImcCompanyLite = {
+  id: string;
+  name: string;
+  country?: string | null;
+  logo?: string | null;
+  imcSince?: number | null;
+  description?: string | null;
+};
 
 // "Korea, India" -> ["Korea", "India"] (comma, semicolon or slash).
 export function splitCountries(value: string | null | undefined) {
