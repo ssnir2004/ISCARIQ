@@ -165,6 +165,7 @@ export function GlossaryPage({
   listPath,
   createValues,
   hideHeader = false,
+  noImage = false,
   collapsibleForm = false,
 }: {
   resource: string;
@@ -185,6 +186,8 @@ export function GlossaryPage({
   createValues?: Record<string, unknown>;
   // Omit the page title (e.g. when shown inside a tab that already names it).
   hideHeader?: boolean;
+  // Leave out the image field (entries of this kind have no picture).
+  noImage?: boolean;
   // Hide the add/edit form behind an "+ Add" button; it opens on click or on
   // Edit, and closes on Cancel or after a successful save.
   collapsibleForm?: boolean;
@@ -422,13 +425,15 @@ export function GlossaryPage({
               setValues: setExtraValues,
               editing: (editingId && data.find((e) => e.id === editingId)) || null,
             })}
-            <div>
-              <Label>Image (optional)</Label>
-              <div className="flex items-center gap-3">
-                <Input key={fileInputKey} type="file" accept="image/*" onChange={onImageChange} />
-                {form.image && <img src={form.image} alt="Preview" className="h-14 w-14 rounded object-cover" />}
+            {!noImage && (
+              <div>
+                <Label>Image (optional)</Label>
+                <div className="flex items-center gap-3">
+                  <Input key={fileInputKey} type="file" accept="image/*" onChange={onImageChange} />
+                  {form.image && <img src={form.image} alt="Preview" className="h-14 w-14 rounded object-cover" />}
+                </div>
               </div>
-            </div>
+            )}
             {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
             <div className="flex gap-2">
               <Button type="submit" disabled={submitting}>

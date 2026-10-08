@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
-import { GlossaryPage, type Entry, type GlossaryExtraSection, type GlossaryListContext } from "./catalog/GlossaryPage";
+import { GlossaryPage, type GlossaryExtraSection, type GlossaryListContext } from "./catalog/GlossaryPage";
 import { Button, Label, Modal } from "../components/ui";
 import { ClipboardImagePaste } from "../components/npaKnowledge/ClipboardImagePaste";
 import { RulesOfThumb } from "../components/RulesOfThumb";
 import { api, ApiError } from "../lib/api";
 
 // IMC group companies (ISCAR's parent group): name, field of activity,
-// location, logo and a picture of the building. The page shows the IMC logo
+// location and logo. The page shows the IMC logo
 // and rules of thumb on top, then a horizontal row of cards per group.
 
 const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : "");
@@ -18,7 +18,6 @@ function websiteHref(site: string) {
 }
 
 function CompanyCards({ data, startEdit, remove }: GlossaryListContext) {
-  const [zoom, setZoom] = useState<Entry | null>(null);
   const groups = [...new Set(data.map((c) => str(c.groupName) || NO_GROUP))].sort((a, b) =>
     a === NO_GROUP ? 1 : b === NO_GROUP ? -1 : a.localeCompare(b)
   );
@@ -47,13 +46,6 @@ function CompanyCards({ data, startEdit, remove }: GlossaryListContext) {
                     <h3 className="border-b border-neutral-200 px-3 py-2 text-base font-bold text-neutral-900 dark:border-neutral-800 dark:text-neutral-100" data-imc-name>
                       {c.name}
                     </h3>
-                    {c.image ? (
-                      <button type="button" onClick={() => setZoom(c)} title="Enlarge" className="block">
-                        <img src={c.image} alt={`${c.name} building`} className="h-40 w-full object-cover" />
-                      </button>
-                    ) : (
-                      <div className="flex h-40 items-center justify-center bg-neutral-100 text-xs text-neutral-400 dark:bg-neutral-800">No image</div>
-                    )}
                     <div className="flex flex-1 flex-col gap-1 p-3 text-sm">
                       {/* White backing so dark (transparent) logos stay visible in dark mode. */}
                       {str(c.logo) && (
@@ -84,16 +76,11 @@ function CompanyCards({ data, startEdit, remove }: GlossaryListContext) {
           </div>
         </section>
       ))}
-      {zoom?.image && (
-        <Modal title={zoom.name} onClose={() => setZoom(null)} wide>
-          <img src={zoom.image} alt={`${zoom.name} building`} className="mx-auto max-h-[75vh] rounded-lg object-contain" />
-        </Modal>
-      )}
     </div>
   );
 }
 
-// The logo, as its own image field in the form (the main image is the building).
+// The company logo, as an image field in the form (companies have no other picture).
 const logoSection: GlossaryExtraSection = {
   read: (entry) => ({ logo: str(entry.logo) || null }),
   render: ({ values, setValues }) => (
@@ -176,6 +163,7 @@ export function Imc() {
         resource="/imc-companies"
         title="IMC"
         hideHeader
+        noImage
         singular="company"
         collapsibleForm
         textFields={[
