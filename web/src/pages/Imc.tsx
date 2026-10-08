@@ -1,9 +1,14 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { GlossaryPage, type GlossaryExtraSection, type GlossaryListContext } from "./catalog/GlossaryPage";
 import { Button, Label, Modal } from "../components/ui";
 import { ClipboardImagePaste } from "../components/npaKnowledge/ClipboardImagePaste";
 import { RulesOfThumb } from "../components/RulesOfThumb";
 import { api, ApiError } from "../lib/api";
+import { ImcTimeline } from "./imc/ImcTimeline";
+import type { ImcCompanyLite } from "./imc/imcCountries";
+
+// The map carries world shapes and flags, so it loads only when opened.
+const ImcMap = lazy(() => import("./imc/ImcMap"));
 
 // IMC group companies (ISCAR's parent group): name, field of activity,
 // location and logo. The page shows the IMC logo
@@ -15,6 +20,72 @@ const LOGO_KEY = "imc.logo";
 
 function websiteHref(site: string) {
   return /^https?:\/\//i.test(site) ? site : `https://${site}`;
+}
+
+type View = "cards" | "map" | "timeline";
+const VIEWS: { value: View; label: string }[] = [
+  { value: "cards", label: "Cards" },
+  { value: "map", label: "Map" },
+  { value: "timeline", label: "Timeline" },
+];
+const VIEW_KEY = "iscariq.imc.view";
+
+function readView(): View {
+  try {
+    const v = localStorage.getItem(VIEW_KEY);
+    return VIEWS.some((x) => x.value === v) ? (v as View) : "cards";
+  } catch {
+    return "cards";
+  }
+}
+
+// Cards / Map / Timeline of the companies (the choice is remembered).
+function CompanyViews(ctx: GlossaryListContext) {
+  const [view, setView] = useState<View>(readView);
+  const companies: ImcCompanyLite[] = ctx.data.map((c) => ({
+    id: c.id,
+    name: c.name,
+    country: str(c.country) || null,
+    logo: str(c.logo) || null,
+    imcSince: typeof c.imcSince === "number" ? c.imcSince : null,
+  }));
+
+  function choose(v: View) {
+    setView(v);
+    try {
+      localStorage.setItem(VIEW_KEY, v);
+    } catch {
+      // not remembered
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="inline-flex rounded-lg border border-neutral-200 p-0.5 text-sm dark:border-neutral-700" role="tablist">
+        {VIEWS.map((v) => (
+          <button
+            key={v.value}
+            type="button"
+            role="tab"
+            aria-selected={view === v.value}
+            onClick={() => choose(v.value)}
+            className={`rounded-md px-3 py-1 ${view === v.value ? "bg-blue-600 text-white" : "text-neutral-600 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white"}`}
+          >
+            {v.label}
+          </button>
+        ))}
+      </div>
+      {view === "map" ? (
+        <Suspense fallback={<p className="text-sm text-neutral-500">Loading map…</p>}>
+          <ImcMap companies={companies} />
+        </Suspense>
+      ) : view === "timeline" ? (
+        <ImcTimeline companies={companies} />
+      ) : (
+        <CompanyCards {...ctx} />
+      )}
+    </div>
+  );
 }
 
 function CompanyCards({ data, startEdit, remove }: GlossaryListContext) {
@@ -174,13 +245,13 @@ export function Imc() {
         textFields={[
           { key: "groupName", label: "Group", placeholder: "e.g. Cutting tools" },
           { key: "activity", label: "Field of activity", placeholder: "e.g. Cutting tools — milling" },
-          { key: "country", label: "Country", placeholder: "e.g. Israel" },
+          { key: "country", label: "Country (several: comma-separated)", placeholder: "e.g. Israel  or  Korea, India" },
           { key: "city", label: "City", placeholder: "e.g. Tefen" },
           { key: "website", label: "Website (optional)", placeholder: "e.g. www.iscar.com" },
           { key: "imcSince", label: "Part of IMC since (year)", type: "number", placeholder: "e.g. 2006" },
         ]}
         extraSection={logoSection}
-        renderList={(ctx) => <CompanyCards {...ctx} />}
+        renderList={(ctx) => <CompanyViews {...ctx} />}
       />
     </div>
   );
