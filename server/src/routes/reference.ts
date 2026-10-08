@@ -956,6 +956,15 @@ applicationRouter.delete("/:id", async (req, res, next) => {
 applicationRouter.use(glossaryRouter(prisma.application));
 export const coatingRouter = glossaryRouter(prisma.coating);
 
+// IMC group companies: name, description and building image, plus field of
+// activity and location.
+export const imcCompanyRouter = glossaryRouter(prisma.imcCompany, {
+  activity: z.string().trim().max(200).nullable().optional(),
+  country: z.string().trim().max(100).nullable().optional(),
+  city: z.string().trim().max(100).nullable().optional(),
+  website: z.string().trim().max(300).nullable().optional(),
+});
+
 export const testReportRouter = crudRouter({
   delegate: prisma.testReport,
   createSchema: z.object({

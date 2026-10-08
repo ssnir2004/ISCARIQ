@@ -41,6 +41,7 @@ import {
   toolSubApplicationRouter,
   gradeCaseRouter,
   coatingRouter,
+  imcCompanyRouter,
   toolRouter,
   testReportRouter,
   testReportFileRouter,
@@ -84,6 +85,7 @@ app.use("/api/tool-lines", toolLineRouter);
 app.use("/api/tool-sub-applications", toolSubApplicationRouter);
 app.use("/api/grade-cases", gradeCaseRouter);
 app.use("/api/coatings", coatingRouter);
+app.use("/api/imc-companies", imcCompanyRouter);
 app.use("/api/tools", toolRouter);
 app.use("/api/test-reports", testReportRouter);
 app.use("/api/test-report-files", testReportFileRouter);

@@ -22,6 +22,7 @@ import { GradesHub } from "./pages/catalog/Grades";
 import { Applications } from "./pages/catalog/Applications";
 import { Substrates } from "./pages/catalog/Substrates";
 import { Coatings } from "./pages/catalog/Coatings";
+import { Imc } from "./pages/Imc";
 import { Npas } from "./pages/catalog/Npas";
 import { NpaKnowledge } from "./pages/catalog/NpaKnowledge";
 
@@ -76,6 +77,7 @@ function AppRoutes() {
         <Route path="/catalog/applications" element={<Applications />} />
         <Route path="/catalog/substrates" element={<Substrates />} />
         <Route path="/catalog/coatings" element={<Coatings />} />
+        <Route path="/imc" element={<Imc />} />
         <Route path="/catalog/npas" element={<Npas />} />
         <Route path="/catalog/npa-knowledge" element={<NpaKnowledge />} />
         <Route path="*" element={<Navigate to="/" replace />} />
