@@ -129,7 +129,7 @@ export default function ImcMap({ companies }: { companies: ImcCompanyLite[] }) {
   layout(labels);
 
   return (
-    <div className="space-y-2" data-imc-map>
+    <div className="mx-auto max-w-3xl space-y-2" data-imc-map>
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full rounded-xl bg-white dark:bg-neutral-100" role="img" aria-label="IMC companies world map">
         {shapes.map((f, i) => (
           <path key={i} d={path(f) ?? undefined} fill="#2f80d1" stroke="#ffffff" strokeWidth={0.4} />
