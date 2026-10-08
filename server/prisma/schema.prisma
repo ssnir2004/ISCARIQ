@@ -656,6 +656,19 @@ model GradeChartBox {
   @@id([scope, iso513Group, gradeId])
 }
 
+// A company of the IMC group (ISCAR's parent): what it does, where it is,
+// and a picture of its building. Shown on the IMC screen.
+model ImcCompany {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String?
+  image       String?
+  activity    String?
+  country     String?
+  city        String?
+  website     String?
+}
+
 model Coating {
   id          String  @id @default(cuid())
   name        String  @unique
