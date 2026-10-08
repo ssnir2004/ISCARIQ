@@ -16,6 +16,7 @@ const ImcMap = lazy(() => import("./imc/ImcMap"));
 
 const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : "");
 const NO_GROUP = "Other";
+const yearOf = (c: Record<string, unknown>) => (typeof c.imcSince === "number" ? c.imcSince : Infinity);
 const LOGO_KEY = "imc.logo";
 
 function websiteHref(site: string) {
@@ -104,6 +105,8 @@ function CompanyCards({ data, startEdit, remove }: GlossaryListContext) {
           <div className="flex gap-4 overflow-x-auto pb-2" data-imc-row>
             {data
               .filter((c) => (str(c.groupName) || NO_GROUP) === group)
+              // Left to right by the year they joined IMC (no year last), then by name.
+              .sort((a, b) => yearOf(a) - yearOf(b) || a.name.localeCompare(b.name))
               .map((c) => {
                 const where = [str(c.city), str(c.country)].filter(Boolean).join(", ");
                 const site = str(c.website);
