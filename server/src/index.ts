@@ -35,7 +35,8 @@ import {
   substrateRouter,
   gradeSetRouter,
   gradeTypeRouter,
-  gradeRuleRouter,
+  ruleRouter,
+  settingRouter,
   gradeRecommendationRouter,
   toolLineRouter,
   toolSubApplicationRouter,
@@ -79,7 +80,8 @@ app.use("/api/grade-chart", gradeChartRouter);
 app.use("/api/substrates", substrateRouter);
 app.use("/api/grade-sets", gradeSetRouter);
 app.use("/api/grade-types", gradeTypeRouter);
-app.use("/api/grade-rules", gradeRuleRouter);
+app.use("/api/rules", ruleRouter);
+app.use("/api/settings", settingRouter);
 app.use("/api/grade-recommendations", gradeRecommendationRouter);
 app.use("/api/tool-lines", toolLineRouter);
 app.use("/api/tool-sub-applications", toolSubApplicationRouter);

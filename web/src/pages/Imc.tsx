@@ -1,13 +1,17 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { GlossaryPage, type Entry, type GlossaryExtraSection, type GlossaryListContext } from "./catalog/GlossaryPage";
 import { Button, Label, Modal } from "../components/ui";
 import { ClipboardImagePaste } from "../components/npaKnowledge/ClipboardImagePaste";
+import { RulesOfThumb } from "../components/RulesOfThumb";
+import { api, ApiError } from "../lib/api";
 
 // IMC group companies (ISCAR's parent group): name, field of activity,
-// location and a picture of the building, as cards grouped by country.
+// location, logo and a picture of the building. The page shows the IMC logo
+// and rules of thumb on top, then a horizontal row of cards per group.
 
 const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : "");
-const NO_COUNTRY = "Other";
+const NO_GROUP = "Other";
+const LOGO_KEY = "imc.logo";
 
 function websiteHref(site: string) {
   return /^https?:\/\//i.test(site) ? site : `https://${site}`;
@@ -15,27 +19,28 @@ function websiteHref(site: string) {
 
 function CompanyCards({ data, startEdit, remove }: GlossaryListContext) {
   const [zoom, setZoom] = useState<Entry | null>(null);
-  const countries = [...new Set(data.map((c) => str(c.country) || NO_COUNTRY))].sort((a, b) =>
-    a === NO_COUNTRY ? 1 : b === NO_COUNTRY ? -1 : a.localeCompare(b)
+  const groups = [...new Set(data.map((c) => str(c.groupName) || NO_GROUP))].sort((a, b) =>
+    a === NO_GROUP ? 1 : b === NO_GROUP ? -1 : a.localeCompare(b)
   );
 
   if (data.length === 0) return <p className="py-6 text-center text-sm text-neutral-500 dark:text-neutral-400">No companies yet.</p>;
 
   return (
     <div className="space-y-6" data-imc-companies>
-      {countries.map((country) => (
-        <section key={country} data-imc-country={country}>
-          <h2 className="mb-2 text-sm font-semibold tracking-wide text-neutral-500 uppercase dark:text-neutral-400">{country}</h2>
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
+      {groups.map((group) => (
+        <section key={group} data-imc-group={group}>
+          <h2 className="mb-2 text-sm font-semibold tracking-wide text-neutral-500 uppercase dark:text-neutral-400">{group}</h2>
+          {/* One row per group, scrolling sideways when it doesn't fit. */}
+          <div className="flex gap-4 overflow-x-auto pb-2" data-imc-row>
             {data
-              .filter((c) => (str(c.country) || NO_COUNTRY) === country)
+              .filter((c) => (str(c.groupName) || NO_GROUP) === group)
               .map((c) => {
                 const where = [str(c.city), str(c.country)].filter(Boolean).join(", ");
                 const site = str(c.website);
                 return (
                   <article
                     key={c.id}
-                    className="group flex flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900"
+                    className="group flex w-72 shrink-0 flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900"
                     data-imc-company={c.name}
                   >
                     {/* Company name on top of the card. */}
@@ -94,21 +99,86 @@ const logoSection: GlossaryExtraSection = {
   ),
 };
 
+// The IMC logo at the top of the page (an app setting), with a small
+// window to add, replace or remove it.
+function ImcHeader() {
+  const [logo, setLogo] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    api
+      .get<{ value: string | null }>(`/settings/${LOGO_KEY}`)
+      .then((r) => setLogo(r.value))
+      .catch(() => setLogo(null));
+  }, []);
+
+  async function save() {
+    setError(null);
+    try {
+      await api.put(`/settings/${LOGO_KEY}`, { value: draft });
+      setLogo(draft);
+      setEditing(false);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to save the logo");
+    }
+  }
+
+  return (
+    <div className="mb-4 flex items-center gap-4" data-imc-header>
+      {logo && <img src={logo} alt="IMC logo" className="h-14 max-w-56 object-contain" data-imc-page-logo />}
+      <h1 className="text-2xl font-semibold text-neutral-900 dark:text-neutral-100">IMC</h1>
+      <Button
+        variant="ghost"
+        onClick={() => {
+          setDraft(logo);
+          setEditing(true);
+        }}
+      >
+        {logo ? "Change logo" : "+ Add logo"}
+      </Button>
+      {editing && (
+        <Modal title="IMC logo" onClose={() => setEditing(false)}>
+          <div className="space-y-3">
+            <ClipboardImagePaste value={draft} onChange={setDraft} />
+            {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+            <div className="flex gap-2">
+              <Button type="button" onClick={save}>
+                Save
+              </Button>
+              <Button type="button" variant="secondary" onClick={() => setEditing(false)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
 export function Imc() {
   return (
-    <GlossaryPage
-      resource="/imc-companies"
-      title="IMC"
-      singular="company"
-      collapsibleForm
-      textFields={[
-        { key: "activity", label: "Field of activity", placeholder: "e.g. Cutting tools — milling" },
-        { key: "country", label: "Country", placeholder: "e.g. Israel" },
-        { key: "city", label: "City", placeholder: "e.g. Tefen" },
-        { key: "website", label: "Website (optional)", placeholder: "e.g. www.iscar.com" },
-      ]}
-      extraSection={logoSection}
-      renderList={(ctx) => <CompanyCards {...ctx} />}
-    />
+    <div>
+      <ImcHeader />
+      <RulesOfThumb scope="imc" />
+      <GlossaryPage
+        resource="/imc-companies"
+        title="IMC"
+        hideHeader
+        singular="company"
+        collapsibleForm
+        textFields={[
+          { key: "groupName", label: "Group", placeholder: "e.g. Cutting tools" },
+          { key: "activity", label: "Field of activity", placeholder: "e.g. Cutting tools — milling" },
+          { key: "country", label: "Country", placeholder: "e.g. Israel" },
+          { key: "city", label: "City", placeholder: "e.g. Tefen" },
+          { key: "website", label: "Website (optional)", placeholder: "e.g. www.iscar.com" },
+        ]}
+        extraSection={logoSection}
+        renderList={(ctx) => <CompanyCards {...ctx} />}
+      />
+    </div>
   );
 }
