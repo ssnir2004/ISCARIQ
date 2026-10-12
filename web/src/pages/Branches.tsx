@@ -40,7 +40,7 @@ export function Branches() {
 
   return (
     <div>
-      <PageHeader title="ISCAR Branches" action={!adding && <Button onClick={() => setAdding(true)}>+ Add branch</Button>} />
+      <PageHeader title={`ISCAR Branches (${branches.length})`} action={!adding && <Button onClick={() => setAdding(true)}>+ Add branch</Button>} />
       {adding && (
         <Card className="mb-6 max-w-2xl p-4">
           <form onSubmit={add} className="grid grid-cols-2 gap-3">
@@ -76,7 +76,7 @@ export function Branches() {
           .filter((g) => g.items.length > 0)
           .map(({ region, items }) => (
             <section key={region} data-region={region}>
-              <h2 className="mb-2 text-sm font-bold tracking-wide text-neutral-600 uppercase dark:text-neutral-300">{region}</h2>
+              <h2 className="mb-2 text-sm font-bold tracking-wide text-neutral-600 uppercase dark:text-neutral-300">{region} ({items.length})</h2>
               <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
                 {items.map((b) => {
                   const branchPlants = plantsIn(b.country);
