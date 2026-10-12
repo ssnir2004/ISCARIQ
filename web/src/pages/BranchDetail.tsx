@@ -383,9 +383,10 @@ function NotesSection({ branch, onChanged }: { branch: Branch; onChanged: () => 
 
   const form = (
     <form onSubmit={save} className="space-y-2 rounded-lg border border-neutral-200 p-3 dark:border-neutral-700" data-note-form>
-      <div className="flex gap-2">
+      {/* Title takes the row; the date a fixed column on its right. */}
+      <div className="grid grid-cols-[minmax(0,1fr)_11rem] gap-2">
         <Input dir="auto" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" aria-label="Note title" required autoFocus />
-        <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-label="Note date" className="w-44 shrink-0" />
+        <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-label="Note date" />
       </div>
       <Textarea dir="auto" rows={4} value={text} onChange={(e) => setText(e.target.value)} placeholder="Information about the branch…" aria-label="Note text" />
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
