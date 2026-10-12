@@ -57,7 +57,16 @@ interface DragState {
 
 // A company's plants on the world / Germany maps: Schaeffler (default),
 // Dauch or GKN Aero, each with its own list.
-export function PlantsMap({ company = "SCHAEFFLER", title = "Schaeffler Plants" }: { company?: PlantCompany; title?: string }) {
+export function PlantsMap({
+  company = "SCHAEFFLER",
+  title = "Schaeffler Plants",
+  hideTitle = false,
+}: {
+  company?: PlantCompany;
+  title?: string;
+  // Leave out the title (shown inside the Plants page's tabs).
+  hideTitle?: boolean;
+}) {
   const { data: plants, reload } = useResource<Plant>(`/plants?company=${company}`);
   const [view, setView] = useState<PlantMapView>("WORLD");
   const [mode, setMode] = useState<"view" | "edit">("view");
@@ -263,47 +272,51 @@ export function PlantsMap({ company = "SCHAEFFLER", title = "Schaeffler Plants" 
     return (pct / 100) * viewConfig.map.viewBoxHeight;
   }
 
+  // View / Edit and World / Germany switches.
+  const controls = (
+    <div className="flex items-center gap-3">
+      <div className="flex gap-1 rounded-lg bg-neutral-100 p-1 dark:bg-neutral-900">
+        {(["view", "edit"] as const).map((m) => (
+          <button
+            key={m}
+            type="button"
+            onClick={() => setMode(m)}
+            className={`rounded-md px-3 py-1.5 text-sm font-medium capitalize transition ${
+              mode === m
+                ? "bg-white text-neutral-900 shadow-sm dark:bg-neutral-700 dark:text-neutral-100"
+                : "text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+            }`}
+          >
+            {m}
+          </button>
+        ))}
+      </div>
+      <div className="flex gap-1 rounded-lg bg-neutral-100 p-1 dark:bg-neutral-900">
+        {VIEWS.map((v) => (
+          <button
+            key={v.id}
+            type="button"
+            onClick={() => setView(v.id)}
+            className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
+              view === v.id
+                ? "bg-white text-neutral-900 shadow-sm dark:bg-neutral-700 dark:text-neutral-100"
+                : "text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+            }`}
+          >
+            {v.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
   return (
     <div className="w-full">
-      <PageHeader
-        title={title}
-        action={
-          <div className="flex items-center gap-3">
-            <div className="flex gap-1 rounded-lg bg-neutral-100 p-1 dark:bg-neutral-900">
-              {(["view", "edit"] as const).map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => setMode(m)}
-                  className={`rounded-md px-3 py-1.5 text-sm font-medium capitalize transition ${
-                    mode === m
-                      ? "bg-white text-neutral-900 shadow-sm dark:bg-neutral-700 dark:text-neutral-100"
-                      : "text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
-                  }`}
-                >
-                  {m}
-                </button>
-              ))}
-            </div>
-            <div className="flex gap-1 rounded-lg bg-neutral-100 p-1 dark:bg-neutral-900">
-              {VIEWS.map((v) => (
-                <button
-                  key={v.id}
-                  type="button"
-                  onClick={() => setView(v.id)}
-                  className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
-                    view === v.id
-                      ? "bg-white text-neutral-900 shadow-sm dark:bg-neutral-700 dark:text-neutral-100"
-                      : "text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
-                  }`}
-                >
-                  {v.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        }
-      />
+      {hideTitle ? (
+        <div className="mb-6 flex justify-end">{controls}</div>
+      ) : (
+        <PageHeader title={title} action={controls} />
+      )}
 
       <p className="mb-3 text-sm text-neutral-500 dark:text-neutral-400">
         {mode === "edit"
