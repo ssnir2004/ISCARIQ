@@ -3,7 +3,7 @@ import { AuthProvider, useAuth } from "./lib/auth";
 import { Layout } from "./components/Layout";
 import { Login } from "./pages/Login";
 import { Pipeline } from "./pages/Pipeline";
-import { PlantsMap } from "./pages/PlantsMap";
+import { PlantsHub } from "./pages/PlantsHub";
 import { RfqDetail } from "./pages/RfqDetail";
 import { ProjectDetail } from "./pages/ProjectDetail";
 import { Advisor } from "./pages/Advisor";
@@ -56,10 +56,11 @@ function AppRoutes() {
         }
       >
         <Route path="/" element={<Pipeline />} />
-        <Route path="/plants" element={<PlantsMap key="schaeffler" />} />
-        {/* Same screen, Dauch's plants; key so switching screens resets its state. */}
-        <Route path="/dauch-plants" element={<PlantsMap key="dauch" company="DAUCH" title="Dauch Plants" />} />
-        <Route path="/gkn-aero-plants" element={<PlantsMap key="gkn-aero" company="GKN_AERO" title="GKN Aero Plants" />} />
+        <Route path="/plants" element={<PlantsHub />} />
+        <Route path="/plants/:slug" element={<PlantsHub />} />
+        {/* Old per-company addresses */}
+        <Route path="/dauch-plants" element={<Navigate to="/plants/dauch" replace />} />
+        <Route path="/gkn-aero-plants" element={<Navigate to="/plants/gkn-aero" replace />} />
         <Route path="/rfqs/:id" element={<RfqDetail />} />
         <Route path="/projects/:id" element={<ProjectDetail />} />
         <Route path="/advisor" element={<Advisor />} />

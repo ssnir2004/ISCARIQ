@@ -95,7 +95,7 @@ export function BranchDetail() {
               ))}
             </ul>
           )}
-          <Link to="/plants" className="mt-3 inline-block text-xs text-blue-600 hover:underline dark:text-blue-400">
+          <Link to="/plants/schaeffler" className="mt-3 inline-block text-xs text-blue-600 hover:underline dark:text-blue-400">
             Open the Schaeffler Plants map →
           </Link>
         </Section>

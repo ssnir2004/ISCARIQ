@@ -3,9 +3,7 @@ import { useAuth } from "../lib/auth";
 
 const NAV = [
   { to: "/", label: "Pipeline", end: true },
-  { to: "/plants", label: "Schaeffler Plants" },
-  { to: "/dauch-plants", label: "Dauch Plants" },
-  { to: "/gkn-aero-plants", label: "GKN Aero Plants" },
+  { to: "/plants", label: "Plants" },
   { to: "/imc", label: "IMC" },
   { to: "/branches", label: "ISCAR Branches" },
   { to: "/advisor", label: "Insert Advisor" },
