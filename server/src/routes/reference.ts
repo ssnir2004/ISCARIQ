@@ -35,6 +35,8 @@ const branchFields = {
   managerName: z.string().trim().max(200).nullable().optional(),
   phone: z.string().trim().max(100).nullable().optional(),
   email: z.string().trim().max(200).nullable().optional(),
+  region: z.string().trim().max(100).nullable().optional(),
+  position: z.number().int().optional(),
 };
 export const branchRouter = crudRouter({
   delegate: prisma.branch,
@@ -45,7 +47,7 @@ export const branchRouter = crudRouter({
     notes: { orderBy: { createdAt: "desc" } },
     _count: { select: { rfqs: true } },
   },
-  orderBy: { name: "asc" },
+  orderBy: [{ position: "asc" }, { name: "asc" }],
 });
 
 // A branch's contacts: POST { branchId, role, name, email?, phone? } (added

@@ -25,3 +25,6 @@ export const COUNTRY_OPTIONS: { code: string; name: string }[] = Object.keys(cou
 export function plantCountry(plant: Pick<Plant, "mapView" | "regionCode">) {
   return plant.mapView === "GERMANY" ? "DE" : (plant.regionCode ?? "").toUpperCase();
 }
+
+// ISCAR sales regions, in display order on the branches screen.
+export const BRANCH_REGIONS = ["WEST EUROPE", "NORTH AMERICA", "ASIA & FAR EAST", "EAST EUROPE", "SOUTH AMERICA", "PACIFIC", "AFRICA+MID EAST"];

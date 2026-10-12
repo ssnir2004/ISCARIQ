@@ -33,6 +33,10 @@ model Branch {
   managerName String?
   phone       String?
   email       String?
+  // Sales region (e.g. "WEST EUROPE") and order within it on the branches
+  // screen.
+  region      String?
+  position    Int             @default(0)
   rfqs        Rfq[]
   contacts    BranchContact[]
   notes       BranchNote[]

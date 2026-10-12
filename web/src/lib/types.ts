@@ -47,6 +47,9 @@ export interface Branch {
   managerName?: string | null;
   phone?: string | null;
   email?: string | null;
+  // Sales region (e.g. "WEST EUROPE") and order within it.
+  region?: string | null;
+  position?: number;
   contacts?: BranchContact[];
   notes?: BranchNote[];
   _count?: { rfqs: number };
