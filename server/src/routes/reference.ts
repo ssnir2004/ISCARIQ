@@ -119,9 +119,14 @@ branchNoteRouter.delete("/:id", async (req, res) => {
   res.status(204).end();
 });
 
+// Plants of Schaeffler or Dauch: GET ?company=DAUCH lists one company's
+// plants (Schaeffler when not given).
+const plantCompanySchema = z.enum(["SCHAEFFLER", "DAUCH"]);
 export const plantRouter = crudRouter({
   delegate: prisma.plant,
+  listWhere: (req) => ({ company: plantCompanySchema.catch("SCHAEFFLER").parse(req.query.company) }),
   createSchema: z.object({
+    company: plantCompanySchema.optional(),
     name: z.string().min(1),
     regionCode: z.string().optional(),
     specialties: z.string().optional(),

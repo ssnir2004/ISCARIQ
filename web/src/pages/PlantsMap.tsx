@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { useResource } from "../lib/useResource";
 import { api, ApiError } from "../lib/api";
-import type { Plant, PlantMapView } from "../lib/types";
+import type { Plant, PlantCompany, PlantMapView } from "../lib/types";
 import { Button, Input, Label, Modal, PageHeader, Textarea } from "../components/ui";
 import { GERMANY_MAP, WORLD_MAP } from "../lib/mapPaths";
 
@@ -55,8 +55,10 @@ interface DragState {
   pendingDy?: number;
 }
 
-export function PlantsMap() {
-  const { data: plants, reload } = useResource<Plant>("/plants");
+// A company's plants on the world / Germany maps: Schaeffler (default) or
+// Dauch, each with its own list.
+export function PlantsMap({ company = "SCHAEFFLER", title = "Schaeffler Plants" }: { company?: PlantCompany; title?: string }) {
+  const { data: plants, reload } = useResource<Plant>(`/plants?company=${company}`);
   const [view, setView] = useState<PlantMapView>("WORLD");
   const [mode, setMode] = useState<"view" | "edit">("view");
   const [zoom, setZoom] = useState(1);
@@ -206,6 +208,7 @@ export function PlantsMap() {
     setSubmitting(true);
     try {
       await api.post("/plants", {
+        company,
         name: addForm.name,
         regionCode: addForm.regionCode || undefined,
         specialties: addForm.specialties || undefined,
@@ -263,7 +266,7 @@ export function PlantsMap() {
   return (
     <div className="w-full">
       <PageHeader
-        title="Schaeffler Plants"
+        title={title}
         action={
           <div className="flex items-center gap-3">
             <div className="flex gap-1 rounded-lg bg-neutral-100 p-1 dark:bg-neutral-900">

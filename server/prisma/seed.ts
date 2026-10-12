@@ -200,7 +200,7 @@ async function main() {
 
   for (const p of PLANTS) {
     await prisma.plant.upsert({
-      where: { name: p.name },
+      where: { company_name: { company: "SCHAEFFLER", name: p.name } },
       update: { regionCode: p.regionCode, specialties: p.specialties, mapView: p.mapView, x: p.x, y: p.y },
       create: p,
     });
