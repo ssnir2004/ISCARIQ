@@ -63,6 +63,8 @@ model BranchNote {
   branchId  String
   title     String
   text      String
+  // The date the information refers to (e.g. a visit), chosen by the user.
+  date      DateTime? @db.Date
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
