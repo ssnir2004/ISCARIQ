@@ -98,10 +98,11 @@ enum PlantMapView {
   GERMANY
 }
 
-// Whose plant it is: Schaeffler or Dauch (each has its own plants screen).
+// Whose plant it is (each company has its own plants screen).
 enum PlantCompany {
   SCHAEFFLER
   DAUCH
+  GKN_AERO
 }
 
 model Plant {
