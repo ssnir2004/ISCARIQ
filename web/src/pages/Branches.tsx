@@ -4,6 +4,7 @@ import { api, ApiError } from "../lib/api";
 import { useResource } from "../lib/useResource";
 import { BRANCH_REGIONS, COUNTRY_OPTIONS, countryName, plantCountry } from "../lib/countries";
 import { Flag } from "../components/Flag";
+import schaefflerLogo from "../assets/schaeffler-ina-logo.png";
 import type { Branch, Plant } from "../lib/types";
 import { Button, Card, Input, Label, PageHeader, Select } from "../components/ui";
 
@@ -83,10 +84,20 @@ export function Branches() {
                     <Link
                       key={b.id}
                       to={`/branches/${b.id}`}
-                      className="flex flex-col gap-1 rounded-xl border border-neutral-200 bg-white p-4 text-sm shadow-sm hover:border-blue-400 dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-blue-500"
+                      className="relative flex flex-col gap-1 rounded-xl border border-neutral-200 bg-white p-4 text-sm shadow-sm hover:border-blue-400 dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-blue-500"
                       data-branch={b.name}
                     >
-                      <span className="flex items-center gap-2 text-base font-bold text-neutral-900 dark:text-neutral-100">
+                      {/* Branches responsible for Schaeffler plants carry the Schaeffler (INA) logo. */}
+                      {branchPlants.length > 0 && (
+                        <img
+                          src={schaefflerLogo}
+                          alt="Schaeffler plants"
+                          title={`Schaeffler plants: ${branchPlants.map((p) => p.name).join(", ")}`}
+                          className="absolute top-3 right-3 h-11 w-11 rounded-md bg-white object-contain p-0.5 ring-1 ring-neutral-200 dark:ring-neutral-700"
+                          data-schaeffler-logo
+                        />
+                      )}
+                      <span className={`flex items-center gap-2 text-base font-bold text-neutral-900 dark:text-neutral-100 ${branchPlants.length > 0 ? "pr-12" : ""}`}>
                         <Flag code={b.country} className="h-5 w-7" />
                         {b.name}
                       </span>
