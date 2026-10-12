@@ -22,10 +22,47 @@ model User {
 
 // ---------- Org reference data ----------
 
+// An ISCAR branch (subsidiary) worldwide. Its Schaeffler plants are the
+// plants in the same country.
 model Branch {
-  id      String @id @default(cuid())
-  name    String @unique
-  rfqs    Rfq[]
+  id          String          @id @default(cuid())
+  name        String          @unique
+  // ISO 3166 alpha-2 code, e.g. "DE".
+  country     String?
+  address     String?
+  managerName String?
+  phone       String?
+  email       String?
+  rfqs        Rfq[]
+  contacts    BranchContact[]
+  notes       BranchNote[]
+}
+
+// A contact person at a branch, by role (e.g. Sales Manager).
+model BranchContact {
+  id       String @id @default(cuid())
+  branch   Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  branchId String
+  role     String
+  name     String
+  email    String?
+  phone    String?
+  position Int    @default(0)
+
+  @@index([branchId])
+}
+
+// General information about a branch: a titled note.
+model BranchNote {
+  id        String   @id @default(cuid())
+  branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  branchId  String
+  title     String
+  text      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([branchId])
 }
 
 model Department {

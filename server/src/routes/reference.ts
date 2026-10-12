@@ -27,11 +27,86 @@ async function validScope(scope: string) {
   return bare === "all" || (await prisma.application.findUnique({ where: { id: bare } })) !== null;
 }
 
+// ISCAR branches: name plus country (ISO alpha-2), address, manager and
+// contact details; contacts and notes come with each branch.
+const branchFields = {
+  country: z.string().regex(/^[A-Z]{2}$/, "Choose a country").nullable().optional(),
+  address: z.string().trim().max(500).nullable().optional(),
+  managerName: z.string().trim().max(200).nullable().optional(),
+  phone: z.string().trim().max(100).nullable().optional(),
+  email: z.string().trim().max(200).nullable().optional(),
+};
 export const branchRouter = crudRouter({
   delegate: prisma.branch,
-  createSchema: z.object({ name: z.string().min(1) }),
-  updateSchema: z.object({ name: z.string().min(1).optional() }),
+  createSchema: z.object({ name: z.string().trim().min(1), ...branchFields }),
+  updateSchema: z.object({ name: z.string().trim().min(1).optional(), ...branchFields }),
+  include: {
+    contacts: { orderBy: [{ position: "asc" }, { name: "asc" }] },
+    notes: { orderBy: { createdAt: "desc" } },
+    _count: { select: { rfqs: true } },
+  },
   orderBy: { name: "asc" },
+});
+
+// A branch's contacts: POST { branchId, role, name, email?, phone? } (added
+// last), PATCH /:id, DELETE /:id.
+export const branchContactRouter = Router();
+const contactFields = {
+  role: z.string().trim().min(1, "Enter the role").max(100),
+  name: z.string().trim().min(1, "Enter the name").max(200),
+  email: z.string().trim().max(200).nullable().optional(),
+  phone: z.string().trim().max(100).nullable().optional(),
+};
+
+branchContactRouter.post("/", async (req, res) => {
+  const parsed = z.object({ branchId: z.string().min(1), ...contactFields }).safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid contact" });
+  const branch = await prisma.branch.findUnique({ where: { id: parsed.data.branchId }, select: { id: true } });
+  if (!branch) return res.status(404).json({ error: "Branch not found" });
+  const last = await prisma.branchContact.aggregate({ where: { branchId: parsed.data.branchId }, _max: { position: true } });
+  res.status(201).json(await prisma.branchContact.create({ data: { ...parsed.data, position: (last._max.position ?? -1) + 1 } }));
+});
+
+branchContactRouter.patch("/:id", async (req, res) => {
+  const parsed = z.object(contactFields).partial().safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid contact" });
+  const { count } = await prisma.branchContact.updateMany({ where: { id: req.params.id }, data: parsed.data });
+  if (count === 0) return res.status(404).json({ error: "Not found" });
+  res.json(await prisma.branchContact.findUnique({ where: { id: req.params.id } }));
+});
+
+branchContactRouter.delete("/:id", async (req, res) => {
+  await prisma.branchContact.deleteMany({ where: { id: req.params.id } });
+  res.status(204).end();
+});
+
+// A branch's general information notes: POST { branchId, title, text },
+// PATCH /:id, DELETE /:id.
+export const branchNoteRouter = Router();
+const noteFields = {
+  title: z.string().trim().min(1, "Enter a title").max(200),
+  text: z.string().trim().max(20000),
+};
+
+branchNoteRouter.post("/", async (req, res) => {
+  const parsed = z.object({ branchId: z.string().min(1), ...noteFields }).safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid note" });
+  const branch = await prisma.branch.findUnique({ where: { id: parsed.data.branchId }, select: { id: true } });
+  if (!branch) return res.status(404).json({ error: "Branch not found" });
+  res.status(201).json(await prisma.branchNote.create({ data: parsed.data }));
+});
+
+branchNoteRouter.patch("/:id", async (req, res) => {
+  const parsed = z.object(noteFields).partial().safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid note" });
+  const { count } = await prisma.branchNote.updateMany({ where: { id: req.params.id }, data: parsed.data });
+  if (count === 0) return res.status(404).json({ error: "Not found" });
+  res.json(await prisma.branchNote.findUnique({ where: { id: req.params.id } }));
+});
+
+branchNoteRouter.delete("/:id", async (req, res) => {
+  await prisma.branchNote.deleteMany({ where: { id: req.params.id } });
+  res.status(204).end();
 });
 
 export const plantRouter = crudRouter({

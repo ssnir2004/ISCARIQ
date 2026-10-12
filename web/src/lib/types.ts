@@ -37,9 +37,39 @@ export interface Plant {
   createdAt: string;
 }
 
+// An ISCAR branch. Its Schaeffler plants are those in the same country.
 export interface Branch {
   id: string;
   name: string;
+  // ISO alpha-2 code.
+  country?: string | null;
+  address?: string | null;
+  managerName?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  contacts?: BranchContact[];
+  notes?: BranchNote[];
+  _count?: { rfqs: number };
+}
+
+export interface BranchContact {
+  id: string;
+  branchId: string;
+  role: string;
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+  position: number;
+}
+
+// General information about a branch.
+export interface BranchNote {
+  id: string;
+  branchId: string;
+  title: string;
+  text: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Department {
