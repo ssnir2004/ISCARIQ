@@ -19,6 +19,8 @@ import { npaKnowledgeRouter } from "./routes/npaKnowledge.js";
 import {
   plantRouter,
   branchRouter,
+  branchContactRouter,
+  branchNoteRouter,
   departmentRouter,
   teamRouter,
   materialRouter,
@@ -64,6 +66,8 @@ app.use("/api", requireAuth);
 
 app.use("/api/plants", plantRouter);
 app.use("/api/branches", branchRouter);
+app.use("/api/branch-contacts", branchContactRouter);
+app.use("/api/branch-notes", branchNoteRouter);
 app.use("/api/departments", departmentRouter);
 app.use("/api/teams", teamRouter);
 app.use("/api/materials", materialRouter);

@@ -23,6 +23,8 @@ import { Applications } from "./pages/catalog/Applications";
 import { Substrates } from "./pages/catalog/Substrates";
 import { Coatings } from "./pages/catalog/Coatings";
 import { Imc } from "./pages/Imc";
+import { Branches } from "./pages/Branches";
+import { BranchDetail } from "./pages/BranchDetail";
 import { Npas } from "./pages/catalog/Npas";
 import { NpaKnowledge } from "./pages/catalog/NpaKnowledge";
 
@@ -78,6 +80,8 @@ function AppRoutes() {
         <Route path="/catalog/substrates" element={<Substrates />} />
         <Route path="/catalog/coatings" element={<Coatings />} />
         <Route path="/imc" element={<Imc />} />
+        <Route path="/branches" element={<Branches />} />
+        <Route path="/branches/:id" element={<BranchDetail />} />
         <Route path="/catalog/npas" element={<Npas />} />
         <Route path="/catalog/npa-knowledge" element={<NpaKnowledge />} />
         <Route path="*" element={<Navigate to="/" replace />} />
