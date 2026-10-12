@@ -2,13 +2,18 @@ import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
 import { useResource } from "../lib/useResource";
-import { COUNTRY_OPTIONS, countryName, plantCountry } from "../lib/countries";
+import { BRANCH_REGIONS, COUNTRY_OPTIONS, countryName, plantCountry } from "../lib/countries";
+import { Flag } from "../components/Flag";
 import type { Branch, Plant } from "../lib/types";
 import { Button, Card, Input, Label, PageHeader, Select } from "../components/ui";
 
-// ISCAR branches worldwide: a card per branch with its country, manager,
-// address and how many contacts and Schaeffler plants it has. A branch's
+// ISCAR branches worldwide, in sections by sales region: a card per branch
+// with its flag, country, manager, address and how many contacts and
+// Schaeffler plants it has. A branch's
 // page holds the details, contacts, plants and general information.
+const OTHER = "Other";
+const regionOf = (b: Branch) => (b.region && (BRANCH_REGIONS as readonly string[]).includes(b.region) ? b.region : OTHER);
+
 export function Branches() {
   const { data: branches, reload } = useResource<Branch>("/branches");
   const { data: plants } = useResource<Plant>("/plants");
@@ -64,38 +69,51 @@ export function Branches() {
         </Card>
       )}
 
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4" data-branches>
-        {branches.map((b) => {
-          const branchPlants = plantsIn(b.country);
-          return (
-            <Link
-              key={b.id}
-              to={`/branches/${b.id}`}
-              className="flex flex-col gap-1 rounded-xl border border-neutral-200 bg-white p-4 text-sm shadow-sm hover:border-blue-400 dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-blue-500"
-              data-branch={b.name}
-            >
-              <span className="text-base font-bold text-neutral-900 dark:text-neutral-100">{b.name}</span>
-              {b.country && <span className="text-neutral-600 dark:text-neutral-300">📍 {countryName(b.country)}</span>}
-              {b.managerName && (
-                <span className="text-neutral-700 dark:text-neutral-200">
-                  <span className="text-neutral-500 dark:text-neutral-400">Manager:</span> {b.managerName}
-                </span>
-              )}
-              {b.address && <span className="line-clamp-2 text-xs whitespace-pre-line text-neutral-500 dark:text-neutral-400">{b.address}</span>}
-              <span className="mt-auto flex flex-wrap gap-1.5 pt-2 text-xs">
-                <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
-                  {b.contacts?.length ?? 0} contacts
-                </span>
-                <span className="rounded-full bg-blue-50 px-2 py-0.5 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                  {branchPlants.length} Schaeffler plants
-                </span>
-                {(b.notes?.length ?? 0) > 0 && (
-                  <span className="rounded-full bg-amber-50 px-2 py-0.5 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">{b.notes!.length} notes</span>
-                )}
-              </span>
-            </Link>
-          );
-        })}
+      <div className="space-y-6" data-branches>
+        {[...BRANCH_REGIONS, OTHER]
+          .map((region) => ({ region, items: branches.filter((b) => regionOf(b) === region) }))
+          .filter((g) => g.items.length > 0)
+          .map(({ region, items }) => (
+            <section key={region} data-region={region}>
+              <h2 className="mb-2 text-sm font-bold tracking-wide text-neutral-600 uppercase dark:text-neutral-300">{region}</h2>
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
+                {items.map((b) => {
+                  const branchPlants = plantsIn(b.country);
+                  return (
+                    <Link
+                      key={b.id}
+                      to={`/branches/${b.id}`}
+                      className="flex flex-col gap-1 rounded-xl border border-neutral-200 bg-white p-4 text-sm shadow-sm hover:border-blue-400 dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-blue-500"
+                      data-branch={b.name}
+                    >
+                      <span className="flex items-center gap-2 text-base font-bold text-neutral-900 dark:text-neutral-100">
+                        <Flag code={b.country} className="h-5 w-7" />
+                        {b.name}
+                      </span>
+                      {b.country && <span className="text-neutral-600 dark:text-neutral-300">{countryName(b.country)}</span>}
+                      {b.managerName && (
+                        <span className="text-neutral-700 dark:text-neutral-200">
+                          <span className="text-neutral-500 dark:text-neutral-400">Manager:</span> {b.managerName}
+                        </span>
+                      )}
+                      {b.address && <span className="line-clamp-2 text-xs whitespace-pre-line text-neutral-500 dark:text-neutral-400">{b.address}</span>}
+                      <span className="mt-auto flex flex-wrap gap-1.5 pt-2 text-xs">
+                        <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
+                          {b.contacts?.length ?? 0} contacts
+                        </span>
+                        <span className="rounded-full bg-blue-50 px-2 py-0.5 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                          {branchPlants.length} Schaeffler plants
+                        </span>
+                        {(b.notes?.length ?? 0) > 0 && (
+                          <span className="rounded-full bg-amber-50 px-2 py-0.5 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">{b.notes!.length} notes</span>
+                        )}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
       </div>
     </div>
   );

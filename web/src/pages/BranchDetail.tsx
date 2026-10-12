@@ -2,7 +2,8 @@ import { Fragment, useCallback, useEffect, useState, type FormEvent, type ReactN
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
 import { useResource } from "../lib/useResource";
-import { COUNTRY_OPTIONS, countryName, plantCountry } from "../lib/countries";
+import { BRANCH_REGIONS, COUNTRY_OPTIONS, countryName, plantCountry } from "../lib/countries";
+import { Flag } from "../components/Flag";
 import type { Branch, BranchContact, BranchNote, Plant } from "../lib/types";
 import { Button, Card, Input, Label, Select, Textarea } from "../components/ui";
 
@@ -64,7 +65,11 @@ export function BranchDetail() {
           <Link to="/branches" className="text-sm text-blue-600 hover:underline dark:text-blue-400">
             ← ISCAR Branches
           </Link>
-          <h1 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100">{branch.name}</h1>
+          <h1 className="flex items-center gap-2 text-xl font-semibold text-neutral-900 dark:text-neutral-100">
+            <Flag code={branch.country} className="h-6 w-9" />
+            {branch.name}
+          </h1>
+          {branch.region && <p className="text-xs font-semibold tracking-wide text-neutral-500 uppercase dark:text-neutral-400">{branch.region}</p>}
         </div>
         <Button variant="ghost" onClick={removeBranch}>
           Delete branch
@@ -103,13 +108,14 @@ export function BranchDetail() {
 
 function DetailsSection({ branch, onSaved }: { branch: Branch; onSaved: (b: Branch) => void }) {
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ name: "", country: "", address: "", managerName: "", phone: "", email: "" });
+  const [form, setForm] = useState({ name: "", country: "", region: "", address: "", managerName: "", phone: "", email: "" });
   const [error, setError] = useState<string | null>(null);
 
   function start() {
     setForm({
       name: branch.name,
       country: branch.country ?? "",
+      region: branch.region ?? "",
       address: branch.address ?? "",
       managerName: branch.managerName ?? "",
       phone: branch.phone ?? "",
@@ -127,6 +133,7 @@ function DetailsSection({ branch, onSaved }: { branch: Branch; onSaved: (b: Bran
       const saved = await api.patch<Branch>(`/branches/${branch.id}`, {
         name: form.name.trim(),
         country: form.country || null,
+        region: form.region || null,
         address: blank(form.address),
         managerName: blank(form.managerName),
         phone: blank(form.phone),
@@ -167,6 +174,17 @@ function DetailsSection({ branch, onSaved }: { branch: Branch; onSaved: (b: Bran
             </Select>
           </div>
           <div className="col-span-2">
+            <Label>Region</Label>
+            <Select value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })} aria-label="Region">
+              <option value="">—</option>
+              {BRANCH_REGIONS.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div className="col-span-2">
             <Label>Address</Label>
             <Textarea dir="auto" rows={2} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} aria-label="Address" />
           </div>
@@ -193,6 +211,7 @@ function DetailsSection({ branch, onSaved }: { branch: Branch; onSaved: (b: Bran
       ) : (
         <dl className="grid grid-cols-[8rem_1fr] gap-x-3 gap-y-2 text-sm" data-branch-details>
           {row("Country", branch.country ? countryName(branch.country) : null)}
+          {row("Region", branch.region)}
           {row("Address", branch.address)}
           {row("Branch manager", branch.managerName)}
           {row("Phone", branch.phone)}
