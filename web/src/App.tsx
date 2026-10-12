@@ -59,6 +59,7 @@ function AppRoutes() {
         <Route path="/plants" element={<PlantsMap key="schaeffler" />} />
         {/* Same screen, Dauch's plants; key so switching screens resets its state. */}
         <Route path="/dauch-plants" element={<PlantsMap key="dauch" company="DAUCH" title="Dauch Plants" />} />
+        <Route path="/gkn-aero-plants" element={<PlantsMap key="gkn-aero" company="GKN_AERO" title="GKN Aero Plants" />} />
         <Route path="/rfqs/:id" element={<RfqDetail />} />
         <Route path="/projects/:id" element={<ProjectDetail />} />
         <Route path="/advisor" element={<Advisor />} />

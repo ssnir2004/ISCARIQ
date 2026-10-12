@@ -23,7 +23,7 @@ export type Iso513Group = "P" | "M" | "K" | "N" | "S" | "H" | "SM";
 export type CoolantPreference = "REQUIRED" | "OPTIONAL" | "AVOID";
 export type PlantMapView = "WORLD" | "GERMANY";
 
-export type PlantCompany = "SCHAEFFLER" | "DAUCH";
+export type PlantCompany = "SCHAEFFLER" | "DAUCH" | "GKN_AERO";
 
 export interface Plant {
   id: string;

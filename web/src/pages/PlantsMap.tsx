@@ -55,8 +55,8 @@ interface DragState {
   pendingDy?: number;
 }
 
-// A company's plants on the world / Germany maps: Schaeffler (default) or
-// Dauch, each with its own list.
+// A company's plants on the world / Germany maps: Schaeffler (default),
+// Dauch or GKN Aero, each with its own list.
 export function PlantsMap({ company = "SCHAEFFLER", title = "Schaeffler Plants" }: { company?: PlantCompany; title?: string }) {
   const { data: plants, reload } = useResource<Plant>(`/plants?company=${company}`);
   const [view, setView] = useState<PlantMapView>("WORLD");
