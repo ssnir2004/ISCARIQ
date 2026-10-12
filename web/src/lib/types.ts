@@ -71,6 +71,8 @@ export interface BranchNote {
   branchId: string;
   title: string;
   text: string;
+  // ISO date-time at midnight UTC, or null.
+  date?: string | null;
   createdAt: string;
   updatedAt: string;
 }

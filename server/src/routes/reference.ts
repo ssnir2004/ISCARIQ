@@ -44,7 +44,8 @@ export const branchRouter = crudRouter({
   updateSchema: z.object({ name: z.string().trim().min(1).optional(), ...branchFields }),
   include: {
     contacts: { orderBy: [{ position: "asc" }, { name: "asc" }] },
-    notes: { orderBy: { createdAt: "desc" } },
+    // Newest first by their date (undated last), then by when they were added.
+    notes: { orderBy: [{ date: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }] },
     _count: { select: { rfqs: true } },
   },
   orderBy: [{ position: "asc" }, { name: "asc" }],
@@ -88,6 +89,13 @@ export const branchNoteRouter = Router();
 const noteFields = {
   title: z.string().trim().min(1, "Enter a title").max(200),
   text: z.string().trim().max(20000),
+  // "YYYY-MM-DD", or null for no date.
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Enter a valid date")
+    .nullable()
+    .optional()
+    .transform((d) => (d ? new Date(`${d}T00:00:00Z`) : d)),
 };
 
 branchNoteRouter.post("/", async (req, res) => {

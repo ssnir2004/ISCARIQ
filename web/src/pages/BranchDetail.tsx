@@ -349,10 +349,13 @@ function NotesSection({ branch, onChanged }: { branch: Branch; onChanged: () => 
   const [editing, setEditing] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [text, setText] = useState("");
+  const [date, setDate] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   function start(n?: BranchNote) {
     setTitle(n?.title ?? "");
+    // New information defaults to today.
+    setDate(n ? (n.date ?? "").slice(0, 10) : new Date().toISOString().slice(0, 10));
     setText(n?.text ?? "");
     setEditing(n ? n.id : "new");
     setError(null);
@@ -362,8 +365,9 @@ function NotesSection({ branch, onChanged }: { branch: Branch; onChanged: () => 
     e.preventDefault();
     setError(null);
     try {
-      if (editing === "new") await api.post("/branch-notes", { branchId: branch.id, title: title.trim(), text: text.trim() });
-      else await api.patch(`/branch-notes/${editing}`, { title: title.trim(), text: text.trim() });
+      const body = { title: title.trim(), text: text.trim(), date: date || null };
+      if (editing === "new") await api.post("/branch-notes", { branchId: branch.id, ...body });
+      else await api.patch(`/branch-notes/${editing}`, body);
       setEditing(null);
       onChanged();
     } catch (err) {
@@ -379,7 +383,10 @@ function NotesSection({ branch, onChanged }: { branch: Branch; onChanged: () => 
 
   const form = (
     <form onSubmit={save} className="space-y-2 rounded-lg border border-neutral-200 p-3 dark:border-neutral-700" data-note-form>
-      <Input dir="auto" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" aria-label="Note title" required autoFocus />
+      <div className="flex gap-2">
+        <Input dir="auto" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" aria-label="Note title" required autoFocus />
+        <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-label="Note date" className="w-44 shrink-0" />
+      </div>
       <Textarea dir="auto" rows={4} value={text} onChange={(e) => setText(e.target.value)} placeholder="Information about the branch…" aria-label="Note text" />
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
       <div className="flex gap-2">
@@ -406,7 +413,11 @@ function NotesSection({ branch, onChanged }: { branch: Branch; onChanged: () => 
                   {n.title}
                 </h3>
                 <span className="flex shrink-0 items-center gap-1 text-xs">
-                  <span className="text-neutral-400">{new Date(n.updatedAt).toLocaleDateString()}</span>
+                  {n.date && (
+                    <span className="rounded bg-neutral-100 px-1.5 py-0.5 font-medium text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300" data-note-date>
+                      {new Date(n.date).toLocaleDateString(undefined, { timeZone: "UTC" })}
+                    </span>
+                  )}
                   <span className="opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
                     <button type="button" onClick={() => start(n)} className="px-1.5 text-blue-600 hover:underline dark:text-blue-400">
                       Edit
