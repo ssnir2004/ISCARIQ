@@ -98,9 +98,16 @@ enum PlantMapView {
   GERMANY
 }
 
+// Whose plant it is: Schaeffler or Dauch (each has its own plants screen).
+enum PlantCompany {
+  SCHAEFFLER
+  DAUCH
+}
+
 model Plant {
   id          String       @id @default(cuid())
-  name        String       @unique
+  company     PlantCompany @default(SCHAEFFLER)
+  name        String
   regionCode  String?
   specialties String?
   mapView     PlantMapView
@@ -115,6 +122,9 @@ model Plant {
   // about, so it can be highlighted differently on the map.
   uncertain   Boolean      @default(false)
   createdAt   DateTime     @default(now())
+
+  // Names are unique per company.
+  @@unique([company, name])
 }
 
 // ---------- RFQ -> Project -> Order -> Production pipeline ----------
