@@ -774,4 +774,7 @@ model Innovation {
   year        Int?
   // Product field, e.g. "Grooving & parting".
   category    String?
+  // About the brand's insert and its tool.
+  insertDescription String?
+  toolDescription   String?
 }

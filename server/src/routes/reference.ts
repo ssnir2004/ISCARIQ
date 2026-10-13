@@ -1083,6 +1083,8 @@ export const imcCompanyRouter = glossaryRouter(prisma.imcCompany, {
 export const innovationRouter = glossaryRouter(prisma.innovation, {
   year: z.number().int("Enter a year").min(1900, "Enter a year").max(2100, "Enter a year").nullable().optional(),
   category: z.string().trim().max(100).nullable().optional(),
+  insertDescription: z.string().trim().max(4000).nullable().optional(),
+  toolDescription: z.string().trim().max(4000).nullable().optional(),
 });
 
 export const testReportRouter = crudRouter({
