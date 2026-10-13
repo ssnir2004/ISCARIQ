@@ -4,3 +4,6 @@ dist/
 !.env.example
 *.log
 .DS_Store
+
+# Local embedded Postgres data (test runs)
+server/data/
