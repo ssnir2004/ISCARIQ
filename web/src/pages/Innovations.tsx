@@ -19,6 +19,7 @@ function Timeline({ data, startEdit, remove }: GlossaryListContext) {
       {sorted.map((e) => {
         const year = yearOf(e);
         const category = str(e.category);
+        const parts = PARTS.filter((p) => str(e[p.key]));
         return (
           <li key={e.id} className="relative mb-8 pl-6 last:mb-0" data-innovation={e.name}>
             {/* The year to the left of the line, with a dot on it. */}
@@ -26,7 +27,7 @@ function Timeline({ data, startEdit, remove }: GlossaryListContext) {
               {year ?? "—"}
             </span>
             <span className="absolute top-4.5 -left-[7px] h-3 w-3 rounded-full bg-blue-600 ring-4 ring-white dark:ring-neutral-950" />
-            <article className="group flex max-w-3xl flex-col gap-4 rounded-xl border border-neutral-200 bg-white p-4 shadow-sm sm:flex-row dark:border-neutral-800 dark:bg-neutral-900">
+            <article className="group flex max-w-5xl flex-col gap-4 rounded-xl border border-neutral-200 bg-white p-4 shadow-sm sm:flex-row dark:border-neutral-800 dark:bg-neutral-900">
               {/* White backing so product photos look the same in dark mode. */}
               {e.image ? (
                 <span className="flex h-40 w-full shrink-0 items-center justify-center rounded-lg bg-white ring-1 ring-neutral-200 sm:w-56 dark:ring-neutral-700">
@@ -50,14 +51,6 @@ function Timeline({ data, startEdit, remove }: GlossaryListContext) {
                   )}
                 </p>
                 {e.description && <p className="whitespace-pre-line text-neutral-600 dark:text-neutral-300">{e.description}</p>}
-                {PARTS.map((part) =>
-                  str(e[part.key]) ? (
-                    <div key={part.key} className="mt-1" data-innovation-part={part.key}>
-                      <p className="text-xs font-semibold tracking-wide text-neutral-500 uppercase dark:text-neutral-400">{part.title}</p>
-                      <p className="whitespace-pre-line text-neutral-600 dark:text-neutral-300">{str(e[part.key])}</p>
-                    </div>
-                  ) : null
-                )}
                 <div className="mt-auto flex justify-end gap-1 pt-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
                   <Button variant="ghost" onClick={() => startEdit(e)}>
                     Edit
@@ -67,6 +60,17 @@ function Timeline({ data, startEdit, remove }: GlossaryListContext) {
                   </Button>
                 </div>
               </div>
+              {/* Insert and tool to the right of the description, keeping the card short. */}
+              {parts.length > 0 && (
+                <aside className="flex w-full shrink-0 flex-col gap-3 border-neutral-200 text-sm sm:w-52 sm:border-l sm:pl-4 dark:border-neutral-800" data-innovation-parts>
+                  {parts.map((part) => (
+                    <div key={part.key} data-innovation-part={part.key}>
+                      <p className="text-xs font-semibold tracking-wide text-neutral-500 uppercase dark:text-neutral-400">{part.title}</p>
+                      <p className="whitespace-pre-line text-neutral-600 dark:text-neutral-300">{str(e[part.key])}</p>
+                    </div>
+                  ))}
+                </aside>
+              )}
             </article>
           </li>
         );
