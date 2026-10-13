@@ -1079,6 +1079,12 @@ export const imcCompanyRouter = glossaryRouter(prisma.imcCompany, {
   imcSince: z.number().int("Enter a year").min(1800, "Enter a year").max(2100, "Enter a year").nullable().optional(),
 });
 
+// ISCAR innovations by brand: the year it came to market and its field.
+export const innovationRouter = glossaryRouter(prisma.innovation, {
+  year: z.number().int("Enter a year").min(1900, "Enter a year").max(2100, "Enter a year").nullable().optional(),
+  category: z.string().trim().max(100).nullable().optional(),
+});
+
 export const testReportRouter = crudRouter({
   delegate: prisma.testReport,
   createSchema: z.object({

@@ -762,3 +762,16 @@ model InsertProblemMatch {
 
   @@unique([insertId, problemTagId, materialId])
 }
+
+// ISCAR product innovations over the years, by brand (e.g. SELF-GRIP,
+// 1978): the brand is the name, with a product picture and a description.
+model Innovation {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String?
+  image       String?
+  // Year the brand came to market.
+  year        Int?
+  // Product field, e.g. "Grooving & parting".
+  category    String?
+}
