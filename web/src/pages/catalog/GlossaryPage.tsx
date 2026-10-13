@@ -167,6 +167,7 @@ export function GlossaryPage({
   hideHeader = false,
   noImage = false,
   collapsibleForm = false,
+  nameLabel = "Name",
 }: {
   resource: string;
   title: string;
@@ -191,6 +192,8 @@ export function GlossaryPage({
   // Hide the add/edit form behind an "+ Add" button; it opens on click or on
   // Edit, and closes on Cancel or after a successful save.
   collapsibleForm?: boolean;
+  // Label of the name field (e.g. "Brand").
+  nameLabel?: string;
 }) {
   const formRef = useRef<HTMLDivElement>(null);
   const { data, reload } = useResource<Entry>(listPath ?? resource);
@@ -321,7 +324,7 @@ export function GlossaryPage({
         <Card className="mb-6 p-4">
           <form onSubmit={onSubmit} className="grid grid-cols-1 gap-4">
             <div>
-              <Label>Name</Label>
+              <Label>{nameLabel}</Label>
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
               {duplicate && (
                 <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-amber-700 dark:text-amber-400">
