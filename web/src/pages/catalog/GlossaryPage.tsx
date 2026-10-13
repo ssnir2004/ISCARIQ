@@ -1,4 +1,5 @@
-import { useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
+import { useRef, useState, type FormEvent, type ReactNode } from "react";
+import { ClipboardImagePaste } from "../../components/npaKnowledge/ClipboardImagePaste";
 import { useResource } from "../../lib/useResource";
 import { api, ApiError } from "../../lib/api";
 import type { GlossaryEntry } from "../../lib/types";
@@ -142,14 +143,6 @@ function TagToggles({
   );
 }
 
-function readFileAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
 
 export function GlossaryPage({
   resource,
@@ -219,13 +212,6 @@ export function GlossaryPage({
   const duplicate = typedName ? data.find((d) => d.id !== editingId && d.name.trim().toLowerCase() === typedName) : undefined;
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [fileInputKey, setFileInputKey] = useState(0);
-
-  async function onImageChange(e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setForm({ ...form, image: await readFileAsDataUrl(file) });
-  }
 
   function startEdit(entry: Entry) {
     setForm({ name: entry.name, description: entry.description ?? "", image: entry.image ?? "" });
@@ -249,7 +235,6 @@ export function GlossaryPage({
     setChecks({});
     setExtraValues({});
     setEditingId(null);
-    setFileInputKey((k) => k + 1);
     setError(null);
     setFormOpen(!collapsibleForm);
   }
@@ -296,7 +281,6 @@ export function GlossaryPage({
     setExtraValues({});
     setCreatingKey(null);
     setEditingId(null);
-    setFileInputKey((k) => k + 1);
     setFormOpen(!collapsibleForm);
   }
 
@@ -431,10 +415,8 @@ export function GlossaryPage({
             {!noImage && (
               <div>
                 <Label>Image (optional)</Label>
-                <div className="flex items-center gap-3">
-                  <Input key={fileInputKey} type="file" accept="image/*" onChange={onImageChange} />
-                  {form.image && <img src={form.image} alt="Preview" className="h-14 w-14 rounded object-cover" />}
-                </div>
+                {/* Paste (Ctrl+V) or choose a file; "" when removed. */}
+                <ClipboardImagePaste value={form.image || null} onChange={(image) => setForm((f) => ({ ...f, image: image ?? "" }))} />
               </div>
             )}
             {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
