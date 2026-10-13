@@ -1,5 +1,5 @@
-import { GlossaryPage, type GlossaryListContext } from "./catalog/GlossaryPage";
-import { Button } from "../components/ui";
+import { GlossaryPage, type GlossaryExtraSection, type GlossaryListContext } from "./catalog/GlossaryPage";
+import { Button, Label, Textarea } from "../components/ui";
 
 // ISCAR innovations over the years, by brand: a timeline from the oldest
 // brand to the newest, each with its year, product picture, field and
@@ -50,6 +50,14 @@ function Timeline({ data, startEdit, remove }: GlossaryListContext) {
                   )}
                 </p>
                 {e.description && <p className="whitespace-pre-line text-neutral-600 dark:text-neutral-300">{e.description}</p>}
+                {PARTS.map((part) =>
+                  str(e[part.key]) ? (
+                    <div key={part.key} className="mt-1" data-innovation-part={part.key}>
+                      <p className="text-xs font-semibold tracking-wide text-neutral-500 uppercase dark:text-neutral-400">{part.title}</p>
+                      <p className="whitespace-pre-line text-neutral-600 dark:text-neutral-300">{str(e[part.key])}</p>
+                    </div>
+                  ) : null
+                )}
                 <div className="mt-auto flex justify-end gap-1 pt-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
                   <Button variant="ghost" onClick={() => startEdit(e)}>
                     Edit
@@ -67,6 +75,30 @@ function Timeline({ data, startEdit, remove }: GlossaryListContext) {
   );
 }
 
+// The brand's insert and tool, each described in its own box.
+const PARTS = [
+  { key: "insertDescription", title: "Insert", label: "Insert description" },
+  { key: "toolDescription", title: "Tool", label: "Tool description" },
+] as const;
+
+const partsSection: GlossaryExtraSection = {
+  read: (entry) => Object.fromEntries(PARTS.map((p) => [p.key, str(entry[p.key]) || null])),
+  render: ({ values, setValues }) => (
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      {PARTS.map((p) => (
+        <div key={p.key}>
+          <Label>{p.label}</Label>
+          <Textarea
+            rows={3}
+            value={(values[p.key] as string | null | undefined) ?? ""}
+            onChange={(ev) => setValues({ ...values, [p.key]: ev.target.value.trim() ? ev.target.value : null })}
+          />
+        </div>
+      ))}
+    </div>
+  ),
+};
+
 export function Innovations() {
   return (
     <GlossaryPage
@@ -79,6 +111,7 @@ export function Innovations() {
         { key: "year", label: "Launched (year)", type: "number", placeholder: "e.g. 1978" },
         { key: "category", label: "Field", placeholder: "e.g. Grooving & parting" },
       ]}
+      extraSection={partsSection}
       renderList={(ctx) => <Timeline {...ctx} />}
     />
   );
