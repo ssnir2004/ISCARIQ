@@ -1079,12 +1079,75 @@ export const imcCompanyRouter = glossaryRouter(prisma.imcCompany, {
   imcSince: z.number().int("Enter a year").min(1800, "Enter a year").max(2100, "Enter a year").nullable().optional(),
 });
 
-// ISCAR innovations by brand: the year it came to market and its field.
-export const innovationRouter = glossaryRouter(prisma.innovation, {
-  year: z.number().int("Enter a year").min(1900, "Enter a year").max(2100, "Enter a year").nullable().optional(),
-  category: z.string().trim().max(100).nullable().optional(),
-  insertDescription: z.string().trim().max(4000).nullable().optional(),
-  toolDescription: z.string().trim().max(4000).nullable().optional(),
+// ISCAR brands: the Innovations timeline (year it came to market) and the
+// Solutions screen (applications, group within them, cases).
+// ?applicationId= lists one application's solutions.
+export const innovationRouter = glossaryRouter(
+  prisma.innovation,
+  {
+    year: z.number().int("Enter a year").min(1900, "Enter a year").max(2100, "Enter a year").nullable().optional(),
+    category: z.string().trim().max(100).nullable().optional(),
+    insertDescription: z.string().trim().max(4000).nullable().optional(),
+    toolDescription: z.string().trim().max(4000).nullable().optional(),
+    solutionGroup: z.string().trim().max(100).nullable().optional(),
+    applicationIds: z.array(z.string().min(1)).optional(),
+  },
+  {
+    include: { applications: { select: { id: true, name: true }, orderBy: { name: "asc" } }, _count: { select: { cases: true } } },
+    listWhere: (req) => (typeof req.query.applicationId === "string" ? { applications: { some: { id: req.query.applicationId } } } : undefined),
+    mapData: ({ applicationIds, ...data }, mode) => {
+      if (applicationIds !== undefined) {
+        const ids = [...new Set(applicationIds as string[])].map((id) => ({ id }));
+        data.applications = mode === "create" ? { connect: ids } : { set: ids };
+      }
+      return data;
+    },
+  }
+);
+
+// Cases of a brand on the Solutions screen (like grade cases).
+export const innovationCaseRouter = Router();
+
+const innovationCaseSchema = z.object({
+  innovationId: z.string().min(1),
+  iso513Group: iso513GroupSchema.nullable().optional(),
+  title: z.string().trim().min(1, "Enter a title"),
+  notes: z.string().nullable().optional(),
+  image: z.string().startsWith("data:image/", "Image must be an uploaded picture"),
+});
+
+innovationCaseRouter.get("/", async (req, res) => {
+  const innovationId = typeof req.query.innovationId === "string" ? req.query.innovationId : undefined;
+  res.json(await prisma.innovationCase.findMany({ where: { innovationId }, orderBy: { createdAt: "desc" } }));
+});
+
+innovationCaseRouter.post("/", async (req, res) => {
+  const parsed = innovationCaseSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid case" });
+  try {
+    res.status(201).json(await prisma.innovationCase.create({ data: parsed.data }));
+  } catch (e: any) {
+    res.status(409).json({ error: e.message ?? "Create failed" });
+  }
+});
+
+innovationCaseRouter.patch("/:id", async (req, res) => {
+  const parsed = innovationCaseSchema.omit({ innovationId: true }).partial().safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid case" });
+  try {
+    res.json(await prisma.innovationCase.update({ where: { id: req.params.id }, data: parsed.data }));
+  } catch (e: any) {
+    res.status(404).json({ error: e.message ?? "Update failed" });
+  }
+});
+
+innovationCaseRouter.delete("/:id", async (req, res) => {
+  try {
+    await prisma.innovationCase.delete({ where: { id: req.params.id } });
+    res.status(204).end();
+  } catch {
+    res.status(404).json({ error: "Not found" });
+  }
 });
 
 export const testReportRouter = crudRouter({

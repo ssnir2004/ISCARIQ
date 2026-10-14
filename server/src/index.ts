@@ -46,6 +46,7 @@ import {
   coatingRouter,
   imcCompanyRouter,
   innovationRouter,
+  innovationCaseRouter,
   toolRouter,
   testReportRouter,
   testReportFileRouter,
@@ -94,6 +95,7 @@ app.use("/api/grade-cases", gradeCaseRouter);
 app.use("/api/coatings", coatingRouter);
 app.use("/api/imc-companies", imcCompanyRouter);
 app.use("/api/innovations", innovationRouter);
+app.use("/api/innovation-cases", innovationCaseRouter);
 app.use("/api/tools", toolRouter);
 app.use("/api/test-reports", testReportRouter);
 app.use("/api/test-report-files", testReportFileRouter);

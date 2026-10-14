@@ -6,6 +6,7 @@ const NAV = [
   { to: "/plants", label: "Plants" },
   { to: "/imc", label: "IMC" },
   { to: "/innovations", label: "Innovations" },
+  { to: "/solutions", label: "Solutions" },
   { to: "/branches", label: "ISCAR Branches" },
   { to: "/advisor", label: "Insert Advisor" },
   { to: "/catalog/npas", label: "NPA Catalog" },
