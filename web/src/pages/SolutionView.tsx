@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { Button, Input, Label, Modal, Select, Textarea } from "../components/ui";
 import { ClipboardImagePaste } from "../components/npaKnowledge/ClipboardImagePaste";
 import { api, ApiError } from "../lib/api";
@@ -7,18 +7,13 @@ import { ISO513_COLORS, ISO513_GROUPS } from "../lib/npaKnowledgeConstants";
 import type { InnovationCase, Iso513Group } from "../lib/types";
 import { PARTS, str } from "./Innovations";
 import { SolutionUses } from "./SolutionUses";
+import { SolutionBrandEdit, type BrandDetails } from "./SolutionBrandEdit";
 
-// A solution (brand) page: its picture and details, its uses (with their
-// inserts) and its cases. A case opens full screen, with Previous / Next
+// A solution (brand) page: its picture and details (editable here), its
+// uses (with their inserts) and its cases. A case opens full screen, with Previous / Next
 // through the brand's cases.
 
-type Brand = Record<string, unknown> & {
-  id: string;
-  name: string;
-  description?: string | null;
-  image?: string | null;
-  applications?: { id: string; name: string }[];
-};
+type Brand = BrandDetails;
 
 export function SolutionView() {
   const { id } = useParams();
@@ -29,6 +24,8 @@ export function SolutionView() {
   const [open, setOpen] = useState<number | null>(null);
   // The case being edited, or "new" while adding one.
   const [editing, setEditing] = useState<InnovationCase | "new" | null>(null);
+  const [editingBrand, setEditingBrand] = useState(false);
+  const navigate = useNavigate();
 
   const loadCases = useCallback(
     () => api.get<InnovationCase[]>(`/innovation-cases?innovationId=${encodeURIComponent(id ?? "")}`).then((list) => (setCases(list), list)),
@@ -66,6 +63,16 @@ export function SolutionView() {
     setOpen((i) => (i === null || list.length === 0 ? null : Math.min(i, list.length - 1)));
   }
 
+  async function removeBrand() {
+    if (!brand || !confirm(`Delete ${brand.name}? It is removed from Innovations and every application, with its uses and cases.`)) return;
+    try {
+      await api.delete(`/innovations/${brand.id}`);
+      navigate("/solutions");
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : "Failed to delete the brand");
+    }
+  }
+
   if (!brand) return <p className="text-sm text-neutral-500 dark:text-neutral-400">{error ?? "Loading…"}</p>;
 
   const year = typeof brand.year === "number" ? brand.year : null;
@@ -85,7 +92,17 @@ export function SolutionView() {
           )}
         </span>
         <div className="flex min-w-0 flex-1 flex-col gap-2 text-sm">
-          <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">{brand.name}</h1>
+          <div className="flex items-start justify-between gap-3">
+            <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">{brand.name}</h1>
+            <div className="flex shrink-0 gap-1" data-brand-actions>
+              <Button variant="secondary" onClick={() => setEditingBrand(true)}>
+                Edit
+              </Button>
+              <Button variant="ghost" onClick={removeBrand}>
+                Delete
+              </Button>
+            </div>
+          </div>
           <p className="flex flex-wrap items-center gap-2">
             {(brand.applications ?? []).map((a) => (
               <span key={a.id} className="rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
@@ -155,6 +172,17 @@ export function SolutionView() {
           onEdit={(c) => setEditing(c)}
           onDelete={removeCase}
           paused={editing !== null}
+        />
+      )}
+      {editingBrand && (
+        <SolutionBrandEdit
+          brand={brand}
+          onClose={() => setEditingBrand(false)}
+          onSaved={(saved) => {
+            setBrand(saved);
+            document.title = `${saved.name} — Solutions`;
+            setEditingBrand(false);
+          }}
         />
       )}
       {editing && (
