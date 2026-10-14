@@ -1,20 +1,40 @@
-import { GlossaryPage, type GlossaryExtraSection, type GlossaryListContext } from "./catalog/GlossaryPage";
+import { Link } from "react-router-dom";
+import { GlossaryPage, type GlossaryExtraSection, type GlossaryListContext, type GlossaryTagField, type GlossaryTextField } from "./catalog/GlossaryPage";
 import { Button, Label, Textarea } from "../components/ui";
+import { useResource } from "../lib/useResource";
+import type { Application } from "../lib/types";
 
 // ISCAR innovations over the years, by brand: a timeline from the oldest
 // brand to the newest, each with its year, product picture, field and
-// a few words about it.
+// a few words about it. The same brands are the Solutions screen's
+// solutions (by application); only brands with a year are on the timeline.
 
-const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : "");
+export const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : "");
 const yearOf = (e: Record<string, unknown>) => (typeof e.year === "number" ? e.year : null);
 
 function Timeline({ data, startEdit, remove }: GlossaryListContext) {
-  if (data.length === 0) return <p className="py-6 text-center text-sm text-neutral-500 dark:text-neutral-400">No innovations yet.</p>;
-
-  // Oldest first; brands without a year at the end.
-  const sorted = [...data].sort((a, b) => (yearOf(a) ?? Infinity) - (yearOf(b) ?? Infinity) || a.name.localeCompare(b.name));
+  // Oldest first.
+  const sorted = data.filter((e) => yearOf(e) !== null).sort((a, b) => yearOf(a)! - yearOf(b)! || a.name.localeCompare(b.name));
+  const withoutYear = data.length - sorted.length;
+  const note = withoutYear > 0 && (
+    <p className="mt-6 text-xs text-neutral-500 dark:text-neutral-400" data-innovations-no-year>
+      {withoutYear} brand{withoutYear === 1 ? "" : "s"} without a launch year {withoutYear === 1 ? "is" : "are"} not on the timeline (see{" "}
+      <Link to="/solutions" className="text-blue-600 hover:underline dark:text-blue-400">
+        Solutions
+      </Link>
+      ).
+    </p>
+  );
+  if (sorted.length === 0)
+    return (
+      <>
+        <p className="py-6 text-center text-sm text-neutral-500 dark:text-neutral-400">No innovations yet.</p>
+        {note}
+      </>
+    );
 
   return (
+    <>
     <ol className="relative ml-20 border-l-2 border-blue-200 dark:border-blue-900" data-innovations>
       {sorted.map((e) => {
         const year = yearOf(e);
@@ -76,16 +96,18 @@ function Timeline({ data, startEdit, remove }: GlossaryListContext) {
         );
       })}
     </ol>
+    {note}
+    </>
   );
 }
 
 // The brand's insert and tool, each described in its own box.
-const PARTS = [
+export const PARTS = [
   { key: "insertDescription", title: "Insert", label: "Insert description" },
   { key: "toolDescription", title: "Tool", label: "Tool description" },
 ] as const;
 
-const partsSection: GlossaryExtraSection = {
+export const partsSection: GlossaryExtraSection = {
   read: (entry) => Object.fromEntries(PARTS.map((p) => [p.key, str(entry[p.key]) || null])),
   render: ({ values, setValues }) => (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -103,7 +125,29 @@ const partsSection: GlossaryExtraSection = {
   ),
 };
 
+// Form fields shared by the Innovations and Solutions screens; on Solutions
+// a new brand starts in the application of the open tab.
+export function useBrandFields(applicationId?: string) {
+  const { data: applications } = useResource<Application>("/applications");
+  const tagFields: GlossaryTagField[] = [
+    {
+      key: "applicationIds",
+      label: "Solution for applications",
+      options: applications.map((a) => ({ value: a.id, label: a.name })),
+      read: (entry) => ((entry.applications as { id: string }[] | undefined) ?? []).map((a) => a.id),
+      initial: applicationId ? [applicationId] : undefined,
+    },
+  ];
+  const textFields: GlossaryTextField[] = [
+    { key: "year", label: "Launched (year)", type: "number", placeholder: "e.g. 1978" },
+    { key: "category", label: "Field", placeholder: "e.g. Grooving & parting" },
+    { key: "solutionGroup", label: "Group in its applications", placeholder: "e.g. Parting" },
+  ];
+  return { tagFields, textFields };
+}
+
 export function Innovations() {
+  const { tagFields, textFields } = useBrandFields();
   return (
     <GlossaryPage
       resource="/innovations"
@@ -111,10 +155,8 @@ export function Innovations() {
       singular="innovation"
       nameLabel="Brand"
       collapsibleForm
-      textFields={[
-        { key: "year", label: "Launched (year)", type: "number", placeholder: "e.g. 1978" },
-        { key: "category", label: "Field", placeholder: "e.g. Grooving & parting" },
-      ]}
+      tagFields={tagFields}
+      textFields={textFields}
       extraSection={partsSection}
       renderList={(ctx) => <Timeline {...ctx} />}
     />

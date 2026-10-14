@@ -24,6 +24,8 @@ import { Substrates } from "./pages/catalog/Substrates";
 import { Coatings } from "./pages/catalog/Coatings";
 import { Imc } from "./pages/Imc";
 import { Innovations } from "./pages/Innovations";
+import { Solutions } from "./pages/Solutions";
+import { SolutionView } from "./pages/SolutionView";
 import { Branches } from "./pages/Branches";
 import { BranchDetail } from "./pages/BranchDetail";
 import { Npas } from "./pages/catalog/Npas";
@@ -86,6 +88,8 @@ function AppRoutes() {
         <Route path="/catalog/coatings" element={<Coatings />} />
         <Route path="/imc" element={<Imc />} />
         <Route path="/innovations" element={<Innovations />} />
+        <Route path="/solutions" element={<Solutions />} />
+        <Route path="/solutions/brand/:id" element={<SolutionView />} />
         <Route path="/branches" element={<Branches />} />
         <Route path="/branches/:id" element={<BranchDetail />} />
         <Route path="/catalog/npas" element={<Npas />} />

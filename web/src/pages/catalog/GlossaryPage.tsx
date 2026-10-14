@@ -23,6 +23,8 @@ export interface GlossaryTagField {
   // Lets the user create a new option on the spot (see GlossarySelectField);
   // `done` receives the new option's value to select it, or null.
   create?: { label: string; render: (done: (value: string | null) => void) => ReactNode };
+  // Selected on a new entry (e.g. the application of the tab it's added on).
+  initial?: string[];
 }
 
 // A single-line optional text or number field (e.g. a Substrate's hardness).
@@ -100,7 +102,7 @@ function readTags(field: GlossaryTagField, entry: Entry): string[] {
 }
 
 function emptyTags(fields: GlossaryTagField[]): Tags {
-  return Object.fromEntries(fields.map((f) => [f.key, []]));
+  return Object.fromEntries(fields.map((f) => [f.key, f.initial ?? []]));
 }
 
 // onChange receives an updater so quick successive toggles each apply to the

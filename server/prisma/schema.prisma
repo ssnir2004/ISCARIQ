@@ -471,6 +471,8 @@ model Application {
   gradeGroups GradeApplicationGroups[]
   gradeRecommendations GradeRecommendation[]
   toolLines   ToolLine[]
+  // Brands (solutions) for this application, on the Solutions screen.
+  innovations Innovation[]
 }
 
 // Carbide substrate a grade is built on, managed on the Substrates screen.
@@ -777,4 +779,21 @@ model Innovation {
   // About the brand's insert and its tool.
   insertDescription String?
   toolDescription   String?
+  // Solutions screen: the applications it is a solution for, its group
+  // within them (e.g. "Parting"), and its cases.
+  applications  Application[]
+  solutionGroup String?
+  cases         InnovationCase[]
+}
+
+// A case (picture of a job) for a brand on the Solutions screen.
+model InnovationCase {
+  id           String       @id @default(cuid())
+  innovation   Innovation   @relation(fields: [innovationId], references: [id], onDelete: Cascade)
+  innovationId String
+  iso513Group  Iso513Group?
+  title        String
+  notes        String?
+  image        String
+  createdAt    DateTime     @default(now())
 }
