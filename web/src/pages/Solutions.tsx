@@ -162,7 +162,8 @@ function SolutionCards({
                     </span>
                     <span className="flex flex-1 flex-col gap-1 border-t border-neutral-200 p-3 dark:border-neutral-800">
                       <span className="text-base font-bold text-neutral-900 dark:text-neutral-100">{b.name}</span>
-                      {b.description && <span className="line-clamp-3 text-neutral-600 dark:text-neutral-300">{b.description}</span>}
+                      {/* Each line of the description on its own line; the brand's page shows all of it. */}
+                      {b.description && <span className="line-clamp-6 whitespace-pre-line text-neutral-600 dark:text-neutral-300" data-solution-description>{b.description}</span>}
                       <span className="mt-auto flex items-center justify-between pt-2">
                         <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs text-amber-800 dark:bg-amber-900/30 dark:text-amber-300" data-solution-cases>
                           {cases} case{cases === 1 ? "" : "s"}
