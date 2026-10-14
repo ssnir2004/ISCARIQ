@@ -784,6 +784,19 @@ model Innovation {
   applications  Application[]
   solutionGroup String?
   cases         InnovationCase[]
+  uses          InnovationUse[]
+}
+
+// A use of a brand on its Solutions page (e.g. CUT-GRIP "Undercutting"),
+// with the inserts for it, in order.
+model InnovationUse {
+  id           String     @id @default(cuid())
+  innovation   Innovation @relation(fields: [innovationId], references: [id], onDelete: Cascade)
+  innovationId String
+  name         String
+  position     Int        @default(0)
+  // [{ name: "GIPA", note: "W=3-6" }, ...]
+  inserts      Json       @default("[]")
 }
 
 // A case (picture of a job) for a brand on the Solutions screen.

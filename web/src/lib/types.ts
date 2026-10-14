@@ -185,6 +185,13 @@ export type Application = GlossaryEntry;
 // A trial / case study for a grade (usually a slide image). A null
 // applicationId / iso513Group means it applies to every application / group.
 // `image` is only present when fetched by id.
+// A use of a brand on the Solutions screen (e.g. "Undercutting") and its inserts.
+export interface InnovationUse {
+  id?: string;
+  name: string;
+  inserts: { name: string; note: string | null }[];
+}
+
 // A case (picture of a job) for a brand on the Solutions screen.
 export interface InnovationCase {
   id: string;
