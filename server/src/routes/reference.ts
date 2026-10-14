@@ -1117,8 +1117,19 @@ const innovationUsesSchema = z.array(
   z.object({
     name: z.string().trim().min(1, "Enter a name for every use").max(200),
     inserts: z
-      .array(z.object({ name: z.string().trim().max(100), note: z.string().trim().max(200).nullable().optional() }))
-      .transform((rows) => rows.filter((r) => r.name).map((r) => ({ name: r.name, note: r.note || null }))),
+      .array(
+        z.object({
+          name: z.string().trim().max(100),
+          note: z.string().trim().max(200).nullable().optional(),
+          // Its page in the e-catalog; "https://" is added when left out.
+          link: z.string().trim().max(1000).nullable().optional(),
+        })
+      )
+      .transform((rows) =>
+        rows
+          .filter((r) => r.name)
+          .map((r) => ({ name: r.name, note: r.note || null, link: r.link ? (/^https?:\/\//i.test(r.link) ? r.link : `https://${r.link}`) : null }))
+      ),
   })
 );
 
