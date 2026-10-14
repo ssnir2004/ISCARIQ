@@ -15,15 +15,40 @@ const yearOf = (e: Record<string, unknown>) => (typeof e.year === "number" ? e.y
 function Timeline({ data, startEdit, remove }: GlossaryListContext) {
   // Oldest first.
   const sorted = data.filter((e) => yearOf(e) !== null).sort((a, b) => yearOf(a)! - yearOf(b)! || a.name.localeCompare(b.name));
-  const withoutYear = data.length - sorted.length;
-  const note = withoutYear > 0 && (
-    <p className="mt-6 text-xs text-neutral-500 dark:text-neutral-400" data-innovations-no-year>
-      {withoutYear} brand{withoutYear === 1 ? "" : "s"} without a launch year {withoutYear === 1 ? "is" : "are"} not on the timeline (see{" "}
-      <Link to="/solutions" className="text-blue-600 hover:underline dark:text-blue-400">
-        Solutions
-      </Link>
-      ).
-    </p>
+  // Brands without a year aren't on the timeline; they're listed below it
+  // so each can still be edited (e.g. given a year) or deleted.
+  const withoutYear = data.filter((e) => yearOf(e) === null).sort((a, b) => a.name.localeCompare(b.name));
+  const note = withoutYear.length > 0 && (
+    <section className="mt-8 max-w-5xl" data-innovations-no-year>
+      <p className="mb-2 text-xs text-neutral-500 dark:text-neutral-400">
+        {withoutYear.length} brand{withoutYear.length === 1 ? "" : "s"} without a launch year {withoutYear.length === 1 ? "is" : "are"} not on the timeline (see also{" "}
+        <Link to="/solutions" className="text-blue-600 hover:underline dark:text-blue-400">
+          Solutions
+        </Link>
+        ):
+      </p>
+      <ul className="flex flex-wrap gap-2">
+        {withoutYear.map((e) => {
+          const apps = (e.applications as { id: string; name: string }[] | undefined) ?? [];
+          return (
+            <li
+              key={e.id}
+              className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-white py-1 pr-1 pl-3 text-sm dark:border-neutral-800 dark:bg-neutral-900"
+              data-innovation-no-year={e.name}
+            >
+              <span className="font-semibold text-neutral-900 dark:text-neutral-100">{e.name}</span>
+              <span className="text-xs text-neutral-500 dark:text-neutral-400">{apps.length > 0 ? apps.map((a) => a.name).join(", ") : "No application"}</span>
+              <Button variant="ghost" onClick={() => startEdit(e)}>
+                Edit
+              </Button>
+              <Button variant="ghost" onClick={() => remove(e.id)}>
+                Delete
+              </Button>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
   if (sorted.length === 0)
     return (
