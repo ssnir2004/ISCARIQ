@@ -1093,7 +1093,11 @@ export const innovationRouter = glossaryRouter(
     applicationIds: z.array(z.string().min(1)).optional(),
   },
   {
-    include: { applications: { select: { id: true, name: true }, orderBy: { name: "asc" } }, _count: { select: { cases: true } } },
+    include: {
+      applications: { select: { id: true, name: true }, orderBy: { name: "asc" } },
+      uses: { select: { name: true, inserts: true }, orderBy: { position: "asc" } },
+      _count: { select: { cases: true } },
+    },
     listWhere: (req) => (typeof req.query.applicationId === "string" ? { applications: { some: { id: req.query.applicationId } } } : undefined),
     mapData: ({ applicationIds, ...data }, mode) => {
       if (applicationIds !== undefined) {

@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { GlossaryPage, type GlossaryExtraSection, type GlossaryListContext, type GlossaryTagField, type GlossaryTextField } from "./catalog/GlossaryPage";
 import { Button, Label, Textarea } from "../components/ui";
 import { useResource } from "../lib/useResource";
-import type { Application } from "../lib/types";
+import type { Application, InnovationUse } from "../lib/types";
 
 // ISCAR innovations over the years, by brand: a timeline from the oldest
 // brand to the newest, each with its year, product picture, field and
@@ -40,6 +40,7 @@ function Timeline({ data, startEdit, remove }: GlossaryListContext) {
         const year = yearOf(e);
         const category = str(e.category);
         const parts = PARTS.filter((p) => str(e[p.key]));
+        const uses = (e.uses as InnovationUse[] | undefined) ?? [];
         return (
           <li key={e.id} className="relative mb-8 pl-6 last:mb-0" data-innovation={e.name}>
             {/* The year to the left of the line, with a dot on it. */}
@@ -80,9 +81,22 @@ function Timeline({ data, startEdit, remove }: GlossaryListContext) {
                   </Button>
                 </div>
               </div>
-              {/* Insert and tool to the right of the description, keeping the card short. */}
-              {parts.length > 0 && (
-                <aside className="flex w-full shrink-0 flex-col gap-3 border-neutral-200 text-sm sm:w-52 sm:border-l sm:pl-4 dark:border-neutral-800" data-innovation-parts>
+              {/* Uses (with their inserts) and tool to the right of the description, keeping the card short. */}
+              {(uses.length > 0 || parts.length > 0) && (
+                <aside className="flex w-full shrink-0 flex-col gap-3 border-neutral-200 text-sm sm:w-72 sm:border-l sm:pl-4 dark:border-neutral-800" data-innovation-parts>
+                  {uses.length > 0 && (
+                    <div data-innovation-uses>
+                      <p className="text-xs font-semibold tracking-wide text-neutral-500 uppercase dark:text-neutral-400">Uses</p>
+                      <ul className="space-y-0.5 text-xs">
+                        {uses.map((u, n) => (
+                          <li key={n} className="text-neutral-600 dark:text-neutral-300" data-innovation-use={u.name}>
+                            <span className="font-semibold text-neutral-800 dark:text-neutral-100">{u.name}:</span>{" "}
+                            {u.inserts.map((i) => (i.note ? `${i.name} (${i.note})` : i.name)).join(", ")}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                   {parts.map((part) => (
                     <div key={part.key} data-innovation-part={part.key}>
                       <p className="text-xs font-semibold tracking-wide text-neutral-500 uppercase dark:text-neutral-400">{part.title}</p>
@@ -101,16 +115,14 @@ function Timeline({ data, startEdit, remove }: GlossaryListContext) {
   );
 }
 
-// The brand's insert and tool, each described in its own box.
-export const PARTS = [
-  { key: "insertDescription", title: "Insert", label: "Insert description" },
-  { key: "toolDescription", title: "Tool", label: "Tool description" },
-] as const;
+// The brand's tool, described in its own box (its inserts are listed
+// under its uses, on the Solutions screen).
+export const PARTS = [{ key: "toolDescription", title: "Tool", label: "Tool description" }] as const;
 
 export const partsSection: GlossaryExtraSection = {
   read: (entry) => Object.fromEntries(PARTS.map((p) => [p.key, str(entry[p.key]) || null])),
   render: ({ values, setValues }) => (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+    <div className="grid grid-cols-1 gap-4">
       {PARTS.map((p) => (
         <div key={p.key}>
           <Label>{p.label}</Label>
