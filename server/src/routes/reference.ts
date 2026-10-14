@@ -1105,6 +1105,35 @@ export const innovationRouter = glossaryRouter(
   }
 );
 
+// Uses of a brand on the Solutions screen (e.g. CUT-GRIP "Undercutting"),
+// each with its inserts. Saved as a whole list: PUT replaces them all.
+export const innovationUseRouter = Router();
+
+const innovationUsesSchema = z.array(
+  z.object({
+    name: z.string().trim().min(1, "Enter a name for every use").max(200),
+    inserts: z
+      .array(z.object({ name: z.string().trim().max(100), note: z.string().trim().max(200).nullable().optional() }))
+      .transform((rows) => rows.filter((r) => r.name).map((r) => ({ name: r.name, note: r.note || null }))),
+  })
+);
+
+innovationUseRouter.get("/:innovationId", async (req, res) => {
+  res.json(await prisma.innovationUse.findMany({ where: { innovationId: req.params.innovationId }, orderBy: { position: "asc" } }));
+});
+
+innovationUseRouter.put("/:innovationId", async (req, res) => {
+  const parsed = innovationUsesSchema.safeParse(req.body?.uses);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid uses" });
+  const innovationId = req.params.innovationId;
+  if (!(await prisma.innovation.findUnique({ where: { id: innovationId }, select: { id: true } }))) return res.status(404).json({ error: "Not found" });
+  await prisma.$transaction([
+    prisma.innovationUse.deleteMany({ where: { innovationId } }),
+    prisma.innovationUse.createMany({ data: parsed.data.map((u, position) => ({ innovationId, name: u.name, inserts: u.inserts, position })) }),
+  ]);
+  res.json(await prisma.innovationUse.findMany({ where: { innovationId }, orderBy: { position: "asc" } }));
+});
+
 // Cases of a brand on the Solutions screen (like grade cases).
 export const innovationCaseRouter = Router();
 

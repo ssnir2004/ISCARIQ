@@ -6,9 +6,11 @@ import { api, ApiError } from "../lib/api";
 import { ISO513_COLORS, ISO513_GROUPS } from "../lib/npaKnowledgeConstants";
 import type { InnovationCase, Iso513Group } from "../lib/types";
 import { PARTS, str } from "./Innovations";
+import { SolutionUses } from "./SolutionUses";
 
-// A solution (brand) page: its picture and details, and its cases. A case
-// opens full screen, with Previous / Next through the brand's cases.
+// A solution (brand) page: its picture and details, its uses (with their
+// inserts) and its cases. A case opens full screen, with Previous / Next
+// through the brand's cases.
 
 type Brand = Record<string, unknown> & {
   id: string;
@@ -112,6 +114,8 @@ export function SolutionView() {
           </aside>
         )}
       </article>
+
+      <SolutionUses key={brand.id} brandId={brand.id} />
 
       <section className="mt-6" data-solution-cases>
         <div className="mb-3 flex items-center justify-between">
