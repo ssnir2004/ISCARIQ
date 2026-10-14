@@ -36,12 +36,33 @@ export function SolutionUses({ brandId }: { brandId: string }) {
             <div key={u.id ?? u.name} className="rounded-xl border border-neutral-200 bg-white p-3 text-sm dark:border-neutral-800 dark:bg-neutral-900" data-use={u.name}>
               <h3 className="mb-2 font-semibold text-neutral-900 dark:text-neutral-100">{u.name}</h3>
               <div className="flex flex-wrap gap-1.5">
-                {u.inserts.map((i, n) => (
-                  <span key={n} className="rounded-md bg-blue-50 px-2 py-0.5 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200" data-use-insert={i.name}>
-                    <span className="font-medium">{i.name}</span>
-                    {i.note && <span className="ml-1 text-xs text-blue-600 dark:text-blue-300">({i.note})</span>}
-                  </span>
-                ))}
+                {u.inserts.map((i, n) => {
+                  const content = (
+                    <>
+                      <span className="font-medium">{i.name}</span>
+                      {i.note && <span className="ml-1 text-xs text-blue-600 dark:text-blue-300">({i.note})</span>}
+                      {i.link && <span className="ml-1 text-xs">↗</span>}
+                    </>
+                  );
+                  // With a catalog link the chip opens it in a new tab.
+                  return i.link ? (
+                    <a
+                      key={n}
+                      href={i.link}
+                      target="_blank"
+                      rel="noreferrer"
+                      title="Open in the e-catalog"
+                      className={`${chip} hover:bg-blue-100 hover:underline dark:hover:bg-blue-900/60`}
+                      data-use-insert={i.name}
+                    >
+                      {content}
+                    </a>
+                  ) : (
+                    <span key={n} className={chip} data-use-insert={i.name}>
+                      {content}
+                    </span>
+                  );
+                })}
                 {u.inserts.length === 0 && <span className="text-xs text-neutral-400">No inserts</span>}
               </div>
             </div>
@@ -63,13 +84,17 @@ export function SolutionUses({ brandId }: { brandId: string }) {
   );
 }
 
-// "GIPA (Full Radius W=3-6)" -> { name: "GIPA", note: "Full Radius W=3-6" };
-// list markers ("-", "•") are dropped.
+// "GIPA (Full Radius W=3-6) https://…" -> { name: "GIPA", note: "Full Radius
+// W=3-6", link: "https://…" }; list markers ("-", "•") are dropped and the
+// note and link are optional.
 export function parseInsertLine(line: string): Insert | null {
-  const text = line.replace(/^\s*[-•*·]\s*/, "").trim();
+  let text = line.replace(/^\s*[-•*·]\s*/, "").trim();
+  const url = text.match(/\s*(https?:\/\/\S+)\s*$/i);
+  const link = url ? url[1] : null;
+  if (url) text = text.slice(0, url.index).trim();
   if (!text) return null;
   const m = text.match(/^(.*?)\s*\((.*)\)\s*$/);
-  return m && m[1] ? { name: m[1].trim(), note: m[2].trim() || null } : { name: text, note: null };
+  return m && m[1] ? { name: m[1].trim(), note: m[2].trim() || null, link } : { name: text, note: null, link };
 }
 
 function move<T>(list: T[], from: number, to: number) {
@@ -80,6 +105,9 @@ function move<T>(list: T[], from: number, to: number) {
   return next;
 }
 
+// Insert family | note | link | move / remove buttons.
+const insertRow = "grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,2fr)_auto] items-center gap-2";
+const chip = "rounded-md bg-blue-50 px-2 py-0.5 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200";
 const small = "rounded px-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 disabled:opacity-30 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100";
 
 function UsesEditor({
@@ -143,38 +171,48 @@ function UsesEditor({
               </Button>
             </div>
             <div className="mt-3 space-y-1.5 pl-3">
+              {u.inserts.length > 0 && (
+                <div className={`${insertRow} text-xs font-medium text-neutral-500 dark:text-neutral-400`}>
+                  <span>Insert family</span>
+                  <span>Note (optional)</span>
+                  <span>E-catalog link (optional)</span>
+                </div>
+              )}
               {u.inserts.map((ins, row) => (
-                <div key={row} className="flex items-center gap-2">
-                  <Input className="w-48" value={ins.name} onChange={(e) => setInsert(index, row, { name: e.target.value })} placeholder="Insert, e.g. GIPA" aria-label="Insert" />
-                  <Input className="flex-1" value={ins.note ?? ""} onChange={(e) => setInsert(index, row, { note: e.target.value || null })} placeholder="Note (optional), e.g. W=3-6" aria-label="Note" />
-                  <button type="button" className={small} disabled={row === 0} onClick={() => update(index, (x) => ({ ...x, inserts: move(x.inserts, row, row - 1) }))} aria-label="Move insert up">
-                    ↑
-                  </button>
-                  <button
-                    type="button"
-                    className={small}
-                    disabled={row === u.inserts.length - 1}
-                    onClick={() => update(index, (x) => ({ ...x, inserts: move(x.inserts, row, row + 1) }))}
-                    aria-label="Move insert down"
-                  >
-                    ↓
-                  </button>
-                  <button type="button" className={small} onClick={() => update(index, (x) => ({ ...x, inserts: x.inserts.filter((_, n) => n !== row) }))} aria-label="Remove insert">
-                    ✕
-                  </button>
+                <div key={row} className={insertRow}>
+                  <Input value={ins.name} onChange={(e) => setInsert(index, row, { name: e.target.value })} placeholder="e.g. GIPA" aria-label="Insert" />
+                  <Input value={ins.note ?? ""} onChange={(e) => setInsert(index, row, { note: e.target.value || null })} placeholder="e.g. W=3-6" aria-label="Note" />
+                  <Input value={ins.link ?? ""} onChange={(e) => setInsert(index, row, { link: e.target.value || null })} placeholder="https://…" aria-label="E-catalog link" />
+                  <span className="flex">
+                    <button type="button" className={small} disabled={row === 0} onClick={() => update(index, (x) => ({ ...x, inserts: move(x.inserts, row, row - 1) }))} aria-label="Move insert up">
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      className={small}
+                      disabled={row === u.inserts.length - 1}
+                      onClick={() => update(index, (x) => ({ ...x, inserts: move(x.inserts, row, row + 1) }))}
+                      aria-label="Move insert down"
+                    >
+                      ↓
+                    </button>
+                    <button type="button" className={small} onClick={() => update(index, (x) => ({ ...x, inserts: x.inserts.filter((_, n) => n !== row) }))} aria-label="Remove insert">
+                      ✕
+                    </button>
+                  </span>
                 </div>
               ))}
               <div className="flex flex-wrap items-start gap-2 pt-1">
                 <Button type="button" variant="ghost" onClick={() => update(index, (x) => ({ ...x, inserts: [...x.inserts, { name: "", note: null }] }))}>
                   + Add insert
                 </Button>
-                {/* Several at once: one per line, "GIPA (W=3-6)" puts W=3-6 in the note. */}
+                {/* Several at once, one per line: "GIPA (W=3-6) https://…" puts W=3-6 in the note and the address in the link. */}
                 <Textarea
                   rows={2}
                   className="min-w-64 flex-1"
                   value={pasting[index] ?? ""}
                   onChange={(e) => setPasting((p) => ({ ...p, [index]: e.target.value }))}
-                  placeholder={"Paste several, one per line — e.g.\nGIPA (W=3-6)"}
+                  placeholder={"Paste several, one per line — e.g.\nGIPA (W=3-6) https://…"}
                   aria-label="Paste inserts"
                 />
                 <Button type="button" variant="secondary" disabled={!(pasting[index] ?? "").trim()} onClick={() => addPasted(index)}>

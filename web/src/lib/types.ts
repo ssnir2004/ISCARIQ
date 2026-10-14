@@ -189,7 +189,8 @@ export type Application = GlossaryEntry;
 export interface InnovationUse {
   id?: string;
   name: string;
-  inserts: { name: string; note: string | null }[];
+  // `link`: the insert family's page in the e-catalog.
+  inserts: { name: string; note: string | null; link?: string | null }[];
 }
 
 // A case (picture of a job) for a brand on the Solutions screen.

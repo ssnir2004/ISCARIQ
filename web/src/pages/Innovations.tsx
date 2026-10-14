@@ -91,7 +91,21 @@ function Timeline({ data, startEdit, remove }: GlossaryListContext) {
                         {uses.map((u, n) => (
                           <li key={n} className="text-neutral-600 dark:text-neutral-300" data-innovation-use={u.name}>
                             <span className="font-semibold text-neutral-800 dark:text-neutral-100">{u.name}:</span>{" "}
-                            {u.inserts.map((i) => (i.note ? `${i.name} (${i.note})` : i.name)).join(", ")}
+                            {u.inserts.map((i, n) => {
+                              const label = i.note ? `${i.name} (${i.note})` : i.name;
+                              return (
+                                <span key={n}>
+                                  {n > 0 && ", "}
+                                  {i.link ? (
+                                    <a href={i.link} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline dark:text-blue-400" title="Open in the e-catalog">
+                                      {label}
+                                    </a>
+                                  ) : (
+                                    label
+                                  )}
+                                </span>
+                              );
+                            })}
                           </li>
                         ))}
                       </ul>
