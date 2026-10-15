@@ -28,7 +28,17 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     throw new ApiError(res.status, message);
   }
   if (res.status === 204) return undefined as T;
-  return res.json() as Promise<T>;
+  return withBlobUrls(await res.json()) as T;
+}
+
+// Pictures and files come as "/api/blobs/<hash>" (see the server's
+// responseCache); point them at this app's API so <img src> and download
+// links load them.
+function withBlobUrls(value: unknown): unknown {
+  if (typeof value === "string") return value.startsWith("/api/blobs/") ? `${location.origin}${BASE}${value.slice(4)}` : value;
+  if (Array.isArray(value)) return value.map(withBlobUrls);
+  if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, withBlobUrls(v)]));
+  return value;
 }
 
 export const api = {
