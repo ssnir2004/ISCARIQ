@@ -349,6 +349,57 @@ function glossaryRouter(
 
 export const shapeRouter = glossaryRouter(prisma.shape);
 export const chipbreakerRouter = glossaryRouter(prisma.chipbreaker);
+
+// Chipbreaker feed ranges per application: GET ?applicationId= (with the
+// chipbreaker), POST, PATCH /:id, DELETE /:id.
+export const chipbreakerRangeRouter = Router();
+
+const feed = z.number({ invalid_type_error: "Enter the feed" }).positive("Feed must be above 0").max(10, "Feed is in mm/rev");
+const rangeFields = {
+  feedMin: feed,
+  feedMax: feed,
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Invalid color").nullable().optional(),
+  notes: z.string().trim().max(1000).nullable().optional(),
+};
+const rangeOrder = (r: { feedMin?: number; feedMax?: number }) => r.feedMin === undefined || r.feedMax === undefined || r.feedMin < r.feedMax;
+const rangeOrderError = { message: "The feed range must go from low to high", path: ["feedMax"] };
+const rangeInclude = { chipbreaker: true } as const;
+
+chipbreakerRangeRouter.get("/", async (req, res) => {
+  const applicationId = typeof req.query.applicationId === "string" ? req.query.applicationId : undefined;
+  res.json(await prisma.chipbreakerRange.findMany({ where: { applicationId }, include: rangeInclude, orderBy: [{ feedMin: "asc" }, { feedMax: "asc" }] }));
+});
+
+chipbreakerRangeRouter.post("/", async (req, res) => {
+  const parsed = z
+    .object({ applicationId: z.string().min(1), chipbreakerId: z.string().min(1), ...rangeFields })
+    .refine(rangeOrder, rangeOrderError)
+    .safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid range" });
+  try {
+    res.status(201).json(await prisma.chipbreakerRange.create({ data: parsed.data, include: rangeInclude }));
+  } catch (e: any) {
+    res.status(409).json({ error: e.code === "P2002" ? "This chipbreaker is already in this application" : (e.message ?? "Create failed") });
+  }
+});
+
+chipbreakerRangeRouter.patch("/:id", async (req, res) => {
+  const parsed = z.object(rangeFields).partial().refine(rangeOrder, rangeOrderError).safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid range" });
+  const current = await prisma.chipbreakerRange.findUnique({ where: { id: req.params.id } });
+  if (!current) return res.status(404).json({ error: "Not found" });
+  if ((parsed.data.feedMin ?? current.feedMin) >= (parsed.data.feedMax ?? current.feedMax)) return res.status(400).json({ error: rangeOrderError.message });
+  res.json(await prisma.chipbreakerRange.update({ where: { id: req.params.id }, data: parsed.data, include: rangeInclude }));
+});
+
+chipbreakerRangeRouter.delete("/:id", async (req, res) => {
+  try {
+    await prisma.chipbreakerRange.delete({ where: { id: req.params.id } });
+    res.status(204).end();
+  } catch {
+    res.status(404).json({ error: "Not found" });
+  }
+});
 // Rejects materials a grade's family can't be used for (e.g. P on a CBN
 // grade). The family comes from the body on create, from the DB on update.
 async function checkFamilyGroups(req: Request, res: Response, next: NextFunction) {

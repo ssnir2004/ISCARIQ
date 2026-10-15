@@ -457,6 +457,25 @@ model Chipbreaker {
   name        String  @unique
   description String?
   image       String?
+  // Feed ranges per application (Chipbreakers screen).
+  ranges      ChipbreakerRange[]
+}
+
+// A chipbreaker's feed range in one application (e.g. Parting: T 0.04-0.09
+// mm/rev), for the application's feed range chart.
+model ChipbreakerRange {
+  id            String      @id @default(cuid())
+  chipbreaker   Chipbreaker @relation(fields: [chipbreakerId], references: [id], onDelete: Cascade)
+  chipbreakerId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  applicationId String
+  feedMin       Float
+  feedMax       Float
+  // Bar color on the chart (#rrggbb); a default one when null.
+  color         String?
+  notes         String?
+
+  @@unique([chipbreakerId, applicationId])
 }
 
 // Machining applications (Milling, Turning, ...), managed on the
@@ -473,6 +492,7 @@ model Application {
   toolLines   ToolLine[]
   // Brands (solutions) for this application, on the Solutions screen.
   innovations Innovation[]
+  chipbreakerRanges ChipbreakerRange[]
 }
 
 // Carbide substrate a grade is built on, managed on the Substrates screen.

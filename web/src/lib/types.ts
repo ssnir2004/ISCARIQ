@@ -185,6 +185,18 @@ export type Application = GlossaryEntry;
 // A trial / case study for a grade (usually a slide image). A null
 // applicationId / iso513Group means it applies to every application / group.
 // `image` is only present when fetched by id.
+// A chipbreaker's feed range (mm/rev) in one application.
+export interface ChipbreakerRange {
+  id: string;
+  chipbreakerId: string;
+  chipbreaker: GlossaryEntry;
+  applicationId: string;
+  feedMin: number;
+  feedMax: number;
+  color: string | null;
+  notes: string | null;
+}
+
 // A use of a brand on the Solutions screen (e.g. "Undercutting") and its inserts.
 export interface InnovationUse {
   id?: string;
