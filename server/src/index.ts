@@ -31,6 +31,7 @@ import {
   shapeRouter,
   chipbreakerRouter,
   chipbreakerRangeRouter,
+  chipbreakerCaseRouter,
   gradeRouter,
   applicationRouter,
   gradeOrderRouter,
@@ -82,6 +83,7 @@ app.use("/api/insert-problem-matches", insertProblemMatchRouter);
 app.use("/api/shapes", shapeRouter);
 app.use("/api/chipbreakers", chipbreakerRouter);
 app.use("/api/chipbreaker-ranges", chipbreakerRangeRouter);
+app.use("/api/chipbreaker-cases", chipbreakerCaseRouter);
 app.use("/api/grades", gradeRouter);
 app.use("/api/applications", applicationRouter);
 app.use("/api/grade-order", gradeOrderRouter);

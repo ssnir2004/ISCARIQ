@@ -1169,6 +1169,59 @@ export const innovationRouter = glossaryRouter(
   }
 );
 
+// Cases of a chipbreaker in an application: GET ?chipbreakerId=&applicationId=,
+// GET /counts?applicationId= ({ [chipbreakerId]: n }), POST, PATCH /:id, DELETE /:id.
+export const chipbreakerCaseRouter = Router();
+
+const chipbreakerCaseSchema = z.object({
+  chipbreakerId: z.string().min(1),
+  applicationId: z.string().min(1),
+  iso513Group: iso513GroupSchema.nullable().optional(),
+  title: z.string().trim().min(1, "Enter a title"),
+  notes: z.string().nullable().optional(),
+  image: z.string().startsWith("data:image/", "Image must be an uploaded picture"),
+});
+
+chipbreakerCaseRouter.get("/counts", async (req, res) => {
+  const applicationId = typeof req.query.applicationId === "string" ? req.query.applicationId : undefined;
+  const rows = await prisma.chipbreakerCase.groupBy({ by: ["chipbreakerId"], where: { applicationId }, _count: { _all: true } });
+  res.json(Object.fromEntries(rows.map((r) => [r.chipbreakerId, r._count._all])));
+});
+
+chipbreakerCaseRouter.get("/", async (req, res) => {
+  const q = (k: string) => (typeof req.query[k] === "string" ? (req.query[k] as string) : undefined);
+  res.json(await prisma.chipbreakerCase.findMany({ where: { chipbreakerId: q("chipbreakerId"), applicationId: q("applicationId") }, orderBy: { createdAt: "desc" } }));
+});
+
+chipbreakerCaseRouter.post("/", async (req, res) => {
+  const parsed = chipbreakerCaseSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid case" });
+  try {
+    res.status(201).json(await prisma.chipbreakerCase.create({ data: parsed.data }));
+  } catch (e: any) {
+    res.status(409).json({ error: e.message ?? "Create failed" });
+  }
+});
+
+chipbreakerCaseRouter.patch("/:id", async (req, res) => {
+  const parsed = chipbreakerCaseSchema.omit({ chipbreakerId: true, applicationId: true }).partial().safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid case" });
+  try {
+    res.json(await prisma.chipbreakerCase.update({ where: { id: req.params.id }, data: parsed.data }));
+  } catch (e: any) {
+    res.status(404).json({ error: e.message ?? "Update failed" });
+  }
+});
+
+chipbreakerCaseRouter.delete("/:id", async (req, res) => {
+  try {
+    await prisma.chipbreakerCase.delete({ where: { id: req.params.id } });
+    res.status(204).end();
+  } catch {
+    res.status(404).json({ error: "Not found" });
+  }
+});
+
 // Uses of a brand on the Solutions screen (e.g. CUT-GRIP "Undercutting"),
 // each with its inserts. Saved as a whole list: PUT replaces them all.
 export const innovationUseRouter = Router();

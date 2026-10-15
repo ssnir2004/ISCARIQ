@@ -1,15 +1,16 @@
-import { useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { GlossaryPage } from "./GlossaryPage";
 import { ChipbreakerChart, feedText, nextColor, rangeColor, sortRanges } from "./ChipbreakerChart";
 import { RulesOfThumb } from "../../components/RulesOfThumb";
+import { PictureCases } from "../../components/cases/PictureCases";
 import { Button, Card, Input, Label, PageHeader, Select } from "../../components/ui";
 import { api, ApiError } from "../../lib/api";
 import { useResource } from "../../lib/useResource";
 import type { Application, Chipbreaker, ChipbreakerRange } from "../../lib/types";
 
 // Chipbreakers by application: a tab per application with its rules of
-// thumb, a feed range chart and the list of its chipbreakers (feed range
-// and color each), plus an "All chipbreakers" tab with every chipbreaker's
+// thumb, a feed range chart and the list of its chipbreakers (feed range,
+// color and cases each), plus an "All chipbreakers" tab with every chipbreaker's
 // name, description and picture.
 
 const LAST_TAB_KEY = "iscariq.chipbreakers.tab";
@@ -81,7 +82,18 @@ function ApplicationChipbreakers({ application, onChange }: { application: Appli
   const { data: chipbreakers, reload: reloadChipbreakers } = useResource<Chipbreaker>("/chipbreakers");
   // The range being edited, or "new" while adding one.
   const [editing, setEditing] = useState<ChipbreakerRange | "new" | null>(null);
+  // The chipbreaker whose cases are open, if any.
+  const [casesOf, setCasesOf] = useState<ChipbreakerRange | null>(null);
+  const [caseCounts, setCaseCounts] = useState<Record<string, number>>({});
   const sorted = sortRanges(ranges);
+
+  const loadCounts = useCallback(() => {
+    api
+      .get<Record<string, number>>(`/chipbreaker-cases/counts?applicationId=${encodeURIComponent(application.id)}`)
+      .then(setCaseCounts)
+      .catch(() => setCaseCounts({}));
+  }, [application.id]);
+  useEffect(loadCounts, [loadCounts]);
 
   async function refresh() {
     await reload();
@@ -142,6 +154,7 @@ function ApplicationChipbreakers({ application, onChange }: { application: Appli
                 <th className="py-2 pr-3 font-medium">Feed (mm/rev)</th>
                 <th className="py-2 pr-3 font-medium">Description</th>
                 <th className="py-2 pr-3 font-medium">Notes</th>
+                <th className="py-2 pr-3 font-medium">Cases</th>
                 <th />
               </tr>
             </thead>
@@ -160,6 +173,16 @@ function ApplicationChipbreakers({ application, onChange }: { application: Appli
                   </td>
                   <td className="py-2 pr-3 whitespace-pre-line text-neutral-600 dark:text-neutral-300">{r.chipbreaker.description}</td>
                   <td className="py-2 pr-3 whitespace-pre-line text-neutral-600 dark:text-neutral-300">{r.notes}</td>
+                  <td className="py-2 pr-3">
+                    <button
+                      type="button"
+                      onClick={() => setCasesOf(r)}
+                      className="rounded-full bg-amber-50 px-2 py-0.5 text-xs whitespace-nowrap text-amber-800 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-300 dark:hover:bg-amber-900/60"
+                      data-chipbreaker-cases={r.chipbreaker.name}
+                    >
+                      {caseCounts[r.chipbreakerId] ?? 0} case{(caseCounts[r.chipbreakerId] ?? 0) === 1 ? "" : "s"}
+                    </button>
+                  </td>
                   <td className="py-2 text-right whitespace-nowrap">
                     <Button variant="ghost" onClick={() => setEditing(r)}>
                       Edit
@@ -173,6 +196,41 @@ function ApplicationChipbreakers({ application, onChange }: { application: Appli
             </tbody>
           </table>
         )}
+      </Card>
+
+      {casesOf && (
+        <CasesPanel title={`${casesOf.chipbreaker.name} — ${application.name}`} onClose={() => setCasesOf(null)}>
+          <PictureCases
+            label={`${casesOf.chipbreaker.name} (${application.name})`}
+            listPath={`/chipbreaker-cases?chipbreakerId=${encodeURIComponent(casesOf.chipbreakerId)}&applicationId=${encodeURIComponent(application.id)}`}
+            endpoint="/chipbreaker-cases"
+            createExtra={{ chipbreakerId: casesOf.chipbreakerId, applicationId: application.id }}
+            onCountChange={loadCounts}
+          />
+        </CasesPanel>
+      )}
+    </div>
+  );
+}
+
+// A window over the screen for a chipbreaker's cases; below the full-screen
+// case view (z-40) and the add / edit window (z-50), so both open over it.
+function CasesPanel({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+  return (
+    <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/50 p-4" onClick={onClose} data-cases-panel>
+      <Card className="max-h-[90vh] w-full max-w-5xl overflow-y-auto p-4" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">{title}</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded p-1 text-neutral-500 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800"
+            aria-label="Close"
+          >
+            ✕
+          </button>
+        </div>
+        {children}
       </Card>
     </div>
   );
