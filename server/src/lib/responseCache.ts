@@ -1,5 +1,7 @@
 import crypto from "node:crypto";
 import type { NextFunction, Request, Response } from "express";
+import { Prisma } from "@prisma/client";
+import { prisma } from "../prisma.js";
 
 // Cuts database traffic (Neon bills network transfer) and page weight:
 //
@@ -8,12 +10,15 @@ import type { NextFunction, Request, Response } from "express";
 //    and the data is kept in memory; GET /api/blobs/<hash> serves it with a
 //    year-long browser cache. A request body that sends such a URL back
 //    (e.g. an unchanged picture in an edit form) gets the data URL again.
+//    The address also names the record and field ("?id=…&f=image"), so after
+//    a server restart (e.g. Render waking up) a blob the memory no longer
+//    has is read again from the database instead of failing.
 // 2. Response cache: GET responses under /api are kept in memory and served
 //    from there; any successful change (POST, PATCH, PUT, DELETE) clears them.
 //    The data GETs don't depend on the user, so one copy serves everyone.
 
 const BLOB_PATH = "/api/blobs/";
-const BLOB_URL = /\/api\/blobs\/([0-9a-f]{40})$/;
+const BLOB_URL = /\/api\/blobs\/([0-9a-f]{40})(?:\?id=([^&]+)&f=([^&]+))?$/;
 // Shorter data URLs (e.g. tiny icons) stay inline.
 const MIN_BLOB = 1024;
 
@@ -25,39 +30,71 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
   return proto === Object.prototype || proto === null;
 }
 
-// Data URLs -> "/api/blobs/<hash>" (kept in memory).
-function externalize(value: unknown): unknown {
+const sha1 = (s: string) => crypto.createHash("sha1").update(s).digest("hex");
+
+// Data URLs -> "/api/blobs/<hash>?id=<record id>&f=<field>" (kept in memory).
+function externalize(value: unknown, id?: string, field?: string): unknown {
   if (typeof value === "string") {
     if (value.length < MIN_BLOB || !value.startsWith("data:")) return value;
-    const hash = crypto.createHash("sha1").update(value).digest("hex");
+    const hash = sha1(value);
     blobs.set(hash, value);
-    return BLOB_PATH + hash;
+    return BLOB_PATH + hash + (id && field ? `?id=${encodeURIComponent(id)}&f=${encodeURIComponent(field)}` : "");
   }
-  if (Array.isArray(value)) return value.map(externalize);
-  if (isPlainObject(value)) return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, externalize(v)]));
+  if (Array.isArray(value)) return value.map((v) => externalize(v));
+  if (isPlainObject(value)) {
+    const ownId = typeof value.id === "string" ? value.id : undefined;
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, externalize(v, ownId, k)]));
+  }
   return value;
+}
+
+// Models with a text field of this name, for finding a record by id.
+function modelsWith(field: string) {
+  return Prisma.dmmf.datamodel.models.filter(
+    (m) => m.fields.some((f) => f.name === field && f.type === "String") && m.fields.some((f) => f.name === "id" && f.type === "String")
+  );
+}
+
+// A blob the memory doesn't have (server restarted): read the record's field
+// again (ids are unique across tables) and keep it if it still matches.
+async function recover(hash: string, id: string | undefined, field: string | undefined) {
+  const known = blobs.get(hash);
+  if (known !== undefined) return known;
+  if (!id || !field || !/^[A-Za-z]\w*$/.test(field)) return undefined;
+  for (const model of modelsWith(field)) {
+    const delegate = (prisma as unknown as Record<string, { findUnique: (q: unknown) => Promise<Record<string, unknown> | null> }>)[
+      model.name[0].toLowerCase() + model.name.slice(1)
+    ];
+    const row = await delegate?.findUnique({ where: { id }, select: { [field]: true } }).catch(() => null);
+    const data = row?.[field];
+    if (typeof data === "string" && sha1(data) === hash) {
+      blobs.set(hash, data);
+      return data;
+    }
+  }
+  return undefined;
 }
 
 class UnknownBlob extends Error {}
 
 // Blob URLs sent back -> their data URLs.
-function internalize(value: unknown): unknown {
+async function internalize(value: unknown): Promise<unknown> {
   if (typeof value === "string") {
     const m = value.match(BLOB_URL);
     if (!m) return value;
-    const data = blobs.get(m[1]);
+    const data = await recover(m[1], m[2] && decodeURIComponent(m[2]), m[3] && decodeURIComponent(m[3]));
     if (data === undefined) throw new UnknownBlob();
     return data;
   }
-  if (Array.isArray(value)) return value.map(internalize);
-  if (isPlainObject(value)) return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, internalize(v)]));
+  if (Array.isArray(value)) return Promise.all(value.map(internalize));
+  if (isPlainObject(value)) return Object.fromEntries(await Promise.all(Object.entries(value).map(async ([k, v]) => [k, await internalize(v)])));
   return value;
 }
 
-// GET /api/blobs/:hash — the picture or file itself.
-export function serveBlob(req: Request, res: Response) {
-  const data = blobs.get(req.params.hash);
-  // Unknown after a server restart: reloading the page lists it again.
+// GET /api/blobs/:hash?id=&f= — the picture or file itself.
+export async function serveBlob(req: Request, res: Response) {
+  const q = (k: string) => (typeof req.query[k] === "string" ? (req.query[k] as string) : undefined);
+  const data = await recover(req.params.hash, q("id"), q("f"));
   if (!data) return res.status(404).json({ error: "Not found — reload the page" });
   const m = data.match(/^data:([^;,]*)((?:;[^;,]*)*),/);
   if (!m) return res.status(404).json({ error: "Not found" });
@@ -73,10 +110,10 @@ const responses = new Map<string, string>();
 // Bumped on every change, so a GET that started before it isn't cached.
 let generation = 0;
 
-export function apiCache(req: Request, res: Response, next: NextFunction) {
+export async function apiCache(req: Request, res: Response, next: NextFunction) {
   if (req.body !== undefined && req.method !== "GET") {
     try {
-      req.body = internalize(req.body);
+      req.body = await internalize(req.body);
     } catch (e) {
       if (e instanceof UnknownBlob) return res.status(409).json({ error: "This page is out of date — reload it and try again." });
       throw e;
