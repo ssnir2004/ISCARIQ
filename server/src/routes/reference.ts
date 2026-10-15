@@ -355,14 +355,18 @@ export const chipbreakerRouter = glossaryRouter(prisma.chipbreaker);
 export const chipbreakerRangeRouter = Router();
 
 const feed = z.number({ invalid_type_error: "Enter the feed" }).positive("Feed must be above 0").max(10, "Feed is in mm/rev");
+// The feed range is optional, but both ends or neither.
 const rangeFields = {
-  feedMin: feed,
-  feedMax: feed,
+  feedMin: feed.nullable().optional(),
+  feedMax: feed.nullable().optional(),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Invalid color").nullable().optional(),
   notes: z.string().trim().max(1000).nullable().optional(),
 };
-const rangeOrder = (r: { feedMin?: number; feedMax?: number }) => r.feedMin === undefined || r.feedMax === undefined || r.feedMin < r.feedMax;
-const rangeOrderError = { message: "The feed range must go from low to high", path: ["feedMax"] };
+function rangeProblem(min: number | null | undefined, max: number | null | undefined) {
+  if ((min == null) !== (max == null)) return "Enter both ends of the feed range, or neither";
+  if (min != null && max != null && min >= max) return "The feed range must go from low to high";
+  return null;
+}
 const rangeInclude = { chipbreaker: true } as const;
 
 chipbreakerRangeRouter.get("/", async (req, res) => {
@@ -373,9 +377,10 @@ chipbreakerRangeRouter.get("/", async (req, res) => {
 chipbreakerRangeRouter.post("/", async (req, res) => {
   const parsed = z
     .object({ applicationId: z.string().min(1), chipbreakerId: z.string().min(1), ...rangeFields })
-    .refine(rangeOrder, rangeOrderError)
     .safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid range" });
+  const problem = rangeProblem(parsed.data.feedMin, parsed.data.feedMax);
+  if (problem) return res.status(400).json({ error: problem });
   try {
     res.status(201).json(await prisma.chipbreakerRange.create({ data: parsed.data, include: rangeInclude }));
   } catch (e: any) {
@@ -384,11 +389,15 @@ chipbreakerRangeRouter.post("/", async (req, res) => {
 });
 
 chipbreakerRangeRouter.patch("/:id", async (req, res) => {
-  const parsed = z.object(rangeFields).partial().refine(rangeOrder, rangeOrderError).safeParse(req.body);
+  const parsed = z.object(rangeFields).safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid range" });
   const current = await prisma.chipbreakerRange.findUnique({ where: { id: req.params.id } });
   if (!current) return res.status(404).json({ error: "Not found" });
-  if ((parsed.data.feedMin ?? current.feedMin) >= (parsed.data.feedMax ?? current.feedMax)) return res.status(400).json({ error: rangeOrderError.message });
+  const problem = rangeProblem(
+    parsed.data.feedMin !== undefined ? parsed.data.feedMin : current.feedMin,
+    parsed.data.feedMax !== undefined ? parsed.data.feedMax : current.feedMax
+  );
+  if (problem) return res.status(400).json({ error: problem });
   res.json(await prisma.chipbreakerRange.update({ where: { id: req.params.id }, data: parsed.data, include: rangeInclude }));
 });
 

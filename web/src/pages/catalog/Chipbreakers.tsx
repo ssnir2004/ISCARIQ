@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { GlossaryPage } from "./GlossaryPage";
-import { ChipbreakerChart, formatFeed, nextColor, rangeColor, sortRanges } from "./ChipbreakerChart";
+import { ChipbreakerChart, feedText, nextColor, rangeColor, sortRanges } from "./ChipbreakerChart";
 import { RulesOfThumb } from "../../components/RulesOfThumb";
 import { Button, Card, Input, Label, PageHeader, Select } from "../../components/ui";
 import { api, ApiError } from "../../lib/api";
@@ -104,10 +104,10 @@ function ApplicationChipbreakers({ application, onChange }: { application: Appli
 
       <Card className="p-4">
         <h2 className="mb-3 text-base font-bold text-neutral-900 dark:text-neutral-100">Feed range on {application.name} chipbreakers</h2>
-        {sorted.length > 0 ? (
+        {sorted.some((r) => r.feedMin != null) ? (
           <ChipbreakerChart ranges={sorted} />
         ) : (
-          <p className="py-4 text-sm text-neutral-500 dark:text-neutral-400">Add chipbreakers with their feed range to see the chart.</p>
+          <p className="py-4 text-sm text-neutral-500 dark:text-neutral-400">Give chipbreakers a feed range to see them on the chart.</p>
         )}
       </Card>
 
@@ -156,7 +156,7 @@ function ApplicationChipbreakers({ application, onChange }: { application: Appli
                     </span>
                   </td>
                   <td className="py-2 pr-3 whitespace-nowrap tabular-nums">
-                    {formatFeed(r.feedMin)} – {formatFeed(r.feedMax)}
+                    {feedText(r)}
                   </td>
                   <td className="py-2 pr-3 whitespace-pre-line text-neutral-600 dark:text-neutral-300">{r.chipbreaker.description}</td>
                   <td className="py-2 pr-3 whitespace-pre-line text-neutral-600 dark:text-neutral-300">{r.notes}</td>
@@ -202,8 +202,8 @@ function RangeForm({
   const available = chipbreakers.filter((c) => !taken.includes(c.id)).sort((a, b) => a.name.localeCompare(b.name));
   const [chipbreakerId, setChipbreakerId] = useState(existing?.chipbreakerId ?? (available.length > 0 ? "" : NEW));
   const [newName, setNewName] = useState("");
-  const [feedMin, setFeedMin] = useState(existing ? String(existing.feedMin) : "");
-  const [feedMax, setFeedMax] = useState(existing ? String(existing.feedMax) : "");
+  const [feedMin, setFeedMin] = useState(existing?.feedMin != null ? String(existing.feedMin) : "");
+  const [feedMax, setFeedMax] = useState(existing?.feedMax != null ? String(existing.feedMax) : "");
   const [color, setColor] = useState(existing?.color ?? defaultColor);
   const [notes, setNotes] = useState(existing?.notes ?? "");
   const [error, setError] = useState<string | null>(null);
@@ -212,10 +212,14 @@ function RangeForm({
   async function save(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    const min = Number(feedMin);
-    const max = Number(feedMax);
-    if (!feedMin.trim() || !feedMax.trim() || !(min > 0) || !(max > 0)) return setError("Enter the feed range (mm/rev)");
-    if (min >= max) return setError("The feed range must go from low to high");
+    // The feed range is optional: both ends or neither.
+    const min = feedMin.trim() ? Number(feedMin) : null;
+    const max = feedMax.trim() ? Number(feedMax) : null;
+    if ((min === null) !== (max === null)) return setError("Enter both ends of the feed range, or neither");
+    if (min !== null && max !== null) {
+      if (!(min > 0) || !(max > 0)) return setError("Feed must be above 0");
+      if (min >= max) return setError("The feed range must go from low to high");
+    }
     const fields = { feedMin: min, feedMax: max, color, notes: notes.trim() || null };
     setSaving(true);
     try {
@@ -266,11 +270,11 @@ function RangeForm({
         )}
       </div>
       <div>
-        <Label>Feed from (mm/rev)</Label>
+        <Label>Feed from (mm/rev, optional)</Label>
         <Input type="number" step="any" min="0" value={feedMin} onChange={(e) => setFeedMin(e.target.value)} placeholder="e.g. 0.04" aria-label="Feed from" />
       </div>
       <div>
-        <Label>Feed to (mm/rev)</Label>
+        <Label>Feed to (mm/rev, optional)</Label>
         <Input type="number" step="any" min="0" value={feedMax} onChange={(e) => setFeedMax(e.target.value)} placeholder="e.g. 0.1" aria-label="Feed to" />
       </div>
       <div>
