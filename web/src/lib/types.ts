@@ -191,8 +191,9 @@ export interface ChipbreakerRange {
   chipbreakerId: string;
   chipbreaker: GlossaryEntry;
   applicationId: string;
-  feedMin: number;
-  feedMax: number;
+  // Both or neither.
+  feedMin: number | null;
+  feedMax: number | null;
   color: string | null;
   notes: string | null;
 }

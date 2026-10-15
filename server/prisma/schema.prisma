@@ -469,8 +469,9 @@ model ChipbreakerRange {
   chipbreakerId String
   application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
   applicationId String
-  feedMin       Float
-  feedMax       Float
+  // Optional (both or neither); only chipbreakers with a range are on the chart.
+  feedMin       Float?
+  feedMax       Float?
   // Bar color on the chart (#rrggbb); a default one when null.
   color         String?
   notes         String?

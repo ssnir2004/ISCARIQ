@@ -24,9 +24,20 @@ function textOn(hex: string) {
 
 export const formatFeed = (v: number) => String(Number(v.toFixed(3)));
 
-// Ranges in chart order: lowest feed first (bottom row), then the narrower.
+// "0.04 – 0.1", or "—" without a range.
+export const feedText = (r: Pick<ChipbreakerRange, "feedMin" | "feedMax">) =>
+  r.feedMin != null && r.feedMax != null ? `${formatFeed(r.feedMin)} – ${formatFeed(r.feedMax)}` : "—";
+
+type Charted = ChipbreakerRange & { feedMin: number; feedMax: number };
+const hasRange = (r: ChipbreakerRange): r is Charted => r.feedMin != null && r.feedMax != null;
+
+// Ranges in chart order: lowest feed first (bottom row), then the narrower;
+// chipbreakers without a feed range last (so colors by index match the chart).
 export function sortRanges(ranges: ChipbreakerRange[]) {
-  return [...ranges].sort((a, b) => a.feedMin - b.feedMin || a.feedMax - b.feedMax || a.chipbreaker.name.localeCompare(b.chipbreaker.name));
+  const key = (v: number | null) => v ?? Infinity;
+  return [...ranges].sort(
+    (a, b) => key(a.feedMin) - key(b.feedMin) || key(a.feedMax) - key(b.feedMax) || a.chipbreaker.name.localeCompare(b.chipbreaker.name)
+  );
 }
 
 const W = 900;
@@ -39,7 +50,8 @@ const BAR = 46;
 const STEP = 40;
 
 export function ChipbreakerChart({ ranges }: { ranges: ChipbreakerRange[] }) {
-  const rows = sortRanges(ranges);
+  // Only chipbreakers with a feed range (sorted first, so indexes match the table).
+  const rows = sortRanges(ranges).filter(hasRange);
   if (rows.length === 0) return null;
   const xMax = Math.max(...rows.map((r) => r.feedMax)) * 1.08;
   const x = (v: number) => LEFT + (v / xMax) * (W - LEFT - RIGHT);
