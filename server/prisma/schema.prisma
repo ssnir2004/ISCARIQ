@@ -459,6 +459,21 @@ model Chipbreaker {
   image       String?
   // Feed ranges per application (Chipbreakers screen).
   ranges      ChipbreakerRange[]
+  cases       ChipbreakerCase[]
+}
+
+// A case (picture of a job) for a chipbreaker in one application.
+model ChipbreakerCase {
+  id            String       @id @default(cuid())
+  chipbreaker   Chipbreaker  @relation(fields: [chipbreakerId], references: [id], onDelete: Cascade)
+  chipbreakerId String
+  application   Application  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  applicationId String
+  iso513Group   Iso513Group?
+  title         String
+  notes         String?
+  image         String
+  createdAt     DateTime     @default(now())
 }
 
 // A chipbreaker's feed range in one application (e.g. Parting: T 0.04-0.09
@@ -494,6 +509,7 @@ model Application {
   // Brands (solutions) for this application, on the Solutions screen.
   innovations Innovation[]
   chipbreakerRanges ChipbreakerRange[]
+  chipbreakerCases  ChipbreakerCase[]
 }
 
 // Carbide substrate a grade is built on, managed on the Substrates screen.
