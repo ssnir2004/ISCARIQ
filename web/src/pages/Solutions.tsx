@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { GlossaryPage, type GlossaryListContext } from "./catalog/GlossaryPage";
-import { Button, PageHeader, Select } from "../components/ui";
+import { Button, Input, PageHeader, Select } from "../components/ui";
 import { api, ApiError } from "../lib/api";
 import { useResource } from "../lib/useResource";
 import type { Application } from "../lib/types";
@@ -28,19 +28,49 @@ function readLastTab() {
   }
 }
 
+// Everything about a brand that the filter searches: its name, details,
+// applications, group and its uses with their inserts.
+function searchText(b: Brand) {
+  const uses = (b.uses as { name: string; inserts: { name: string; note: string | null }[] }[] | undefined) ?? [];
+  return [
+    b.name,
+    b.description,
+    b.category,
+    b.solutionGroup,
+    b.toolDescription,
+    b.year,
+    ...(b.applications ?? []).map((a) => a.name),
+    ...uses.flatMap((u) => [u.name, ...u.inserts.flatMap((i) => [i.name, i.note])]),
+  ]
+    .filter((v) => v !== null && v !== undefined && v !== "")
+    .join(" ")
+    .toLowerCase();
+}
+
+// Every word of the filter must appear somewhere in the brand's text.
+export function matchesQuery(b: Brand, query: string) {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return true;
+  const text = searchText(b);
+  return words.every((w) => text.includes(w));
+}
+
 export function Solutions() {
   const { data: applications } = useResource<Application>("/applications");
   const { data: brands, reload: reloadBrands } = useResource<Brand>("/innovations");
   const [chosen, setChosen] = useState<string | null>(readLastTab);
+  // Filters every tab (and its count) by any text in the solutions.
+  const [query, setQuery] = useState("");
+  const matching = brands.filter((b) => matchesQuery(b, query));
   const isAll = chosen === ALL;
   // null on the All tab.
   const tab = isAll ? null : (applications.find((a) => a.id === chosen) ?? applications.find((a) => a.name === DEFAULT_TAB) ?? applications[0]);
   const { tagFields, textFields } = useBrandFields(tab?.id);
-  const tabs = [{ id: ALL, name: "All", count: brands.length }, ...applications.map((a) => ({ id: a.id, name: a.name, count: countIn(a.id) }))];
+  const tabs = [{ id: ALL, name: "All", count: matching.length }, ...applications.map((a) => ({ id: a.id, name: a.name, count: countIn(a.id) }))];
   const activeId = isAll ? ALL : tab?.id;
 
   function countIn(appId: string) {
-    return brands.filter((b) => b.applications?.some((a) => a.id === appId)).length;
+    return matching.filter((b) => b.applications?.some((a) => a.id === appId)).length;
   }
 
   function choose(id: string) {
@@ -55,6 +85,26 @@ export function Solutions() {
   return (
     <div>
       <PageHeader title="Solutions" />
+      <div className="relative mb-4 max-w-xl">
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Filter by any text — brand, description, application, use, insert…"
+          aria-label="Filter solutions"
+          className="pr-8"
+          data-solutions-filter
+        />
+        {query && (
+          <button
+            type="button"
+            onClick={() => setQuery("")}
+            className="absolute top-1/2 right-2 -translate-y-1/2 rounded px-1 text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
+            aria-label="Clear the filter"
+          >
+            ✕
+          </button>
+        )}
+      </div>
       <div role="tablist" aria-label="Applications" className="mb-4 flex flex-wrap gap-2">
         {tabs.map((a) => (
           <button
@@ -87,7 +137,7 @@ export function Solutions() {
           tagFields={tagFields}
           textFields={textFields}
           extraSection={partsSection}
-          renderList={(ctx) => <SolutionCards {...ctx} application={tab} brands={brands} reloadBrands={reloadBrands} />}
+          renderList={(ctx) => <SolutionCards {...ctx} application={tab} brands={brands} reloadBrands={reloadBrands} query={query} />}
         />
       )}
     </div>
@@ -102,7 +152,8 @@ function SolutionCards({
   application,
   brands,
   reloadBrands,
-}: GlossaryListContext & { application: Application | null; brands: Brand[]; reloadBrands: () => void }) {
+  query,
+}: GlossaryListContext & { application: Application | null; brands: Brand[]; reloadBrands: () => void; query: string }) {
   const [error, setError] = useState<string | null>(null);
 
   // Keep the tab counts in step with adds / edits / deletes here.
@@ -129,7 +180,8 @@ function SolutionCards({
   // within its own applications).
   const appsOf = (b: Brand) => (b.applications as Brand["applications"]) ?? [];
   const groupOf = (b: Brand) => (application ? str(b.solutionGroup) || NO_GROUP : "");
-  const groups = [...new Set(data.map(groupOf))].sort((a, b) => (a === NO_GROUP ? 1 : b === NO_GROUP ? -1 : a.localeCompare(b)));
+  const shown = data.filter((b) => matchesQuery(b as Brand, query));
+  const groups = [...new Set(shown.map(groupOf))].sort((a, b) => (a === NO_GROUP ? 1 : b === NO_GROUP ? -1 : a.localeCompare(b)));
 
   return (
     <div className="space-y-6" data-solutions>
@@ -149,11 +201,16 @@ function SolutionCards({
       {data.length === 0 && (
         <p className="py-6 text-center text-sm text-neutral-500 dark:text-neutral-400">{application ? `No solutions for ${application.name} yet.` : "No brands yet."}</p>
       )}
+      {data.length > 0 && shown.length === 0 && (
+        <p className="py-6 text-center text-sm text-neutral-500 dark:text-neutral-400" data-solutions-no-match>
+          No solutions{application ? ` for ${application.name}` : ""} match “{query.trim()}”.
+        </p>
+      )}
       {groups.map((group) => (
         <section key={group} data-solution-group={group || "All"}>
           {group && <h2 className="mb-2 text-sm font-bold tracking-wide text-neutral-600 uppercase dark:text-neutral-300">{group}</h2>}
           <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4">
-            {data
+            {shown
               .filter((b) => groupOf(b) === group)
               .sort((a, b) => a.name.localeCompare(b.name))
               .map((b) => {
