@@ -9,6 +9,7 @@ import cors from "cors";
 
 import { authRouter } from "./routes/auth.js";
 import { requireAuth } from "./middleware/auth.js";
+import { apiCache, serveBlob } from "./lib/responseCache.js";
 import { rfqRouter } from "./routes/rfqs.js";
 import { projectRouter } from "./routes/projects.js";
 import { drawingRouter } from "./routes/drawings.js";
@@ -68,6 +69,10 @@ app.use("/api/auth", authRouter);
 
 // Everything below requires an authenticated session.
 app.use("/api", requireAuth);
+
+// Pictures / files served by address and GET responses cached (see responseCache).
+app.get("/api/blobs/:hash", serveBlob);
+app.use("/api", apiCache);
 
 app.use("/api/plants", plantRouter);
 app.use("/api/branches", branchRouter);
