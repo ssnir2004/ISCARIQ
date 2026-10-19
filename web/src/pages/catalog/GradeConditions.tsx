@@ -117,6 +117,12 @@ export function GradeConditions({
                           {first && (
                             <td rowSpan={span} className="border-b border-neutral-200 px-2 py-2 font-bold dark:border-neutral-700">
                               {r.material.name}
+                              {/* The material's hardness, when known. */}
+                              {r.material.hardness && (
+                                <div className="text-xs font-normal text-neutral-500 dark:text-neutral-400" data-material-hardness>
+                                  {r.material.hardness}
+                                </div>
+                              )}
                             </td>
                           )}
                           <td className="border-b border-neutral-200 px-2 py-2 dark:border-neutral-700">{r.applications.map((a) => a.name).join("/") || "Any"}</td>
