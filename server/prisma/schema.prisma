@@ -717,6 +717,8 @@ model GradeRecommendation {
   recAe        Float?
   recCoolant   CoolantType?
   recNotes     String?
+  // The recommended tool, described in free text.
+  recTool      String?
   position     Int           @default(0)
   createdAt    DateTime      @default(now())
 

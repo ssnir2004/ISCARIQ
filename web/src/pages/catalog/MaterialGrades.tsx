@@ -5,7 +5,7 @@ import type { GradeFamily, GradeRecommendation, Material } from "../../lib/types
 
 // The grades recommended for a work material (from the Grades cutting
 // conditions) with their recommended working conditions (Vc, f, Ap, Ae,
-// coolant, notes), by application: for a subcategory its own recommendations,
+// coolant, tool, notes), by application: for a subcategory its own recommendations,
 // for an ISO 513 category those of the whole group. Opened from the
 // Materials screen.
 
@@ -94,6 +94,7 @@ export function MaterialGrades({ material, title, onClose }: { material: Materia
                       <th className={`${cell} text-center font-medium`}>Ap (mm)</th>
                       <th className={`${cell} text-center font-medium`}>Ae (mm)</th>
                       <th className={`${cell} font-medium`}>Coolant</th>
+                      <th className={`${cell} font-medium`}>Tool</th>
                       <th className={`${cell} font-medium`}>Notes</th>
                     </tr>
                   </thead>
@@ -116,6 +117,9 @@ export function MaterialGrades({ material, title, onClose }: { material: Materia
                         <td className={`${cell} text-center whitespace-nowrap tabular-nums`}>{num(r.recAp) || "-"}</td>
                         <td className={`${cell} text-center whitespace-nowrap tabular-nums`}>{num(r.recAe) || "-"}</td>
                         <td className={cell}>{r.recCoolant ? COOLANT_LABEL[r.recCoolant] : "-"}</td>
+                        <td className={`${cell} whitespace-pre-line`} dir="auto" data-rec-tool>
+                          {r.recTool}
+                        </td>
                         <td className={`${cell} whitespace-pre-line`} dir="auto">
                           {r.recNotes}
                         </td>

@@ -222,6 +222,7 @@ function RecommendationModal({
     ae: num(existing?.recAe),
     coolant: existing?.recCoolant ?? "",
     notes: existing?.recNotes ?? "",
+    tool: existing?.recTool ?? "",
   });
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -267,6 +268,7 @@ function RecommendationModal({
       recAe: toNumber(rec.ae),
       recCoolant: rec.coolant || null,
       recNotes: rec.notes.trim() || null,
+      recTool: rec.tool.trim() || null,
     };
     // This row keeps its own material if still chosen; the others get new rows.
     const own = existing ? (materialIds.includes(existing.material.id) ? existing.material.id : materialIds[0]) : null;
@@ -424,6 +426,10 @@ function RecommendationModal({
               <Label>Ae (mm)</Label>
               <Input type="number" min="0" step="any" aria-label="Recommended ae" value={rec.ae} onChange={(e) => setRec({ ...rec, ae: e.target.value })} />
             </div>
+          </div>
+          <div>
+            <Label>Recommended tool</Label>
+            <Textarea dir="auto" rows={2} aria-label="Recommended tool" value={rec.tool} onChange={(e) => setRec({ ...rec, tool: e.target.value })} placeholder="e.g. HELIDO H690 F90AX D050-06-22" />
           </div>
           <div className="grid grid-cols-[auto_1fr] gap-3">
             <div>

@@ -699,6 +699,7 @@ const recommendationSchema = z
     recAe: z.number().positive().nullable().optional(),
     recCoolant: z.enum(["NONE", "AIR", "OIL"]).nullable().optional(),
     recNotes: z.string().trim().max(1000).nullable().optional(),
+    recTool: z.string().trim().max(1000).nullable().optional(),
   })
   .refine((r) => !(r.vcMin && r.vcRec && r.vcMin > r.vcRec) && !(r.vcRec && r.vcMax && r.vcRec > r.vcMax) && !(r.vcMin && r.vcMax && r.vcMin > r.vcMax), {
     message: "Cutting speeds must be min ≤ recommended ≤ max",
@@ -727,6 +728,7 @@ function recommendationData({ gradeIds, applicationIds, ...rest }: Recommendatio
     ...rest,
     notes: rest.notes || null,
     recNotes: rest.recNotes || null,
+    recTool: rest.recTool || null,
     grades: mode === "create" ? { connect: grades } : { set: grades },
     applications: mode === "create" ? { connect: applications } : { set: applications },
   };
