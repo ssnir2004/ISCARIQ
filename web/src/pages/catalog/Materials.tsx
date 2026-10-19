@@ -6,6 +6,7 @@ import { ISO513_COLORS, MATERIAL_GROUPS } from "../../lib/npaKnowledgeConstants"
 import type { Iso513Group, Material } from "../../lib/types";
 import { Button, Card, Input, Iso513Badge, Label, Modal, PageHeader, Select } from "../../components/ui";
 import { ClipboardImagePaste } from "../../components/npaKnowledge/ClipboardImagePaste";
+import { MaterialGrades } from "./MaterialGrades";
 
 const EMPTY_FORM = {
   iso513Group: "P" as Iso513Group,
@@ -37,6 +38,8 @@ export function Materials() {
   const { data, reload } = useResource<Material>("/materials");
   const [form, setForm] = useState(EMPTY_FORM);
   const [editing, setEditing] = useState<Material | null>(null);
+  // The material whose recommended grades are open, if any.
+  const [gradesOf, setGradesOf] = useState<{ material: Material; title: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   // A category's picture: edited in the form, viewed from its header.
@@ -194,6 +197,7 @@ export function Materials() {
         </AddSection>
       </div>
 
+      {gradesOf && <MaterialGrades material={gradesOf.material} title={gradesOf.title} onClose={() => setGradesOf(null)} />}
       {viewing?.image && (
         <Modal title={`${viewing.iso513Group} — ${viewing.name}`} onClose={() => setViewing(null)} wide>
           <img src={viewing.image} alt={viewing.name} className="mx-auto max-h-[75vh] rounded-lg object-contain" />
@@ -212,7 +216,20 @@ export function Materials() {
                     <span className="mr-2">
                       <Iso513Badge group={g} />
                     </span>
-                    <span className="font-semibold text-neutral-900 dark:text-neutral-100">{categoryName(g)}</span>
+                    {/* Click a material for the grades recommended for it, by application. */}
+                    {category ? (
+                      <button
+                        type="button"
+                        onClick={() => setGradesOf({ material: category, title: `${g} — ${categoryName(g)}` })}
+                        className="font-semibold text-neutral-900 hover:text-blue-600 hover:underline dark:text-neutral-100 dark:hover:text-blue-400"
+                        title="Recommended grades by application"
+                        data-material-link={g}
+                      >
+                        {categoryName(g)}
+                      </button>
+                    ) : (
+                      <span className="font-semibold text-neutral-900 dark:text-neutral-100">{categoryName(g)}</span>
+                    )}
                     {category?.image && (
                       <button
                         type="button"
@@ -256,7 +273,15 @@ export function Materials() {
                     >
                       <div className="text-sm">
                         <div>
-                          <span className="font-medium text-neutral-900 dark:text-neutral-100">{m.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => setGradesOf({ material: m, title: `${g} — ${m.name}` })}
+                            className="font-medium text-neutral-900 hover:text-blue-600 hover:underline dark:text-neutral-100 dark:hover:text-blue-400"
+                            title="Recommended grades by application"
+                            data-material-link={m.name}
+                          >
+                            {m.name}
+                          </button>
                           {m.hardness && <span className="ml-2 text-neutral-500 dark:text-neutral-400">({m.hardness})</span>}
                           {m.description && <span className="ml-2 text-neutral-500 dark:text-neutral-400">— {m.description}</span>}
                         </div>
