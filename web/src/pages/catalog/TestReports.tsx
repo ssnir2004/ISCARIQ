@@ -1,4 +1,5 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
+import { AddSection } from "../../components/AddSection";
 import { Link, useSearchParams } from "react-router-dom";
 import { useResource } from "../../lib/useResource";
 import { api, ApiError } from "../../lib/api";
@@ -153,61 +154,63 @@ export function TestReports() {
         }
       />
 
-      <Card className="mb-6 p-4">
-        <form onSubmit={onSubmit} className="grid grid-cols-4 gap-4">
-          <div>
-            <Label>Insert</Label>
-            <Select value={form.insertId} onChange={(e) => setForm({ ...form, insertId: e.target.value })} required>
-              <option value="" disabled>
-                Select insert…
-              </option>
-              {inserts.map((i) => (
-                <option key={i.id} value={i.id}>
-                  {i.designation}
+      <AddSection label="test report">
+        <Card className="mb-6 p-4">
+          <form onSubmit={onSubmit} className="grid grid-cols-4 gap-4">
+            <div>
+              <Label>Insert</Label>
+              <Select value={form.insertId} onChange={(e) => setForm({ ...form, insertId: e.target.value })} required>
+                <option value="" disabled>
+                  Select insert…
                 </option>
-              ))}
-            </Select>
-          </div>
-          <div>
-            <Label>Test No.</Label>
-            <Input value={form.testNo} onChange={(e) => setForm({ ...form, testNo: e.target.value })} required />
-          </div>
-          <div>
-            <Label>Test Date</Label>
-            <Input type="date" value={form.testDate} onChange={(e) => setForm({ ...form, testDate: e.target.value })} required />
-          </div>
-          <div>
-            <Label>Result</Label>
-            <Input value={form.result} onChange={(e) => setForm({ ...form, result: e.target.value })} required />
-          </div>
-          <div className="col-span-4">
-            <Label>Description</Label>
-            <Input
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-              placeholder="Brief description of the trial"
-            />
-          </div>
-          <div>
-            <Label>Country</Label>
-            <Input value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} />
-          </div>
-          <div>
-            <Label>Customer</Label>
-            <Input value={form.customer} onChange={(e) => setForm({ ...form, customer: e.target.value })} />
-          </div>
-          <div>
-            <Label>Performer</Label>
-            <Input value={form.performer} onChange={(e) => setForm({ ...form, performer: e.target.value })} />
-          </div>
-          {error && <p className="col-span-4 text-sm text-red-600 dark:text-red-400">{error}</p>}
-          <div className="col-span-4">
-            <Button type="submit" disabled={submitting}>
-              Add Test Report
-            </Button>
-          </div>
-        </form>
-      </Card>
+                {inserts.map((i) => (
+                  <option key={i.id} value={i.id}>
+                    {i.designation}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div>
+              <Label>Test No.</Label>
+              <Input value={form.testNo} onChange={(e) => setForm({ ...form, testNo: e.target.value })} required />
+            </div>
+            <div>
+              <Label>Test Date</Label>
+              <Input type="date" value={form.testDate} onChange={(e) => setForm({ ...form, testDate: e.target.value })} required />
+            </div>
+            <div>
+              <Label>Result</Label>
+              <Input value={form.result} onChange={(e) => setForm({ ...form, result: e.target.value })} required />
+            </div>
+            <div className="col-span-4">
+              <Label>Description</Label>
+              <Input
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                placeholder="Brief description of the trial"
+              />
+            </div>
+            <div>
+              <Label>Country</Label>
+              <Input value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} />
+            </div>
+            <div>
+              <Label>Customer</Label>
+              <Input value={form.customer} onChange={(e) => setForm({ ...form, customer: e.target.value })} />
+            </div>
+            <div>
+              <Label>Performer</Label>
+              <Input value={form.performer} onChange={(e) => setForm({ ...form, performer: e.target.value })} />
+            </div>
+            {error && <p className="col-span-4 text-sm text-red-600 dark:text-red-400">{error}</p>}
+            <div className="col-span-4">
+              <Button type="submit" disabled={submitting}>
+                Add Test Report
+              </Button>
+            </div>
+          </form>
+        </Card>
+      </AddSection>
 
       <div className="overflow-x-auto rounded-xl border border-neutral-200 dark:border-neutral-800">
         <table className="w-full text-left text-sm">

@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { AddSection } from "../../components/AddSection";
 import { useResource } from "../../lib/useResource";
 import { api, ApiError } from "../../lib/api";
 import type { Department, Team } from "../../lib/types";
@@ -55,56 +56,58 @@ export function Teams() {
     <div className="max-w-4xl">
       <PageHeader title="Teams & Departments" />
 
-      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
-        <Card className="p-4">
-          <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-neutral-100">New Department</h2>
-          <form onSubmit={addDept} className="space-y-2">
-            <div>
-              <Label>Code</Label>
-              <Input value={deptForm.code} onChange={(e) => setDeptForm({ ...deptForm, code: e.target.value })} required />
-            </div>
-            <div>
-              <Label>Name</Label>
-              <Input value={deptForm.name} onChange={(e) => setDeptForm({ ...deptForm, name: e.target.value })} required />
-            </div>
-            <Button type="submit">Add Department</Button>
-          </form>
-        </Card>
+      <AddSection label="department or team">
+        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+          <Card className="p-4">
+            <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-neutral-100">New Department</h2>
+            <form onSubmit={addDept} className="space-y-2">
+              <div>
+                <Label>Code</Label>
+                <Input value={deptForm.code} onChange={(e) => setDeptForm({ ...deptForm, code: e.target.value })} required />
+              </div>
+              <div>
+                <Label>Name</Label>
+                <Input value={deptForm.name} onChange={(e) => setDeptForm({ ...deptForm, name: e.target.value })} required />
+              </div>
+              <Button type="submit">Add Department</Button>
+            </form>
+          </Card>
 
-        <Card className="p-4">
-          <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-neutral-100">New Team</h2>
-          <form onSubmit={addTeam} className="space-y-2">
-            <div>
-              <Label>Department</Label>
-              <Select value={teamForm.departmentId} onChange={(e) => setTeamForm({ ...teamForm, departmentId: e.target.value })} required>
-                <option value="">Select…</option>
-                {departments.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.code} — {d.name}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div>
-              <Label>Code</Label>
-              <Input value={teamForm.code} onChange={(e) => setTeamForm({ ...teamForm, code: e.target.value })} required />
-            </div>
-            <div>
-              <Label>Description</Label>
-              <Input value={teamForm.description} onChange={(e) => setTeamForm({ ...teamForm, description: e.target.value })} required />
-            </div>
-            <label className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-300">
-              <input
-                type="checkbox"
-                checked={teamForm.isManager}
-                onChange={(e) => setTeamForm({ ...teamForm, isManager: e.target.checked })}
-              />
-              Department manager
-            </label>
-            <Button type="submit">Add Team</Button>
-          </form>
-        </Card>
-      </div>
+          <Card className="p-4">
+            <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-neutral-100">New Team</h2>
+            <form onSubmit={addTeam} className="space-y-2">
+              <div>
+                <Label>Department</Label>
+                <Select value={teamForm.departmentId} onChange={(e) => setTeamForm({ ...teamForm, departmentId: e.target.value })} required>
+                  <option value="">Select…</option>
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.code} — {d.name}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div>
+                <Label>Code</Label>
+                <Input value={teamForm.code} onChange={(e) => setTeamForm({ ...teamForm, code: e.target.value })} required />
+              </div>
+              <div>
+                <Label>Description</Label>
+                <Input value={teamForm.description} onChange={(e) => setTeamForm({ ...teamForm, description: e.target.value })} required />
+              </div>
+              <label className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-300">
+                <input
+                  type="checkbox"
+                  checked={teamForm.isManager}
+                  onChange={(e) => setTeamForm({ ...teamForm, isManager: e.target.checked })}
+                />
+                Department manager
+              </label>
+              <Button type="submit">Add Team</Button>
+            </form>
+          </Card>
+        </div>
+      </AddSection>
 
       {error && <p className="mb-4 text-sm text-red-600 dark:text-red-400">{error}</p>}
 

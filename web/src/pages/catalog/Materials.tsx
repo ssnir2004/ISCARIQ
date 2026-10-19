@@ -1,4 +1,5 @@
 import { useRef, useState, type FormEvent } from "react";
+import { AddSection } from "../../components/AddSection";
 import { useResource } from "../../lib/useResource";
 import { api, ApiError } from "../../lib/api";
 import { ISO513_COLORS, MATERIAL_GROUPS } from "../../lib/npaKnowledgeConstants";
@@ -120,75 +121,77 @@ export function Materials() {
     <div className="max-w-3xl">
       <PageHeader title="Materials (ISO 513)" />
       <div ref={formRef} className="scroll-mt-4">
-        <Card className="mb-6 p-4">
-          <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-            {editing
-              ? editingCategory
-                ? `Edit category ${editing.iso513Group} — ${editing.name}`
-                : "Edit subcategory"
-              : "Add subcategory"}
-          </h2>
-          <form onSubmit={onSubmit} className="grid grid-cols-3 gap-4">
-            <div>
-              <Label>Category</Label>
-              <Select
-                value={form.iso513Group}
-                disabled={editingCategory}
-                onChange={(e) => setForm({ ...form, iso513Group: e.target.value as Iso513Group })}
-              >
-                {MATERIAL_GROUPS.map(({ value: g }) => (
-                  <option key={g} value={g}>
-                    {g} — {categoryName(g)}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div>
-              <Label>Name</Label>
-              <Input
-                ref={nameRef}
-                value={form.name}
-                disabled={editingCategory}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder={editingCategory ? undefined : "100Cr6"}
-                required
-              />
-            </div>
-            <div>
-              <Label>Hardness</Label>
-              <Input value={form.hardness} onChange={(e) => setForm({ ...form, hardness: e.target.value })} placeholder="60–65 HRC" />
-            </div>
-            <div className="col-span-3">
-              <Label>Description</Label>
-              <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-            </div>
-            <div className="col-span-3">
-              <Label>Common use</Label>
-              <Input value={form.commonUse} onChange={(e) => setForm({ ...form, commonUse: e.target.value })} />
-            </div>
-            <div className="col-span-3">
-              <Label>Key properties</Label>
-              <Input value={form.keyProperties} onChange={(e) => setForm({ ...form, keyProperties: e.target.value })} />
-            </div>
-            {editingCategory && (
-              <div className="col-span-3">
-                <Label>Image (optional)</Label>
-                <ClipboardImagePaste value={image} onChange={setImage} />
+        <AddSection label="subcategory" editing={editing !== null} onCancelEdit={cancelEdit}>
+          <Card className="mb-6 p-4">
+            <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+              {editing
+                ? editingCategory
+                  ? `Edit category ${editing.iso513Group} — ${editing.name}`
+                  : "Edit subcategory"
+                : "Add subcategory"}
+            </h2>
+            <form onSubmit={onSubmit} className="grid grid-cols-3 gap-4">
+              <div>
+                <Label>Category</Label>
+                <Select
+                  value={form.iso513Group}
+                  disabled={editingCategory}
+                  onChange={(e) => setForm({ ...form, iso513Group: e.target.value as Iso513Group })}
+                >
+                  {MATERIAL_GROUPS.map(({ value: g }) => (
+                    <option key={g} value={g}>
+                      {g} — {categoryName(g)}
+                    </option>
+                  ))}
+                </Select>
               </div>
-            )}
-            {error && <p className="col-span-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
-            <div className="col-span-3 flex gap-2">
-              <Button type="submit" disabled={submitting}>
-                {editing ? "Save Changes" : "Add Subcategory"}
-              </Button>
-              {editing && (
-                <Button type="button" variant="secondary" onClick={cancelEdit}>
-                  Cancel
-                </Button>
+              <div>
+                <Label>Name</Label>
+                <Input
+                  ref={nameRef}
+                  value={form.name}
+                  disabled={editingCategory}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder={editingCategory ? undefined : "100Cr6"}
+                  required
+                />
+              </div>
+              <div>
+                <Label>Hardness</Label>
+                <Input value={form.hardness} onChange={(e) => setForm({ ...form, hardness: e.target.value })} placeholder="60–65 HRC" />
+              </div>
+              <div className="col-span-3">
+                <Label>Description</Label>
+                <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+              </div>
+              <div className="col-span-3">
+                <Label>Common use</Label>
+                <Input value={form.commonUse} onChange={(e) => setForm({ ...form, commonUse: e.target.value })} />
+              </div>
+              <div className="col-span-3">
+                <Label>Key properties</Label>
+                <Input value={form.keyProperties} onChange={(e) => setForm({ ...form, keyProperties: e.target.value })} />
+              </div>
+              {editingCategory && (
+                <div className="col-span-3">
+                  <Label>Image (optional)</Label>
+                  <ClipboardImagePaste value={image} onChange={setImage} />
+                </div>
               )}
-            </div>
-          </form>
-        </Card>
+              {error && <p className="col-span-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
+              <div className="col-span-3 flex gap-2">
+                <Button type="submit" disabled={submitting}>
+                  {editing ? "Save Changes" : "Add Subcategory"}
+                </Button>
+                {editing && (
+                  <Button type="button" variant="secondary" onClick={cancelEdit}>
+                    Cancel
+                  </Button>
+                )}
+              </div>
+            </form>
+          </Card>
+        </AddSection>
       </div>
 
       {viewing?.image && (

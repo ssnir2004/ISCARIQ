@@ -1,4 +1,5 @@
 import { useState, type ChangeEvent, type FormEvent } from "react";
+import { AddSection } from "../../components/AddSection";
 import { Link } from "react-router-dom";
 import { useResource } from "../../lib/useResource";
 import { api, ApiError } from "../../lib/api";
@@ -116,76 +117,78 @@ export function Inserts() {
   return (
     <div className="max-w-5xl">
       <PageHeader title="Inserts" />
-      <Card className="mb-6 p-4">
-        <form onSubmit={onSubmit} className="grid grid-cols-4 gap-4">
-          <div>
-            <Label>Item</Label>
-            <Input value={form.item} onChange={(e) => setForm({ ...form, item: e.target.value })} placeholder="5506322" />
-          </div>
-          <div>
-            <Label>Designation</Label>
-            <Input value={form.designation} onChange={(e) => setForm({ ...form, designation: e.target.value })} placeholder="CNMG120408-MF" required />
-          </div>
-          <div>
-            <Label>Shape</Label>
-            <Input value={form.shape} onChange={(e) => setForm({ ...form, shape: e.target.value })} placeholder="CNMG" required />
-          </div>
-          <div>
-            <Label>Size</Label>
-            <Input value={form.size} onChange={(e) => setForm({ ...form, size: e.target.value })} placeholder="120408" required />
-          </div>
-          <div>
-            <Label>Chipbreaker</Label>
-            <Input value={form.chipbreaker} onChange={(e) => setForm({ ...form, chipbreaker: e.target.value })} placeholder="MF" required />
-          </div>
-          <div>
-            <Label>Grade</Label>
-            <Input value={form.grade} onChange={(e) => setForm({ ...form, grade: e.target.value })} placeholder="IC907" required />
-          </div>
-          <div>
-            <Label>Coating</Label>
-            <Input value={form.coatingType} onChange={(e) => setForm({ ...form, coatingType: e.target.value })} placeholder="PVD TiAlN" />
-          </div>
-          <div>
-            <Label>Substrate</Label>
-            <Input value={form.substrate} onChange={(e) => setForm({ ...form, substrate: e.target.value })} placeholder="Carbide" />
-          </div>
-          <div>
-            <Label>Coolant</Label>
-            <Select value={form.coolantPreference} onChange={(e) => setForm({ ...form, coolantPreference: e.target.value as CoolantPreference })}>
-              {COOLANT_OPTIONS.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div className="col-span-2">
-            <Label>Image</Label>
-            <div className="flex items-center gap-3">
-              <Input key={fileInputKey} type="file" accept="image/*" onChange={onImageChange} />
-              {form.image && (
-                <img src={form.image} alt="Preview" className="h-10 w-10 rounded object-cover" />
+      <AddSection label="insert" editing={editingId !== null} onCancelEdit={cancelEdit}>
+        <Card className="mb-6 p-4">
+          <form onSubmit={onSubmit} className="grid grid-cols-4 gap-4">
+            <div>
+              <Label>Item</Label>
+              <Input value={form.item} onChange={(e) => setForm({ ...form, item: e.target.value })} placeholder="5506322" />
+            </div>
+            <div>
+              <Label>Designation</Label>
+              <Input value={form.designation} onChange={(e) => setForm({ ...form, designation: e.target.value })} placeholder="CNMG120408-MF" required />
+            </div>
+            <div>
+              <Label>Shape</Label>
+              <Input value={form.shape} onChange={(e) => setForm({ ...form, shape: e.target.value })} placeholder="CNMG" required />
+            </div>
+            <div>
+              <Label>Size</Label>
+              <Input value={form.size} onChange={(e) => setForm({ ...form, size: e.target.value })} placeholder="120408" required />
+            </div>
+            <div>
+              <Label>Chipbreaker</Label>
+              <Input value={form.chipbreaker} onChange={(e) => setForm({ ...form, chipbreaker: e.target.value })} placeholder="MF" required />
+            </div>
+            <div>
+              <Label>Grade</Label>
+              <Input value={form.grade} onChange={(e) => setForm({ ...form, grade: e.target.value })} placeholder="IC907" required />
+            </div>
+            <div>
+              <Label>Coating</Label>
+              <Input value={form.coatingType} onChange={(e) => setForm({ ...form, coatingType: e.target.value })} placeholder="PVD TiAlN" />
+            </div>
+            <div>
+              <Label>Substrate</Label>
+              <Input value={form.substrate} onChange={(e) => setForm({ ...form, substrate: e.target.value })} placeholder="Carbide" />
+            </div>
+            <div>
+              <Label>Coolant</Label>
+              <Select value={form.coolantPreference} onChange={(e) => setForm({ ...form, coolantPreference: e.target.value as CoolantPreference })}>
+                {COOLANT_OPTIONS.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div className="col-span-2">
+              <Label>Image</Label>
+              <div className="flex items-center gap-3">
+                <Input key={fileInputKey} type="file" accept="image/*" onChange={onImageChange} />
+                {form.image && (
+                  <img src={form.image} alt="Preview" className="h-10 w-10 rounded object-cover" />
+                )}
+              </div>
+            </div>
+            <div className="col-span-4">
+              <Label>Notes</Label>
+              <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+            </div>
+            {error && <p className="col-span-4 text-sm text-red-600 dark:text-red-400">{error}</p>}
+            <div className="col-span-4 flex gap-2">
+              <Button type="submit" disabled={submitting}>
+                {editingId ? "Save Changes" : "Add Insert"}
+              </Button>
+              {editingId && (
+                <Button type="button" variant="secondary" onClick={cancelEdit}>
+                  Cancel
+                </Button>
               )}
             </div>
-          </div>
-          <div className="col-span-4">
-            <Label>Notes</Label>
-            <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
-          </div>
-          {error && <p className="col-span-4 text-sm text-red-600 dark:text-red-400">{error}</p>}
-          <div className="col-span-4 flex gap-2">
-            <Button type="submit" disabled={submitting}>
-              {editingId ? "Save Changes" : "Add Insert"}
-            </Button>
-            {editingId && (
-              <Button type="button" variant="secondary" onClick={cancelEdit}>
-                Cancel
-              </Button>
-            )}
-          </div>
-        </form>
-      </Card>
+          </form>
+        </Card>
+      </AddSection>
 
       <div className="overflow-x-auto rounded-xl border border-neutral-200 dark:border-neutral-800">
         <table className="w-full text-left text-sm">

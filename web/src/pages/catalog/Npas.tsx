@@ -1,4 +1,5 @@
 import { useState, type ChangeEvent, type FormEvent } from "react";
+import { AddSection } from "../../components/AddSection";
 import { useResource } from "../../lib/useResource";
 import { api, ApiError } from "../../lib/api";
 import type { Material, Npa } from "../../lib/types";
@@ -158,143 +159,145 @@ export function Npas() {
     <div className="max-w-5xl">
       <PageHeader title="NPA Catalog" />
 
-      <Card className="mb-6 p-4">
-        <form onSubmit={onSubmit} className="grid grid-cols-4 gap-4">
-          <div>
-            <Label>NPA No.</Label>
-            <Input value={form.npaNumber} onChange={(e) => setForm({ ...form, npaNumber: e.target.value })} placeholder="30-2025" />
-          </div>
-          <div className="col-span-2">
-            <Label>Title</Label>
-            <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
-          </div>
-          <div>
-            <Label>Publish Date</Label>
-            <Input type="date" value={form.publishDate} onChange={(e) => setForm({ ...form, publishDate: e.target.value })} />
-          </div>
-          <div>
-            <Label>Category</Label>
-            <Input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="Milling" />
-          </div>
-          <div>
-            <Label>Application Type</Label>
-            <Input
-              value={form.applicationType}
-              onChange={(e) => setForm({ ...form, applicationType: e.target.value })}
-              placeholder="Shoulder 90°"
-            />
-          </div>
-          <div className="col-span-2">
-            <Label>Designation</Label>
-            <Input
-              value={form.designation}
-              onChange={(e) => setForm({ ...form, designation: e.target.value })}
-              placeholder="HSM90S APCR 1405"
-            />
-          </div>
-
-          <div className="col-span-4">
-            <Label>Recommended Applications</Label>
-            <Textarea
-              rows={2}
-              value={form.recommendedApplications}
-              onChange={(e) => setForm({ ...form, recommendedApplications: e.target.value })}
-            />
-          </div>
-          <div className="col-span-4">
-            <Label>Innovation</Label>
-            <Textarea rows={2} value={form.innovation} onChange={(e) => setForm({ ...form, innovation: e.target.value })} />
-          </div>
-          <div className="col-span-4">
-            <Label>Key Advantages</Label>
-            <Textarea rows={2} value={form.keyAdvantages} onChange={(e) => setForm({ ...form, keyAdvantages: e.target.value })} />
-          </div>
-          <div className="col-span-4">
-            <Label>Applicable Materials (free text)</Label>
-            <Input
-              value={form.materialsText}
-              onChange={(e) => setForm({ ...form, materialsText: e.target.value })}
-              placeholder="Aluminum, aluminum alloys, other non-ferrous metals"
-            />
-          </div>
-
-          <div className="col-span-4">
-            <Label>Linked Materials (catalog)</Label>
-            <div className="flex flex-wrap gap-2 rounded-lg border border-neutral-300 p-2 dark:border-neutral-700">
-              {materials.length === 0 && <span className="text-xs text-neutral-500 dark:text-neutral-400">No materials yet.</span>}
-              {materials.map((m) => (
-                <label
-                  key={m.id}
-                  className="flex items-center gap-1.5 rounded-full border border-neutral-200 px-2 py-1 text-xs dark:border-neutral-700"
-                >
-                  <input type="checkbox" checked={materialIds.includes(m.id)} onChange={() => toggleMaterial(m.id)} />
-                  {m.name}
-                </label>
-              ))}
+      <AddSection label="NPA" editing={editingId !== null} onCancelEdit={resetForm}>
+        <Card className="mb-6 p-4">
+          <form onSubmit={onSubmit} className="grid grid-cols-4 gap-4">
+            <div>
+              <Label>NPA No.</Label>
+              <Input value={form.npaNumber} onChange={(e) => setForm({ ...form, npaNumber: e.target.value })} placeholder="30-2025" />
             </div>
-          </div>
+            <div className="col-span-2">
+              <Label>Title</Label>
+              <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
+            </div>
+            <div>
+              <Label>Publish Date</Label>
+              <Input type="date" value={form.publishDate} onChange={(e) => setForm({ ...form, publishDate: e.target.value })} />
+            </div>
+            <div>
+              <Label>Category</Label>
+              <Input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="Milling" />
+            </div>
+            <div>
+              <Label>Application Type</Label>
+              <Input
+                value={form.applicationType}
+                onChange={(e) => setForm({ ...form, applicationType: e.target.value })}
+                placeholder="Shoulder 90°"
+              />
+            </div>
+            <div className="col-span-2">
+              <Label>Designation</Label>
+              <Input
+                value={form.designation}
+                onChange={(e) => setForm({ ...form, designation: e.target.value })}
+                placeholder="HSM90S APCR 1405"
+              />
+            </div>
 
-          <div className="col-span-4">
-            <div className="mb-1 flex items-center justify-between">
-              <Label>Additional Attributes</Label>
-              <Button type="button" variant="secondary" onClick={addAttrRow}>
-                + Add Attribute
+            <div className="col-span-4">
+              <Label>Recommended Applications</Label>
+              <Textarea
+                rows={2}
+                value={form.recommendedApplications}
+                onChange={(e) => setForm({ ...form, recommendedApplications: e.target.value })}
+              />
+            </div>
+            <div className="col-span-4">
+              <Label>Innovation</Label>
+              <Textarea rows={2} value={form.innovation} onChange={(e) => setForm({ ...form, innovation: e.target.value })} />
+            </div>
+            <div className="col-span-4">
+              <Label>Key Advantages</Label>
+              <Textarea rows={2} value={form.keyAdvantages} onChange={(e) => setForm({ ...form, keyAdvantages: e.target.value })} />
+            </div>
+            <div className="col-span-4">
+              <Label>Applicable Materials (free text)</Label>
+              <Input
+                value={form.materialsText}
+                onChange={(e) => setForm({ ...form, materialsText: e.target.value })}
+                placeholder="Aluminum, aluminum alloys, other non-ferrous metals"
+              />
+            </div>
+
+            <div className="col-span-4">
+              <Label>Linked Materials (catalog)</Label>
+              <div className="flex flex-wrap gap-2 rounded-lg border border-neutral-300 p-2 dark:border-neutral-700">
+                {materials.length === 0 && <span className="text-xs text-neutral-500 dark:text-neutral-400">No materials yet.</span>}
+                {materials.map((m) => (
+                  <label
+                    key={m.id}
+                    className="flex items-center gap-1.5 rounded-full border border-neutral-200 px-2 py-1 text-xs dark:border-neutral-700"
+                  >
+                    <input type="checkbox" checked={materialIds.includes(m.id)} onChange={() => toggleMaterial(m.id)} />
+                    {m.name}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="col-span-4">
+              <div className="mb-1 flex items-center justify-between">
+                <Label>Additional Attributes</Label>
+                <Button type="button" variant="secondary" onClick={addAttrRow}>
+                  + Add Attribute
+                </Button>
+              </div>
+              <p className="mb-2 text-xs text-neutral-500 dark:text-neutral-400">
+                Use this for anything not covered above — not every NPA lists the same properties.
+              </p>
+              <div className="space-y-2">
+                {attributes.map((row, i) => (
+                  <div key={i} className="flex gap-2">
+                    <Input
+                      className="w-48"
+                      placeholder="Label (e.g. Coolant)"
+                      value={row.label}
+                      onChange={(e) => updateAttrRow(i, "label", e.target.value)}
+                    />
+                    <Input
+                      placeholder="Value"
+                      value={row.value}
+                      onChange={(e) => updateAttrRow(i, "value", e.target.value)}
+                    />
+                    <Button type="button" variant="ghost" onClick={() => removeAttrRow(i)}>
+                      Remove
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="col-span-4">
+              <Label>Notes</Label>
+              <Textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+            </div>
+
+            <div className="col-span-2">
+              <Label>Image</Label>
+              <Input type="file" accept="image/*" onChange={onImagePicked} />
+              {image && <img src={image} alt="" className="mt-2 h-24 rounded-lg object-contain" />}
+            </div>
+            <div className="col-span-2">
+              <Label>Source NPA (PDF)</Label>
+              <Input type="file" accept="application/pdf" onChange={onSourceFilePicked} />
+              {sourceFile && <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">{sourceFile.name}</p>}
+            </div>
+
+            {error && <p className="col-span-4 text-sm text-red-600 dark:text-red-400">{error}</p>}
+            <div className="col-span-4 flex gap-2">
+              <Button type="submit" disabled={submitting}>
+                {editingId ? "Save Changes" : "Add NPA"}
               </Button>
+              {editingId && (
+                <Button type="button" variant="secondary" onClick={resetForm}>
+                  Cancel
+                </Button>
+              )}
             </div>
-            <p className="mb-2 text-xs text-neutral-500 dark:text-neutral-400">
-              Use this for anything not covered above — not every NPA lists the same properties.
-            </p>
-            <div className="space-y-2">
-              {attributes.map((row, i) => (
-                <div key={i} className="flex gap-2">
-                  <Input
-                    className="w-48"
-                    placeholder="Label (e.g. Coolant)"
-                    value={row.label}
-                    onChange={(e) => updateAttrRow(i, "label", e.target.value)}
-                  />
-                  <Input
-                    placeholder="Value"
-                    value={row.value}
-                    onChange={(e) => updateAttrRow(i, "value", e.target.value)}
-                  />
-                  <Button type="button" variant="ghost" onClick={() => removeAttrRow(i)}>
-                    Remove
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="col-span-4">
-            <Label>Notes</Label>
-            <Textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
-          </div>
-
-          <div className="col-span-2">
-            <Label>Image</Label>
-            <Input type="file" accept="image/*" onChange={onImagePicked} />
-            {image && <img src={image} alt="" className="mt-2 h-24 rounded-lg object-contain" />}
-          </div>
-          <div className="col-span-2">
-            <Label>Source NPA (PDF)</Label>
-            <Input type="file" accept="application/pdf" onChange={onSourceFilePicked} />
-            {sourceFile && <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">{sourceFile.name}</p>}
-          </div>
-
-          {error && <p className="col-span-4 text-sm text-red-600 dark:text-red-400">{error}</p>}
-          <div className="col-span-4 flex gap-2">
-            <Button type="submit" disabled={submitting}>
-              {editingId ? "Save Changes" : "Add NPA"}
-            </Button>
-            {editingId && (
-              <Button type="button" variant="secondary" onClick={resetForm}>
-                Cancel
-              </Button>
-            )}
-          </div>
-        </form>
-      </Card>
+          </form>
+        </Card>
+      </AddSection>
 
       <div className="space-y-2">
         {npas.map((n) => (
