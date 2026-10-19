@@ -72,6 +72,7 @@ export function Substrates() {
         title="Substrates"
         singular="substrate"
         hideHeader
+        collapsibleForm
         textFields={TEXT_FIELDS}
         renderList={(ctx) => <SubstratesList {...ctx} />}
       />

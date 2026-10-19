@@ -185,7 +185,7 @@ export function GlossaryPage({
   // Leave out the image field (entries of this kind have no picture).
   noImage?: boolean;
   // Hide the add/edit form behind an "+ Add" button; it opens on click or on
-  // Edit, and closes on Cancel or after a successful save.
+  // Edit, and closes on the button again, Cancel or a successful save.
   collapsibleForm?: boolean;
   // Label of the name field (e.g. "Brand").
   nameLabel?: string;
@@ -302,11 +302,19 @@ export function GlossaryPage({
     <div className={renderList ? "" : "max-w-3xl"}>
       {!hideHeader && <PageHeader title={title} />}
       <div ref={formRef} className="max-w-3xl scroll-mt-4">
-        {!formOpen ? (
-          <Button type="button" className="mb-6" onClick={() => setFormOpen(true)}>
-            + Add {singular}
+        {/* With a collapsible form, the button opens and closes it. */}
+        {collapsibleForm && (
+          <Button
+            type="button"
+            variant={formOpen ? "secondary" : "primary"}
+            className={formOpen ? "mb-3" : "mb-6"}
+            onClick={() => (formOpen ? cancelEdit() : setFormOpen(true))}
+            aria-expanded={formOpen}
+          >
+            {formOpen ? "✕ Close" : `+ Add ${singular}`}
           </Button>
-        ) : (
+        )}
+        {formOpen && (
         <Card className="mb-6 p-4">
           <form onSubmit={onSubmit} className="grid grid-cols-1 gap-4">
             <div>
