@@ -294,6 +294,7 @@ export interface GradeRecommendation {
   recAe: number | null;
   recCoolant: "NONE" | "AIR" | "OIL" | null;
   recNotes: string | null;
+  recTool: string | null;
   position: number;
 }
 
