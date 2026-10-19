@@ -5,7 +5,7 @@ import { ISO513_COLORS, MATERIAL_GROUPS } from "../../lib/npaKnowledgeConstants"
 import { FAMILY_GROUPS } from "../../lib/gradeGroups";
 import { ALL_SCOPE } from "../../lib/gradeCases";
 import type { Application, Grade, GradeFamily, GradeRecommendation, Iso513Group, Material } from "../../lib/types";
-import { coolantLabel, num, operationLabel, rangeText, recommendationsFor } from "../../lib/gradeRecommendations";
+import { COOLANT_LABEL, coolantLabel, feedUnitLabel, num, operationLabel, rangeText, recommendationsFor } from "../../lib/gradeRecommendations";
 import { Button, Input, Label, Modal, Select, Textarea } from "../../components/ui";
 
 // Recommended cutting conditions for a family's grades, as a table per ISO
@@ -67,7 +67,19 @@ export function GradeConditions({
         const hasDoc = groupRows.some((r) => r.apMin != null || r.apMax != null);
         const hasFeed = groupRows.some((r) => r.feedMin != null || r.feedMax != null);
         const hasCoolant = groupRows.some((r) => r.dry || r.wet);
+        const hasVc = groupRows.some((r) => r.vcMin != null || r.vcRec != null || r.vcMax != null);
+        // Recommended working conditions (the ones shown on Materials).
+        const has = {
+          vc: groupRows.some((r) => r.recVc != null),
+          feed: groupRows.some((r) => r.recFeed != null),
+          ap: groupRows.some((r) => r.recAp != null),
+          ae: groupRows.some((r) => r.recAe != null),
+          coolant: groupRows.some((r) => r.recCoolant != null),
+          tool: groupRows.some((r) => !!r.recTool),
+          notes: groupRows.some((r) => !!r.recNotes),
+        };
         const cell = "border-b border-neutral-200 px-2 py-2 dark:border-neutral-700";
+        const recTh = "border-b border-neutral-200 bg-blue-50/60 px-2 py-1.5 font-medium dark:border-neutral-700 dark:bg-blue-900/20";
         return (
           <div key={group.value} data-conditions-group={group.value}>
             <div className="mb-1 rounded-lg px-3 py-1.5 text-sm font-semibold text-neutral-900" style={{ backgroundColor: group.color }}>
@@ -81,10 +93,17 @@ export function GradeConditions({
                     <th className="border-b border-neutral-200 px-2 py-1.5 font-medium dark:border-neutral-700">Application</th>
                     <th className="border-b border-neutral-200 px-2 py-1.5 font-medium dark:border-neutral-700">Operation</th>
                     <th className="border-b border-neutral-200 px-2 py-1.5 font-medium dark:border-neutral-700">Grade</th>
-                    <th className="border-b border-neutral-200 px-2 py-1.5 text-center font-medium dark:border-neutral-700">V (m/min)</th>
+                    {hasVc && <th className="border-b border-neutral-200 px-2 py-1.5 text-center font-medium dark:border-neutral-700">V (m/min)</th>}
                     {hasDoc && <th className="border-b border-neutral-200 px-2 py-1.5 text-center font-medium dark:border-neutral-700">DOC (mm)</th>}
                     {hasFeed && <th className="border-b border-neutral-200 px-2 py-1.5 text-center font-medium dark:border-neutral-700">f (mm/rev)</th>}
                     {hasCoolant && <th className="border-b border-neutral-200 px-2 py-1.5 font-medium dark:border-neutral-700">Coolant</th>}
+                    {has.vc && <th className={`${recTh} text-center`}>Rec. Vc (m/min)</th>}
+                    {has.feed && <th className={`${recTh} text-center`}>Rec. f</th>}
+                    {has.ap && <th className={`${recTh} text-center`}>Rec. Ap (mm)</th>}
+                    {has.ae && <th className={`${recTh} text-center`}>Rec. Ae (mm)</th>}
+                    {has.coolant && <th className={recTh}>Rec. coolant</th>}
+                    {has.tool && <th className={recTh}>Rec. tool</th>}
+                    {has.notes && <th className={recTh}>Rec. notes</th>}
                     <th className="border-b border-neutral-200 dark:border-neutral-700" />
                   </tr>
                 </thead>
@@ -113,21 +132,40 @@ export function GradeConditions({
                             ))}
                             {r.notes && <div className="text-xs whitespace-pre-line text-neutral-500 dark:text-neutral-400">{r.notes}</div>}
                           </td>
-                          <td className={`${cell} text-center whitespace-nowrap tabular-nums`} data-vc>
-                            {r.vcRec != null ? (
-                              // min  REC  max, with the recommended speed in bold.
-                              <span className="inline-flex items-baseline gap-2">
-                                <span>{num(r.vcMin)}</span>
-                                <span className="text-base font-extrabold">{num(r.vcRec)}</span>
-                                <span>{num(r.vcMax)}</span>
-                              </span>
-                            ) : (
-                              <span className="text-base font-extrabold">{rangeText(r.vcMin, r.vcMax)}</span>
-                            )}
-                          </td>
+                          {hasVc && (
+                            <td className={`${cell} text-center whitespace-nowrap tabular-nums`} data-vc>
+                              {r.vcRec != null ? (
+                                // min  REC  max, with the recommended speed in bold.
+                                <span className="inline-flex items-baseline gap-2">
+                                  <span>{num(r.vcMin)}</span>
+                                  <span className="text-base font-extrabold">{num(r.vcRec)}</span>
+                                  <span>{num(r.vcMax)}</span>
+                                </span>
+                              ) : (
+                                <span className="text-base font-extrabold">{rangeText(r.vcMin, r.vcMax)}</span>
+                              )}
+                            </td>
+                          )}
                           {hasDoc && <td className={`${cell} text-center whitespace-nowrap tabular-nums`}>{rangeText(r.apMin, r.apMax) || "-"}</td>}
                           {hasFeed && <td className={`${cell} text-center whitespace-nowrap tabular-nums`}>{rangeText(r.feedMin, r.feedMax) || "-"}</td>}
                           {hasCoolant && <td className={cell}>{coolantLabel(r)}</td>}
+                          {has.vc && <td className={`${cell} text-center font-bold whitespace-nowrap tabular-nums`}>{num(r.recVc) || "-"}</td>}
+                          {has.feed && (
+                            <td className={`${cell} text-center whitespace-nowrap tabular-nums`}>{r.recFeed != null ? `${num(r.recFeed)} ${feedUnitLabel(r.recFeedUnit)}` : "-"}</td>
+                          )}
+                          {has.ap && <td className={`${cell} text-center whitespace-nowrap tabular-nums`}>{num(r.recAp) || "-"}</td>}
+                          {has.ae && <td className={`${cell} text-center whitespace-nowrap tabular-nums`}>{num(r.recAe) || "-"}</td>}
+                          {has.coolant && <td className={cell}>{r.recCoolant ? COOLANT_LABEL[r.recCoolant] : "-"}</td>}
+                          {has.tool && (
+                            <td className={`${cell} whitespace-pre-line`} dir="auto">
+                              {r.recTool}
+                            </td>
+                          )}
+                          {has.notes && (
+                            <td className={`${cell} whitespace-pre-line`} dir="auto">
+                              {r.recNotes}
+                            </td>
+                          )}
                           <td className="border-b border-neutral-200 px-2 py-2 text-right whitespace-nowrap dark:border-neutral-700">
                             <span className="opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
                               <button type="button" onClick={() => setEditing(r)} className="px-1.5 text-xs text-blue-600 hover:underline dark:text-blue-400">
