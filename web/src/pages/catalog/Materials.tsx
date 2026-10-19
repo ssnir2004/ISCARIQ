@@ -3,10 +3,10 @@ import { AddSection } from "../../components/AddSection";
 import { useResource } from "../../lib/useResource";
 import { api, ApiError } from "../../lib/api";
 import { ISO513_COLORS, MATERIAL_GROUPS } from "../../lib/npaKnowledgeConstants";
-import type { Iso513Group, Material } from "../../lib/types";
+import type { GradeRecommendation, Iso513Group, Material } from "../../lib/types";
 import { Button, Card, Input, Iso513Badge, Label, Modal, PageHeader, Select } from "../../components/ui";
 import { ClipboardImagePaste } from "../../components/npaKnowledge/ClipboardImagePaste";
-import { MaterialGrades } from "./MaterialGrades";
+import { MaterialGrades, MaterialGradesSummary, recommendationsFor } from "./MaterialGrades";
 
 const EMPTY_FORM = {
   iso513Group: "P" as Iso513Group,
@@ -36,6 +36,8 @@ function MaterialDetails({ m }: { m: Material }) {
 
 export function Materials() {
   const { data, reload } = useResource<Material>("/materials");
+  // For each material's recommended grades, by application (Grades → Conditions).
+  const { data: recommendations } = useResource<GradeRecommendation>("/grade-recommendations");
   const [form, setForm] = useState(EMPTY_FORM);
   const [editing, setEditing] = useState<Material | null>(null);
   // The material whose recommended grades are open, if any.
@@ -250,6 +252,12 @@ export function Materials() {
                     {category?.description && <span className="ml-2 text-neutral-500 dark:text-neutral-400">— {category.description}</span>}
                   </div>
                   {category && <MaterialDetails m={category} />}
+                  {category && (
+                    <MaterialGradesSummary
+                      recs={recommendationsFor(recommendations, category)}
+                      onOpen={() => setGradesOf({ material: category, title: `${g} — ${categoryName(g)}` })}
+                    />
+                  )}
                 </div>
                 <div className="flex shrink-0 gap-1">
                   <Button variant="ghost" onClick={() => startAdd(g)}>
@@ -286,6 +294,7 @@ export function Materials() {
                           {m.description && <span className="ml-2 text-neutral-500 dark:text-neutral-400">— {m.description}</span>}
                         </div>
                         <MaterialDetails m={m} />
+                        <MaterialGradesSummary recs={recommendationsFor(recommendations, m)} onOpen={() => setGradesOf({ material: m, title: `${g} — ${m.name}` })} />
                       </div>
                       <div className="flex shrink-0 gap-1">
                         <Button variant="ghost" onClick={() => startEdit(m)}>
