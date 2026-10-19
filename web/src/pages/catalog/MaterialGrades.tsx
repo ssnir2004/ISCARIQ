@@ -8,12 +8,54 @@ import type { GradeFamily, GradeRecommendation, Material } from "../../lib/types
 // for an ISO 513 category those of the whole group. Opened from the
 // Materials screen.
 
-const FAMILY_LABEL: Record<GradeFamily, string> = { CARBIDE: "Carbide", CBN: "CBN", CERAMIC: "Ceramic", PCD: "PCD" };
 const ANY = "Any application";
+
+// The recommendations for a material: its own (subcategory) or its whole
+// ISO group's (category).
+export function recommendationsFor(all: GradeRecommendation[], material: Material) {
+  return all.filter((r) => (material.isCategory ? r.material.iso513Group === material.iso513Group : r.material.id === material.id));
+}
+
+// One line per application with its recommended grades, shown under a
+// material on the Materials screen; clicking it opens the details.
+export function MaterialGradesSummary({ recs, onOpen }: { recs: GradeRecommendation[]; onOpen: () => void }) {
+  if (recs.length === 0) return null;
+  const byApp = new Map<string, string[]>();
+  for (const r of [...recs].sort((a, b) => a.position - b.position)) {
+    for (const app of r.applications.length ? r.applications.map((a) => a.name) : [ANY]) {
+      const names = byApp.get(app) ?? [];
+      for (const g of r.grades) if (!names.includes(g.name)) names.push(g.name);
+      byApp.set(app, names);
+    }
+  }
+  const apps = [...byApp.keys()].sort((a, b) => (a === ANY ? 1 : b === ANY ? -1 : a.localeCompare(b)));
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="mt-1.5 flex flex-col items-start gap-0.5 rounded-md text-left text-xs hover:bg-neutral-50 dark:hover:bg-neutral-800/60"
+      title="Click for the details (Vc, f, ap, operation, coolant)"
+      data-material-summary
+    >
+      {apps.map((app) => (
+        <span key={app} className="flex flex-wrap items-center gap-1" data-summary-app={app}>
+          <span className="font-semibold text-neutral-600 dark:text-neutral-300">{app}:</span>
+          {byApp.get(app)!.map((g) => (
+            <span key={g} className="rounded bg-blue-50 px-1.5 py-px font-semibold text-blue-800 dark:bg-blue-900/30 dark:text-blue-200">
+              {g}
+            </span>
+          ))}
+        </span>
+      ))}
+    </button>
+  );
+}
+
+const FAMILY_LABEL: Record<GradeFamily, string> = { CARBIDE: "Carbide", CBN: "CBN", CERAMIC: "Ceramic", PCD: "PCD" };
 
 export function MaterialGrades({ material, title, onClose }: { material: Material; title: string; onClose: () => void }) {
   const { data: all, loading } = useResource<GradeRecommendation>("/grade-recommendations");
-  const recs = all.filter((r) => (material.isCategory ? r.material.iso513Group === material.iso513Group : r.material.id === material.id));
+  const recs = recommendationsFor(all, material);
 
   // A recommendation for several applications is listed under each.
   const apps = [...new Set(recs.flatMap((r) => (r.applications.length ? r.applications.map((a) => a.name) : [ANY])))].sort((a, b) =>
