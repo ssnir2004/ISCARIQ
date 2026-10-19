@@ -285,8 +285,8 @@ function RecommendationModal({
   }
 
   return (
-    <Modal title={existing ? "Edit recommendation" : "Add recommendation"} onClose={onClose}>
-      <div className="space-y-3" data-recommendation-form>
+    <Modal title={existing ? "Edit recommendation" : "Add recommendation"} onClose={onClose} full>
+      <div className="mx-auto max-w-6xl space-y-4" data-recommendation-form>
         <div>
           <Label>Work material</Label>
           <div className="space-y-1.5" data-material-choices>
