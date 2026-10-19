@@ -286,6 +286,14 @@ export interface GradeRecommendation {
   dry: boolean;
   wet: boolean;
   notes: string | null;
+  // Recommended working conditions (shown on the Materials screen).
+  recVc: number | null;
+  recFeed: number | null;
+  recFeedUnit: "PER_REV" | "PER_TOOTH";
+  recAp: number | null;
+  recAe: number | null;
+  recCoolant: "NONE" | "AIR" | "OIL" | null;
+  recNotes: string | null;
   position: number;
 }
 
