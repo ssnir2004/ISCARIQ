@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { AddSection } from "../../components/AddSection";
 import { useResource } from "../../lib/useResource";
 import { api, ApiError } from "../../lib/api";
 import type { CoolantPreference, CuttingCondition, Insert, InsertProblemMatch, Material, OperationType, ProblemTag } from "../../lib/types";
@@ -64,78 +65,80 @@ function CuttingConditionsSection({ inserts, materials }: { inserts: Insert[]; m
   return (
     <Card className="p-4">
       <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-neutral-100">Cutting Conditions</h2>
-      <form onSubmit={onSubmit} className="mb-4 grid grid-cols-4 gap-3">
-        <div>
-          <Label>Insert</Label>
-          <Select value={form.insertId} onChange={(e) => setForm({ ...form, insertId: e.target.value })} required>
-            <option value="">Select…</option>
-            {inserts.map((i) => (
-              <option key={i.id} value={i.id}>
-                {i.designation}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <div>
-          <Label>Material</Label>
-          <Select value={form.materialId} onChange={(e) => setForm({ ...form, materialId: e.target.value })} required>
-            <option value="">Select…</option>
-            {materials.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.iso513Group} — {m.name}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <div>
-          <Label>Operation</Label>
-          <Select value={form.operationType} onChange={(e) => setForm({ ...form, operationType: e.target.value as OperationType })}>
-            {OPERATIONS.map((o) => (
-              <option key={o} value={o}>
-                {o}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <div>
-          <Label>Coolant</Label>
-          <Select value={form.coolant} onChange={(e) => setForm({ ...form, coolant: e.target.value as CoolantPreference })}>
-            {COOLANT_OPTIONS.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <div>
-          <Label>ap min</Label>
-          <Input type="number" step="any" value={form.apMin} onChange={(e) => setForm({ ...form, apMin: e.target.value })} />
-        </div>
-        <div>
-          <Label>ap max</Label>
-          <Input type="number" step="any" value={form.apMax} onChange={(e) => setForm({ ...form, apMax: e.target.value })} />
-        </div>
-        <div>
-          <Label>vc min (m/min)</Label>
-          <Input type="number" step="any" value={form.vcMin} onChange={(e) => setForm({ ...form, vcMin: e.target.value })} />
-        </div>
-        <div>
-          <Label>vc max (m/min)</Label>
-          <Input type="number" step="any" value={form.vcMax} onChange={(e) => setForm({ ...form, vcMax: e.target.value })} />
-        </div>
-        <div>
-          <Label>feed min (mm/rev)</Label>
-          <Input type="number" step="any" value={form.feedMin} onChange={(e) => setForm({ ...form, feedMin: e.target.value })} />
-        </div>
-        <div>
-          <Label>feed max (mm/rev)</Label>
-          <Input type="number" step="any" value={form.feedMax} onChange={(e) => setForm({ ...form, feedMax: e.target.value })} />
-        </div>
-        {error && <p className="col-span-4 text-sm text-red-600 dark:text-red-400">{error}</p>}
-        <div className="col-span-4">
-          <Button type="submit">Add Cutting Condition</Button>
-        </div>
-      </form>
+      <AddSection label="cutting condition">
+        <form onSubmit={onSubmit} className="mb-4 grid grid-cols-4 gap-3">
+          <div>
+            <Label>Insert</Label>
+            <Select value={form.insertId} onChange={(e) => setForm({ ...form, insertId: e.target.value })} required>
+              <option value="">Select…</option>
+              {inserts.map((i) => (
+                <option key={i.id} value={i.id}>
+                  {i.designation}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <Label>Material</Label>
+            <Select value={form.materialId} onChange={(e) => setForm({ ...form, materialId: e.target.value })} required>
+              <option value="">Select…</option>
+              {materials.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.iso513Group} — {m.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <Label>Operation</Label>
+            <Select value={form.operationType} onChange={(e) => setForm({ ...form, operationType: e.target.value as OperationType })}>
+              {OPERATIONS.map((o) => (
+                <option key={o} value={o}>
+                  {o}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <Label>Coolant</Label>
+            <Select value={form.coolant} onChange={(e) => setForm({ ...form, coolant: e.target.value as CoolantPreference })}>
+              {COOLANT_OPTIONS.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <Label>ap min</Label>
+            <Input type="number" step="any" value={form.apMin} onChange={(e) => setForm({ ...form, apMin: e.target.value })} />
+          </div>
+          <div>
+            <Label>ap max</Label>
+            <Input type="number" step="any" value={form.apMax} onChange={(e) => setForm({ ...form, apMax: e.target.value })} />
+          </div>
+          <div>
+            <Label>vc min (m/min)</Label>
+            <Input type="number" step="any" value={form.vcMin} onChange={(e) => setForm({ ...form, vcMin: e.target.value })} />
+          </div>
+          <div>
+            <Label>vc max (m/min)</Label>
+            <Input type="number" step="any" value={form.vcMax} onChange={(e) => setForm({ ...form, vcMax: e.target.value })} />
+          </div>
+          <div>
+            <Label>feed min (mm/rev)</Label>
+            <Input type="number" step="any" value={form.feedMin} onChange={(e) => setForm({ ...form, feedMin: e.target.value })} />
+          </div>
+          <div>
+            <Label>feed max (mm/rev)</Label>
+            <Input type="number" step="any" value={form.feedMax} onChange={(e) => setForm({ ...form, feedMax: e.target.value })} />
+          </div>
+          {error && <p className="col-span-4 text-sm text-red-600 dark:text-red-400">{error}</p>}
+          <div className="col-span-4">
+            <Button type="submit">Add Cutting Condition</Button>
+          </div>
+        </form>
+      </AddSection>
 
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
@@ -218,49 +221,51 @@ function ProblemMatchesSection({ inserts, materials, tags }: { inserts: Insert[]
       <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-neutral-100">
         Insert ↔ Problem Matches <span className="font-normal text-neutral-500">(what each insert solves)</span>
       </h2>
-      <form onSubmit={onSubmit} className="mb-4 grid grid-cols-4 gap-3">
-        <div>
-          <Label>Insert</Label>
-          <Select value={form.insertId} onChange={(e) => setForm({ ...form, insertId: e.target.value })} required>
-            <option value="">Select…</option>
-            {inserts.map((i) => (
-              <option key={i.id} value={i.id}>
-                {i.designation}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <div>
-          <Label>Problem</Label>
-          <Select value={form.problemTagId} onChange={(e) => setForm({ ...form, problemTagId: e.target.value })} required>
-            <option value="">Select…</option>
-            {tags.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <div>
-          <Label>Material (optional)</Label>
-          <Select value={form.materialId} onChange={(e) => setForm({ ...form, materialId: e.target.value })}>
-            <option value="">Any</option>
-            {materials.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.iso513Group} — {m.name}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <div>
-          <Label>Priority</Label>
-          <Input type="number" value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })} />
-        </div>
-        {error && <p className="col-span-4 text-sm text-red-600 dark:text-red-400">{error}</p>}
-        <div className="col-span-4">
-          <Button type="submit">Add Match</Button>
-        </div>
-      </form>
+      <AddSection label="match">
+        <form onSubmit={onSubmit} className="mb-4 grid grid-cols-4 gap-3">
+          <div>
+            <Label>Insert</Label>
+            <Select value={form.insertId} onChange={(e) => setForm({ ...form, insertId: e.target.value })} required>
+              <option value="">Select…</option>
+              {inserts.map((i) => (
+                <option key={i.id} value={i.id}>
+                  {i.designation}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <Label>Problem</Label>
+            <Select value={form.problemTagId} onChange={(e) => setForm({ ...form, problemTagId: e.target.value })} required>
+              <option value="">Select…</option>
+              {tags.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <Label>Material (optional)</Label>
+            <Select value={form.materialId} onChange={(e) => setForm({ ...form, materialId: e.target.value })}>
+              <option value="">Any</option>
+              {materials.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.iso513Group} — {m.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <Label>Priority</Label>
+            <Input type="number" value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })} />
+          </div>
+          {error && <p className="col-span-4 text-sm text-red-600 dark:text-red-400">{error}</p>}
+          <div className="col-span-4">
+            <Button type="submit">Add Match</Button>
+          </div>
+        </form>
+      </AddSection>
 
       <div className="space-y-1">
         {data.map((m) => (

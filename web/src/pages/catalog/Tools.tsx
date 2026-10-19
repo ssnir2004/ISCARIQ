@@ -1,4 +1,5 @@
 import { useState, type ChangeEvent, type FormEvent } from "react";
+import { AddSection } from "../../components/AddSection";
 import { useResource } from "../../lib/useResource";
 import { api, ApiError } from "../../lib/api";
 import type { Tool } from "../../lib/types";
@@ -96,58 +97,60 @@ export function Tools() {
   return (
     <div className="max-w-5xl">
       <PageHeader title="Tools" />
-      <Card className="mb-6 p-4">
-        <form onSubmit={onSubmit} className="grid grid-cols-4 gap-4">
-          <div className="col-span-2">
-            <Label>Image</Label>
-            <div className="flex items-center gap-3">
-              <Input key={fileInputKey} type="file" accept="image/*" onChange={onImageChange} />
-              {form.image && (
-                <img src={form.image} alt="Preview" className="h-10 w-10 rounded object-cover" />
+      <AddSection label="tool" editing={editingId !== null} onCancelEdit={cancelEdit}>
+        <Card className="mb-6 p-4">
+          <form onSubmit={onSubmit} className="grid grid-cols-4 gap-4">
+            <div className="col-span-2">
+              <Label>Image</Label>
+              <div className="flex items-center gap-3">
+                <Input key={fileInputKey} type="file" accept="image/*" onChange={onImageChange} />
+                {form.image && (
+                  <img src={form.image} alt="Preview" className="h-10 w-10 rounded object-cover" />
+                )}
+              </div>
+            </div>
+            <div>
+              <Label>Item</Label>
+              <Input value={form.item} onChange={(e) => setForm({ ...form, item: e.target.value })} placeholder="5506322" />
+            </div>
+            <div>
+              <Label>Designation</Label>
+              <Input value={form.designation} onChange={(e) => setForm({ ...form, designation: e.target.value })} required />
+            </div>
+            <div>
+              <Label>Tail connection</Label>
+              <Input value={form.tailConnection} onChange={(e) => setForm({ ...form, tailConnection: e.target.value })} required />
+            </div>
+            <div>
+              <Label>Tail size</Label>
+              <Input value={form.tailSize} onChange={(e) => setForm({ ...form, tailSize: e.target.value })} required />
+            </div>
+            <div>
+              <Label>Nose connection</Label>
+              <Input value={form.noseConnection} onChange={(e) => setForm({ ...form, noseConnection: e.target.value })} required />
+            </div>
+            <div>
+              <Label>Nose size</Label>
+              <Input value={form.noseSize} onChange={(e) => setForm({ ...form, noseSize: e.target.value })} required />
+            </div>
+            <div className="col-span-4">
+              <Label>Notes</Label>
+              <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+            </div>
+            {error && <p className="col-span-4 text-sm text-red-600 dark:text-red-400">{error}</p>}
+            <div className="col-span-4 flex gap-2">
+              <Button type="submit" disabled={submitting}>
+                {editingId ? "Save Changes" : "Add Tool"}
+              </Button>
+              {editingId && (
+                <Button type="button" variant="secondary" onClick={cancelEdit}>
+                  Cancel
+                </Button>
               )}
             </div>
-          </div>
-          <div>
-            <Label>Item</Label>
-            <Input value={form.item} onChange={(e) => setForm({ ...form, item: e.target.value })} placeholder="5506322" />
-          </div>
-          <div>
-            <Label>Designation</Label>
-            <Input value={form.designation} onChange={(e) => setForm({ ...form, designation: e.target.value })} required />
-          </div>
-          <div>
-            <Label>Tail connection</Label>
-            <Input value={form.tailConnection} onChange={(e) => setForm({ ...form, tailConnection: e.target.value })} required />
-          </div>
-          <div>
-            <Label>Tail size</Label>
-            <Input value={form.tailSize} onChange={(e) => setForm({ ...form, tailSize: e.target.value })} required />
-          </div>
-          <div>
-            <Label>Nose connection</Label>
-            <Input value={form.noseConnection} onChange={(e) => setForm({ ...form, noseConnection: e.target.value })} required />
-          </div>
-          <div>
-            <Label>Nose size</Label>
-            <Input value={form.noseSize} onChange={(e) => setForm({ ...form, noseSize: e.target.value })} required />
-          </div>
-          <div className="col-span-4">
-            <Label>Notes</Label>
-            <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
-          </div>
-          {error && <p className="col-span-4 text-sm text-red-600 dark:text-red-400">{error}</p>}
-          <div className="col-span-4 flex gap-2">
-            <Button type="submit" disabled={submitting}>
-              {editingId ? "Save Changes" : "Add Tool"}
-            </Button>
-            {editingId && (
-              <Button type="button" variant="secondary" onClick={cancelEdit}>
-                Cancel
-              </Button>
-            )}
-          </div>
-        </form>
-      </Card>
+          </form>
+        </Card>
+      </AddSection>
 
       <div className="overflow-x-auto rounded-xl border border-neutral-200 dark:border-neutral-800">
         <table className="w-full text-left text-sm">

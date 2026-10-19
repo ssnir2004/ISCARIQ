@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { AddSection } from "../../components/AddSection";
 import { useResource } from "../../lib/useResource";
 import { api, ApiError } from "../../lib/api";
 import type { ProblemTag } from "../../lib/types";
@@ -39,15 +40,17 @@ export function ProblemTags() {
   return (
     <div className="max-w-xl">
       <PageHeader title="Problem Tags" />
-      <Card className="mb-6 p-4">
-        <form onSubmit={onSubmit} className="flex gap-2">
-          <Input placeholder="e.g. Chip breaking" value={name} onChange={(e) => setName(e.target.value)} required />
-          <Button type="submit" disabled={submitting}>
-            Add
-          </Button>
-        </form>
-        {error && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p>}
-      </Card>
+      <AddSection label="problem tag">
+        <Card className="mb-6 p-4">
+          <form onSubmit={onSubmit} className="flex gap-2">
+            <Input placeholder="e.g. Chip breaking" value={name} onChange={(e) => setName(e.target.value)} required />
+            <Button type="submit" disabled={submitting}>
+              Add
+            </Button>
+          </form>
+          {error && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p>}
+        </Card>
+      </AddSection>
 
       <div className="space-y-2">
         {data.map((t) => (
