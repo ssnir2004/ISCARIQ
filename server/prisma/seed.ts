@@ -84,7 +84,7 @@ const ISO513_MATERIALS: { group: "P" | "M" | "K" | "N" | "S" | "H" | "SM"; name:
   { group: "M", name: "Stainless Steel", description: "Ferritic, austenitic, duplex stainless steels" },
   { group: "K", name: "Cast Iron", description: "Grey, nodular, malleable cast iron" },
   { group: "N", name: "Non-Ferrous", description: "Aluminum, copper, brass, other non-ferrous metals" },
-  { group: "S", name: "Superalloys / Titanium", description: "Heat-resistant superalloys and titanium alloys" },
+  { group: "S", name: "Superalloys", description: "Heat-resistant superalloys and titanium alloys" },
   { group: "H", name: "Hardened Materials", description: "Hardened steel and chilled cast iron (>45 HRC)" },
   { group: "SM", name: "Sintered Materials", description: "Powder-metallurgy (sintered) steels and irons" },
 ];
