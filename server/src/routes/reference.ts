@@ -697,7 +697,7 @@ const recommendationSchema = z
     recFeedUnit: z.enum(["PER_REV", "PER_TOOTH"]).default("PER_REV"),
     recAp: z.number().positive().nullable().optional(),
     recAe: z.number().positive().nullable().optional(),
-    recCoolant: z.enum(["NONE", "AIR", "OIL"]).nullable().optional(),
+    recCoolant: z.enum(["NONE", "AIR", "OIL", "WET"]).nullable().optional(),
     recNotes: z.string().trim().max(1000).nullable().optional(),
     recTool: z.string().trim().max(1000).nullable().optional(),
   })

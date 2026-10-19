@@ -292,7 +292,7 @@ export interface GradeRecommendation {
   recFeedUnit: "PER_REV" | "PER_TOOTH";
   recAp: number | null;
   recAe: number | null;
-  recCoolant: "NONE" | "AIR" | "OIL" | null;
+  recCoolant: "NONE" | "AIR" | "OIL" | "WET" | null;
   recNotes: string | null;
   recTool: string | null;
   position: number;

@@ -477,6 +477,7 @@ function RecommendationModal({
                 <option value="NONE">No</option>
                 <option value="AIR">Air</option>
                 <option value="OIL">Oil</option>
+                <option value="WET">Wet</option>
               </Select>
             </div>
             <div>

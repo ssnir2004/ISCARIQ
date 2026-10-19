@@ -685,6 +685,7 @@ enum CoolantType {
   NONE
   AIR
   OIL
+  WET
 }
 
 model GradeRecommendation {

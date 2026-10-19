@@ -7,7 +7,7 @@ export const operationLabel = (r: Pick<GradeRecommendation, "rough" | "semiFinis
   [r.rough && "Rough", r.semiFinish && "Semi-finish", r.finish && "Finish"].filter(Boolean).join(" / ");
 export const coolantLabel = (r: Pick<GradeRecommendation, "dry" | "wet">) => [r.dry && "DRY", r.wet && "WET"].filter(Boolean).join("/");
 export const feedUnitLabel = (u: GradeRecommendation["recFeedUnit"]) => (u === "PER_TOOTH" ? "mm/t" : "mm/rev");
-export const COOLANT_LABEL: Record<NonNullable<GradeRecommendation["recCoolant"]>, string> = { NONE: "No", AIR: "Air", OIL: "Oil" };
+export const COOLANT_LABEL: Record<NonNullable<GradeRecommendation["recCoolant"]>, string> = { NONE: "No", AIR: "Air", OIL: "Oil", WET: "Wet" };
 export const num = (v: number | null | undefined) => (v == null ? "" : String(v));
 
 // "0.1-0.6" style range ("0.3" when only one end is set, "" when neither).
