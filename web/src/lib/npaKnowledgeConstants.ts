@@ -28,7 +28,7 @@ export const ISO513_GROUPS: { value: Iso513Group; label: string; color: string }
   { value: "M", label: "M — Stainless Steel", color: ISO513_COLORS.M },
   { value: "K", label: "K — Cast Iron", color: ISO513_COLORS.K },
   { value: "N", label: "N — Non-Ferrous", color: ISO513_COLORS.N },
-  { value: "S", label: "S — Superalloys / Titanium", color: ISO513_COLORS.S },
+  { value: "S", label: "S — Superalloys", color: ISO513_COLORS.S },
   { value: "H", label: "H — Hardened Materials", color: ISO513_COLORS.H },
 ];
 
