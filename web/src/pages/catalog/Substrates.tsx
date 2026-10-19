@@ -1,4 +1,5 @@
-import { Button, Card } from "../../components/ui";
+import { Button, Card, PageHeader } from "../../components/ui";
+import { RulesOfThumb } from "../../components/RulesOfThumb";
 import type { Substrate } from "../../lib/types";
 import { GlossaryPage, type Entry, type GlossaryListContext, type GlossaryTextField } from "./GlossaryPage";
 import { SubstrateMap } from "./SubstrateMap";
@@ -60,14 +61,20 @@ function SubstratesList({ data, startEdit, remove }: GlossaryListContext) {
   );
 }
 
+// Rules of thumb on top (like a Grades tab), then the substrates.
 export function Substrates() {
   return (
-    <GlossaryPage
-      resource="/substrates"
-      title="Substrates"
-      singular="substrate"
-      textFields={TEXT_FIELDS}
-      renderList={(ctx) => <SubstratesList {...ctx} />}
-    />
+    <div>
+      <PageHeader title="Substrates" />
+      <RulesOfThumb scope="substrates" />
+      <GlossaryPage
+        resource="/substrates"
+        title="Substrates"
+        singular="substrate"
+        hideHeader
+        textFields={TEXT_FIELDS}
+        renderList={(ctx) => <SubstratesList {...ctx} />}
+      />
+    </div>
   );
 }
