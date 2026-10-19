@@ -6,8 +6,9 @@ import type { Grade, GradeChartBox, Iso513Group } from "../../lib/types";
 import { Button } from "../../components/ui";
 
 // Cutting speed (y, up) / Toughness (x, right) chart for one board scope and ISO 513
-// group. Each block spans a range: drag it to move, drag the corner handle to
-// resize. A block is one grade, or several grades merged into one box (they
+// group. It opens in view mode (blocks only open their cases); in edit mode
+// ("Edit layout") each block spans a range: drag it to move, drag the corner
+// handle to resize. A block is one grade, or several grades merged into one box (they
 // share a mergeId and a box). Positions are percentages of the plot area,
 // saved per scope + group + grade. Grades without a saved box are laid out
 // on a diagonal from the board ranking (hardest top-left, toughest
@@ -179,6 +180,9 @@ export function GradesChart({
   const dragRef = useRef<Drag | null>(null);
   const plotRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
+  // View mode (the default) can't move anything by accident: blocks only
+  // open their cases. Edit mode moves, resizes, merges and restacks them.
+  const [editing, setEditing] = useState(false);
   // Merge mode: clicks select blocks instead of dragging them.
   const [merging, setMerging] = useState(false);
   // Selected block keys: from merge mode, Ctrl/Shift+click, or a selection
@@ -234,8 +238,16 @@ export function GradesChart({
     return { x: clamp(((e.clientX - r.left) / r.width) * 100, 0, 100), y: clamp(((e.clientY - r.top) / r.height) * 100, 0, 100) };
   }
 
+  // View mode: a click on a block opens the cases of the grade clicked (or
+  // the block's only grade).
+  function openCasesFrom(target: HTMLElement, block: Block) {
+    const clickedId = target.closest<HTMLElement>("[data-grade-id]")?.dataset.gradeId;
+    const grade = block.grades.find((g) => g.id === clickedId) ?? (block.grades.length === 1 ? block.grades[0] : undefined);
+    if (grade && caseCount(grade.id) > 0) onOpenCases(grade);
+  }
+
   function onPointerDown(e: PointerEvent<HTMLDivElement>, block: Block, mode: Drag["mode"]) {
-    if (e.button !== 0 || (e.target as HTMLElement).closest("button")) return;
+    if (!editing || e.button !== 0 || (e.target as HTMLElement).closest("button")) return;
     e.stopPropagation();
     // Merge mode, or Ctrl/Shift+click: toggle the block in the selection.
     if (mode === "move" && (merging || e.ctrlKey || e.metaKey || e.shiftKey)) {
@@ -261,7 +273,7 @@ export function GradesChart({
 
   // Pressing on empty chart space starts a selection rectangle.
   function onPlotPointerDown(e: PointerEvent<HTMLDivElement>) {
-    if (e.button !== 0 || e.target !== e.currentTarget) return;
+    if (!editing || e.button !== 0 || e.target !== e.currentTarget) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     const { x, y } = plotPoint(e);
     const next = { x0: x, y0: y, x1: x, y1: y, additive: merging || e.ctrlKey || e.metaKey || e.shiftKey };
@@ -432,7 +444,11 @@ export function GradesChart({
           <span className="ml-2 text-xs font-normal text-neutral-500 dark:text-neutral-400">{groupLabel}</span>
         </h3>
         <div className="flex flex-wrap items-center gap-2">
-          {merging ? (
+          {!editing ? (
+            <Button variant="secondary" onClick={() => setEditing(true)} data-chart-edit>
+              ✏ Edit layout
+            </Button>
+          ) : merging ? (
             <>
               <span className="text-xs text-neutral-500 dark:text-neutral-400">Click the blocks to merge</span>
               <Button onClick={mergeSelected} disabled={selectedGradeCount < 2}>
@@ -478,6 +494,15 @@ export function GradesChart({
               </Button>
               <Button variant="secondary" onClick={resetLayout} disabled={grades.length === 0}>
                 Reset layout
+              </Button>
+              <Button
+                onClick={() => {
+                  setEditing(false);
+                  setSelected([]);
+                }}
+                data-chart-done
+              >
+                ✓ Done
               </Button>
             </>
           )}
@@ -544,8 +569,9 @@ export function GradesChart({
                     key={block.key}
                     data-chart-box={block.grades.map((g) => g.name).join("+")}
                     onPointerDown={(e) => onPointerDown(e, block, "move")}
+                    onClick={(e) => !editing && openCasesFrom(e.target as HTMLElement, block)}
                     className={`group absolute flex flex-col items-center justify-center overflow-hidden rounded-xl border-2 text-center text-neutral-900 shadow ${
-                      merging ? "cursor-pointer" : "cursor-move"
+                      !editing ? (block.grades.some((g) => caseCount(g.id) > 0) ? "cursor-pointer" : "cursor-default") : merging ? "cursor-pointer" : "cursor-move"
                     } ${active ? "shadow-lg" : ""} ${isSelected ? "ring-4 ring-blue-500" : ""}`}
                     style={{
                       // Saved stacking order; the block being dragged is drawn above all.
@@ -558,7 +584,9 @@ export function GradesChart({
                       borderColor: color,
                     }}
                     title={
-                      merging
+                      !editing
+                        ? `${block.grades.map((g) => g.name).join(", ")} — click a name for its cases (Edit layout to move or resize)`
+                        : merging
                         ? "Click to select for merging"
                         : `${block.grades.map((g) => g.name).join(", ")} — click a name for its cases, drag to move, drag the corner to resize`
                     }
@@ -585,7 +613,7 @@ export function GradesChart({
                       ))}
                       {single?.substrate && <span className="text-[10px] leading-tight opacity-75">{single.substrate.name}</span>}
                     </div>
-                    {!merging && blocks.length > 1 && (
+                    {editing && !merging && blocks.length > 1 && (
                       <span className="absolute top-0.5 left-0.5 flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
                         <button
                           type="button"
@@ -605,7 +633,7 @@ export function GradesChart({
                         </button>
                       </span>
                     )}
-                    {block.mergeId && !merging && (
+                    {editing && block.mergeId && !merging && (
                       <button
                         type="button"
                         onClick={() => split(block)}
@@ -615,7 +643,7 @@ export function GradesChart({
                         Split
                       </button>
                     )}
-                    {!merging && (
+                    {editing && !merging && (
                       <div
                         data-resize-handle
                         onPointerDown={(e) => onPointerDown(e, block, "resize")}
