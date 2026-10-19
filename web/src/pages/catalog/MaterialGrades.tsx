@@ -1,10 +1,11 @@
 import { Modal } from "../../components/ui";
 import { useResource } from "../../lib/useResource";
-import { coolantLabel, num, operationLabel, rangeText } from "../../lib/gradeRecommendations";
+import { COOLANT_LABEL, feedUnitLabel, num } from "../../lib/gradeRecommendations";
 import type { GradeFamily, GradeRecommendation, Material } from "../../lib/types";
 
 // The grades recommended for a work material (from the Grades cutting
-// conditions), by application: for a subcategory its own recommendations,
+// conditions) with their recommended working conditions (Vc, f, Ap, Ae,
+// coolant, notes), by application: for a subcategory its own recommendations,
 // for an ISO 513 category those of the whole group. Opened from the
 // Materials screen.
 
@@ -88,11 +89,12 @@ export function MaterialGrades({ material, title, onClose }: { material: Materia
                       <th className={`${cell} font-medium`}>Grades</th>
                       <th className={`${cell} font-medium`}>Family</th>
                       {material.isCategory && <th className={`${cell} font-medium`}>Material</th>}
-                      <th className={`${cell} font-medium`}>Operation</th>
                       <th className={`${cell} text-center font-medium`}>Vc (m/min)</th>
-                      <th className={`${cell} text-center font-medium`}>f (mm/rev)</th>
-                      <th className={`${cell} text-center font-medium`}>ap (mm)</th>
+                      <th className={`${cell} text-center font-medium`}>f</th>
+                      <th className={`${cell} text-center font-medium`}>Ap (mm)</th>
+                      <th className={`${cell} text-center font-medium`}>Ae (mm)</th>
                       <th className={`${cell} font-medium`}>Coolant</th>
+                      <th className={`${cell} font-medium`}>Notes</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -106,25 +108,17 @@ export function MaterialGrades({ material, title, onClose }: { material: Materia
                               </span>
                             ))}
                           </span>
-                          {r.notes && <div className="mt-1 text-xs whitespace-pre-line text-neutral-500 dark:text-neutral-400">{r.notes}</div>}
                         </td>
                         <td className={cell}>{FAMILY_LABEL[r.family]}</td>
                         {material.isCategory && <td className={cell}>{r.material.name}</td>}
-                        <td className={`${cell} whitespace-nowrap`}>{operationLabel(r) || "-"}</td>
-                        <td className={`${cell} text-center whitespace-nowrap tabular-nums`}>
-                          {r.vcRec != null ? (
-                            <span className="inline-flex items-baseline gap-2">
-                              <span>{num(r.vcMin)}</span>
-                              <span className="font-extrabold">{num(r.vcRec)}</span>
-                              <span>{num(r.vcMax)}</span>
-                            </span>
-                          ) : (
-                            rangeText(r.vcMin, r.vcMax) || "-"
-                          )}
+                        <td className={`${cell} text-center font-bold whitespace-nowrap tabular-nums`}>{num(r.recVc) || "-"}</td>
+                        <td className={`${cell} text-center whitespace-nowrap tabular-nums`}>{r.recFeed != null ? `${num(r.recFeed)} ${feedUnitLabel(r.recFeedUnit)}` : "-"}</td>
+                        <td className={`${cell} text-center whitespace-nowrap tabular-nums`}>{num(r.recAp) || "-"}</td>
+                        <td className={`${cell} text-center whitespace-nowrap tabular-nums`}>{num(r.recAe) || "-"}</td>
+                        <td className={cell}>{r.recCoolant ? COOLANT_LABEL[r.recCoolant] : "-"}</td>
+                        <td className={`${cell} whitespace-pre-line`} dir="auto">
+                          {r.recNotes}
                         </td>
-                        <td className={`${cell} text-center whitespace-nowrap tabular-nums`}>{rangeText(r.feedMin, r.feedMax) || "-"}</td>
-                        <td className={`${cell} text-center whitespace-nowrap tabular-nums`}>{rangeText(r.apMin, r.apMax) || "-"}</td>
-                        <td className={cell}>{coolantLabel(r) || "-"}</td>
                       </tr>
                     ))}
                   </tbody>

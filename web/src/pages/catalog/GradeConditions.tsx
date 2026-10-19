@@ -6,7 +6,7 @@ import { FAMILY_GROUPS } from "../../lib/gradeGroups";
 import { ALL_SCOPE } from "../../lib/gradeCases";
 import type { Application, Grade, GradeFamily, GradeRecommendation, Iso513Group, Material } from "../../lib/types";
 import { coolantLabel, num, operationLabel, rangeText, recommendationsFor } from "../../lib/gradeRecommendations";
-import { Button, Input, Label, Modal, Textarea } from "../../components/ui";
+import { Button, Input, Label, Modal, Select, Textarea } from "../../components/ui";
 
 // Recommended cutting conditions for a family's grades, as a table per ISO
 // material (like the catalog's "Recommended Cutting Conditions" slides):
@@ -213,6 +213,16 @@ function RecommendationModal({
   const [dry, setDry] = useState(existing?.dry ?? false);
   const [wet, setWet] = useState(existing?.wet ?? false);
   const [notes, setNotes] = useState(existing?.notes ?? "");
+  // Recommended working conditions (optional; shown on the Materials screen).
+  const [rec, setRec] = useState({
+    vc: num(existing?.recVc),
+    feed: num(existing?.recFeed),
+    feedUnit: existing?.recFeedUnit ?? "PER_REV",
+    ap: num(existing?.recAp),
+    ae: num(existing?.recAe),
+    coolant: existing?.recCoolant ?? "",
+    notes: existing?.recNotes ?? "",
+  });
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -250,6 +260,13 @@ function RecommendationModal({
       dry,
       wet,
       notes: notes.trim() || null,
+      recVc: toNumber(rec.vc),
+      recFeed: toNumber(rec.feed),
+      recFeedUnit: rec.feedUnit,
+      recAp: toNumber(rec.ap),
+      recAe: toNumber(rec.ae),
+      recCoolant: rec.coolant || null,
+      recNotes: rec.notes.trim() || null,
     };
     // This row keeps its own material if still chosen; the others get new rows.
     const own = existing ? (materialIds.includes(existing.material.id) ? existing.material.id : materialIds[0]) : null;
@@ -377,6 +394,53 @@ function RecommendationModal({
           <Label>Notes (optional)</Label>
           <Textarea dir="auto" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
         </div>
+        <fieldset className="space-y-2 rounded-lg border border-neutral-200 p-3 dark:border-neutral-700" data-recommended-conditions>
+          <legend className="px-1 text-sm font-semibold text-neutral-800 dark:text-neutral-200">Recommended working conditions (optional — shown on Materials)</legend>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div>
+              <Label>Vc (m/min)</Label>
+              <Input type="number" min="0" step="any" aria-label="Recommended Vc" value={rec.vc} onChange={(e) => setRec({ ...rec, vc: e.target.value })} />
+            </div>
+            <div>
+              <Label>f</Label>
+              <div className="flex gap-1">
+                <Input type="number" min="0" step="any" aria-label="Recommended feed" value={rec.feed} onChange={(e) => setRec({ ...rec, feed: e.target.value })} />
+                <Select
+                  aria-label="Feed unit"
+                  value={rec.feedUnit}
+                  onChange={(e) => setRec({ ...rec, feedUnit: e.target.value as GradeRecommendation["recFeedUnit"] })}
+                  className="w-auto"
+                >
+                  <option value="PER_REV">mm/rev</option>
+                  <option value="PER_TOOTH">mm/t</option>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <Label>Ap (mm)</Label>
+              <Input type="number" min="0" step="any" aria-label="Recommended ap" value={rec.ap} onChange={(e) => setRec({ ...rec, ap: e.target.value })} />
+            </div>
+            <div>
+              <Label>Ae (mm)</Label>
+              <Input type="number" min="0" step="any" aria-label="Recommended ae" value={rec.ae} onChange={(e) => setRec({ ...rec, ae: e.target.value })} />
+            </div>
+          </div>
+          <div className="grid grid-cols-[auto_1fr] gap-3">
+            <div>
+              <Label>Coolant</Label>
+              <Select aria-label="Recommended coolant" value={rec.coolant} onChange={(e) => setRec({ ...rec, coolant: e.target.value as typeof rec.coolant })}>
+                <option value="">—</option>
+                <option value="NONE">No</option>
+                <option value="AIR">Air</option>
+                <option value="OIL">Oil</option>
+              </Select>
+            </div>
+            <div>
+              <Label>Notes</Label>
+              <Input dir="auto" aria-label="Recommended notes" value={rec.notes} onChange={(e) => setRec({ ...rec, notes: e.target.value })} />
+            </div>
+          </div>
+        </fieldset>
         {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
         <div className="flex gap-2">
           <Button type="button" onClick={save} disabled={saving}>

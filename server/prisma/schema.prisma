@@ -674,6 +674,19 @@ model AppSetting {
 // max), depth of cut (mm) and feed (mm/rev) ranges, and coolant (dry and/or
 // wet). Shown in the Grades "Conditions" view and on
 // grade cards.
+// Feed in mm/rev or mm/tooth.
+enum FeedUnit {
+  PER_REV
+  PER_TOOTH
+}
+
+// Coolant for the recommended working conditions.
+enum CoolantType {
+  NONE
+  AIR
+  OIL
+}
+
 model GradeRecommendation {
   id           String        @id @default(cuid())
   family       GradeFamily
@@ -695,6 +708,15 @@ model GradeRecommendation {
   dry          Boolean       @default(false)
   wet          Boolean       @default(false)
   notes        String?
+  // Recommended working conditions (all optional), the ones shown on the
+  // Materials screen: Vc, feed per rev or per tooth, ap, ae, coolant, notes.
+  recVc        Float?
+  recFeed      Float?
+  recFeedUnit  FeedUnit      @default(PER_REV)
+  recAp        Float?
+  recAe        Float?
+  recCoolant   CoolantType?
+  recNotes     String?
   position     Int           @default(0)
   createdAt    DateTime      @default(now())
 
