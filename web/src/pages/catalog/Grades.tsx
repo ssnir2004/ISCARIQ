@@ -6,6 +6,7 @@ import { GlossaryPage, type GlossaryExtraSection, type GlossarySelectField, type
 import { GradesBoard } from "./GradesBoard";
 import { GradeFormCases } from "./GradeFormCases";
 import { RulesOfThumb } from "../../components/RulesOfThumb";
+import { CodeKey } from "../../components/CodeKey";
 import { ISO513_COLORS, MATERIAL_GROUPS } from "../../lib/npaKnowledgeConstants";
 import { FAMILY_GROUPS } from "../../lib/gradeGroups";
 import { useResource } from "../../lib/useResource";
@@ -549,6 +550,8 @@ export function GradesHub() {
         ))}
       </div>
       <RulesOfThumb key={`rules:${tab.family}`} scope={`grades:${tab.family}`} />
+      {/* The family's insert designation key (e.g. CBN), editable per tab. */}
+      <CodeKey key={`codekey:${tab.family}`} settingKey={`codekey.${tab.family.toLowerCase()}`} />
       <GradesScreen key={tab.family} family={tab.family} title={tab.label} hideHeader />
     </div>
   );
