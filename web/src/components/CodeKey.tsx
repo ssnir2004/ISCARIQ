@@ -1,23 +1,37 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { api, ApiError } from "../lib/api";
-import { Button, Card, Input } from "./ui";
+import { Button, Card, Input, Textarea } from "./ui";
 
 // A code key for product designations (e.g. "Code key for CBN inserts"):
 // an example designation with each part coloured like its table, and a
-// table per part (code -> meaning). Collapsible (remembered), editable here,
-// and stored as JSON in an app setting, one per screen (e.g. "codekey.cbn").
+// table per part (code -> meaning, with optional details such as use cases,
+// and an optional note), plus optional reference tables (e.g. edge
+// preparation by grade). Collapsible (remembered), editable here, and stored
+// as JSON in an app setting, one per screen (e.g. "codekey.cbn").
 
 export interface CodeKeyData {
   title: string;
   subtitle?: string;
   example: string;
   sections: CodeKeySection[];
+  tables?: CodeKeyTable[];
 }
 interface CodeKeySection {
   title: string;
   // This part as it appears in the example (highlighted there), if it does.
   sample?: string;
-  rows: { code: string; meaning: string }[];
+  rows: { code: string; meaning: string; details?: string }[];
+  // Shown under the table (e.g. how the code's digits read).
+  note?: string;
+}
+interface CodeKeyTable {
+  title: string;
+  // Header cells spanning several columns, above the column headers.
+  groups?: { label: string; span: number }[];
+  columns: string[];
+  rows: string[][];
+  // How many leading columns merge equal cells of consecutive rows.
+  merge?: number;
 }
 
 const COLORS = ["#2563eb", "#16a34a", "#d97706", "#9333ea", "#dc2626", "#0891b2", "#be185d", "#4d7c0f"];
@@ -71,8 +85,12 @@ export function CodeKey({ settingKey }: { settingKey: string }) {
         .map((s) => ({
           title: s.title.trim(),
           sample: s.sample?.trim() || undefined,
-          rows: s.rows.filter((r) => r.code.trim() || r.meaning.trim()).map((r) => ({ code: r.code.trim(), meaning: r.meaning.trim() })),
+          rows: s.rows
+            .filter((r) => r.code.trim() || r.meaning.trim())
+            .map((r) => ({ code: r.code.trim(), meaning: r.meaning.trim(), details: r.details?.trim() || undefined })),
+          note: s.note?.trim() || undefined,
         })),
+      tables: draft.tables?.filter((t) => t.title.trim() || t.rows.length),
     };
     try {
       await api.put(`/settings/${settingKey}`, { value: JSON.stringify(clean) });
@@ -159,17 +177,105 @@ function CodeKeyView({ data }: { data: CodeKeyData }) {
                         {r.code}
                       </span>
                     </td>
-                    <td className="px-3 py-1 text-neutral-700 dark:text-neutral-300">{r.meaning}</td>
+                    <td className="px-3 py-1 text-neutral-700 dark:text-neutral-300">
+                      {r.meaning}
+                      {r.details && (
+                        <div className="mt-0.5 text-xs leading-snug text-neutral-500 dark:text-neutral-400" data-code-details>
+                          {r.details}
+                        </div>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            {s.note && (
+              <p className="border-t border-neutral-100 px-3 py-1.5 text-xs whitespace-pre-line text-neutral-600 dark:border-neutral-800 dark:text-neutral-300" data-code-note>
+                {s.note}
+              </p>
+            )}
           </div>
         ))}
+      </div>
+      {data.tables?.map((t, i) => <ReferenceTable key={i} table={t} />)}
+    </div>
+  );
+}
+
+// A reference table, e.g. edge preparation by grade: group headers over the
+// columns, and equal cells in the first `merge` columns joined down the rows.
+function ReferenceTable({ table }: { table: CodeKeyTable }) {
+  const merge = table.merge ?? 0;
+  const cell = "border border-neutral-200 px-2 py-1 text-center dark:border-neutral-700";
+  // Rows a merged cell covers (0 = hidden under the one above): equal to the
+  // row above in this and every earlier column.
+  const sameUpTo = (a: number, b: number, c: number) => table.rows[a].slice(0, c + 1).every((v, k) => v === table.rows[b][k]);
+  const span = (r: number, c: number) => {
+    if (c >= merge) return 1;
+    if (r > 0 && sameUpTo(r - 1, r, c)) return 0;
+    let n = 1;
+    while (r + n < table.rows.length && sameUpTo(r + n, r, c)) n++;
+    return n;
+  };
+  return (
+    <div className="mt-4" data-code-table={table.title}>
+      <h4 className="mb-1.5 text-sm font-semibold text-neutral-900 dark:text-neutral-100">{table.title}</h4>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-xs">
+          <thead>
+            {table.groups && (
+              <tr className="bg-neutral-100 dark:bg-neutral-800">
+                {table.groups.map((g, i) => (
+                  <th key={i} colSpan={g.span} className={`${cell} font-semibold`}>
+                    {g.label}
+                  </th>
+                ))}
+              </tr>
+            )}
+            <tr className="bg-neutral-50 dark:bg-neutral-900">
+              {table.columns.map((c, i) => (
+                <th key={i} className={`${cell} font-medium whitespace-pre-line`}>
+                  {c}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {table.rows.map((row, r) => (
+              <tr key={r}>
+                {row.map((v, c) => {
+                  const n = span(r, c);
+                  if (n === 0) return null;
+                  return (
+                    <td key={c} rowSpan={n > 1 ? n : undefined} className={`${cell} ${c < merge ? "font-semibold" : ""} tabular-nums`}>
+                      {v}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
 }
+
+// A table as tab-separated text (first line: column headers), so it can be
+// pasted from Excel; group headers as "label | span" per line.
+const tableToText = (t: CodeKeyTable) => [t.columns, ...t.rows].map((r) => r.join("\t")).join("\n");
+const textToRows = (text: string) =>
+  text
+    .split(/\r?\n/)
+    .filter((l) => l.trim())
+    .map((l) => l.split("\t").map((v) => v.trim()));
+const groupsToText = (t: CodeKeyTable) => (t.groups ?? []).map((g) => `${g.label} | ${g.span}`).join("\n");
+const textToGroups = (text: string) =>
+  text
+    .split(/\r?\n/)
+    .map((l) => l.split("|"))
+    .filter((p) => p.length === 2 && Number(p[1]) > 0)
+    .map(([label, n]) => ({ label: label.trim(), span: Number(n) }));
 
 const small = "rounded px-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 disabled:opacity-30 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100";
 
@@ -248,6 +354,12 @@ function CodeKeyEditor({
                   placeholder="Meaning"
                   aria-label="Meaning"
                 />
+                <Input
+                  value={r.details ?? ""}
+                  onChange={(e) => setSection(i, { ...s, rows: s.rows.map((x, k) => (k === n ? { ...x, details: e.target.value } : x)) })}
+                  placeholder="Details / use case (optional)"
+                  aria-label="Details"
+                />
                 <button type="button" className={small} disabled={n === 0} onClick={() => setSection(i, { ...s, rows: move(s.rows, n, n - 1) })} aria-label="Move code up">
                   ↑
                 </button>
@@ -262,11 +374,29 @@ function CodeKeyEditor({
             <Button type="button" variant="ghost" onClick={() => setSection(i, { ...s, rows: [...s.rows, { code: "", meaning: "" }] })}>
               + Add code
             </Button>
+            <Textarea
+              rows={2}
+              value={s.note ?? ""}
+              onChange={(e) => setSection(i, { ...s, note: e.target.value })}
+              placeholder="Note under the table (optional), e.g. how the code reads"
+              aria-label="Note"
+            />
           </div>
         </div>
       ))}
       <Button type="button" variant="secondary" onClick={() => setDraft({ ...draft, sections: [...draft.sections, { title: "", rows: [{ code: "", meaning: "" }] }] })}>
         + Add part
+      </Button>
+      {(draft.tables ?? []).map((t, i) => (
+        <TableEditor
+          key={i}
+          table={t}
+          onChange={(next) => setDraft({ ...draft, tables: (draft.tables ?? []).map((x, n) => (n === i ? next : x)) })}
+          onRemove={() => setDraft({ ...draft, tables: (draft.tables ?? []).filter((_, n) => n !== i) })}
+        />
+      ))}
+      <Button type="button" variant="secondary" onClick={() => setDraft({ ...draft, tables: [...(draft.tables ?? []), { title: "", columns: [], rows: [] }] })}>
+        + Add reference table
       </Button>
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
       <div className="flex gap-2 border-t border-neutral-200 pt-3 dark:border-neutral-700">
@@ -277,6 +407,55 @@ function CodeKeyEditor({
           Cancel
         </Button>
       </div>
+    </div>
+  );
+}
+
+// A reference table edited as text: title, group headers ("label | span" per
+// line) and the cells, tab-separated (paste from Excel; first line = headers).
+function TableEditor({ table, onChange, onRemove }: { table: CodeKeyTable; onChange: (t: CodeKeyTable) => void; onRemove: () => void }) {
+  const [groups, setGroups] = useState(() => groupsToText(table));
+  const [cells, setCells] = useState(() => tableToText(table));
+  return (
+    <div className="space-y-2 rounded-lg border border-neutral-200 p-2 dark:border-neutral-700" data-code-table-editor>
+      <div className="flex items-center gap-2">
+        <Input value={table.title} onChange={(e) => onChange({ ...table, title: e.target.value })} placeholder="Reference table title" aria-label="Table title" />
+        <Input
+          type="number"
+          min="0"
+          className="w-40"
+          value={String(table.merge ?? 0)}
+          onChange={(e) => onChange({ ...table, merge: Number(e.target.value) || 0 })}
+          aria-label="Merged columns"
+          title="Leading columns whose equal cells are joined down the rows"
+        />
+        <button type="button" className={small} onClick={onRemove} aria-label="Remove table">
+          ✕
+        </button>
+      </div>
+      <Textarea
+        rows={3}
+        value={groups}
+        onChange={(e) => {
+          setGroups(e.target.value);
+          onChange({ ...table, groups: textToGroups(e.target.value) });
+        }}
+        placeholder={"Group headers, one per line: label | columns (optional)\ne.g. Standard | 6"}
+        aria-label="Group headers"
+        className="font-mono text-xs"
+      />
+      <Textarea
+        rows={8}
+        value={cells}
+        onChange={(e) => {
+          setCells(e.target.value);
+          const [columns = [], ...rows] = textToRows(e.target.value);
+          onChange({ ...table, columns, rows });
+        }}
+        placeholder="Paste from Excel: first line = column headers, then one line per row (tab-separated)"
+        aria-label="Table cells"
+        className="font-mono text-xs"
+      />
     </div>
   );
 }
