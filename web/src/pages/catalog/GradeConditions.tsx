@@ -86,6 +86,7 @@ export function GradeConditions({
           ae: groupRows.some((r) => r.recAe != null),
           coolant: groupRows.some((r) => r.recCoolant != null),
           tool: groupRows.some((r) => !!r.recTool),
+          test: groupRows.some((r) => !!r.testReportNo),
           notes: groupRows.some((r) => !!r.recNotes),
         };
         const cell = "border-b border-neutral-200 px-2 py-2 dark:border-neutral-700";
@@ -114,6 +115,7 @@ export function GradeConditions({
                     {has.coolant && <th className={recTh}>Rec. coolant</th>}
                     {has.tool && <th className={recTh}>Rec. tool</th>}
                     {has.notes && <th className={recTh}>Rec. notes</th>}
+                    {has.test && <th className="border-b border-neutral-200 px-2 py-1.5 font-medium dark:border-neutral-700">Test report</th>}
                     <th className="border-b border-neutral-200 dark:border-neutral-700" />
                   </tr>
                 </thead>
@@ -180,6 +182,11 @@ export function GradeConditions({
                           {has.notes && (
                             <td className={`${cell} whitespace-pre-line`} dir="auto">
                               {r.recNotes}
+                            </td>
+                          )}
+                          {has.test && (
+                            <td className={`${cell} font-mono tabular-nums`} data-test-report>
+                              {r.testReportNo}
                             </td>
                           )}
                           <td className="border-b border-neutral-200 px-2 py-2 text-right whitespace-nowrap dark:border-neutral-700">
@@ -274,6 +281,7 @@ function RecommendationModal({
   const [dry, setDry] = useState(existing?.dry ?? false);
   const [wet, setWet] = useState(existing?.wet ?? false);
   const [notes, setNotes] = useState(existing?.notes ?? "");
+  const [testReportNo, setTestReportNo] = useState(existing?.testReportNo ?? "");
   // Recommended working conditions (optional; shown on the Materials screen).
   const [rec, setRec] = useState({
     vc: q(existing?.recVc, "speed"),
@@ -304,6 +312,11 @@ function RecommendationModal({
       setSaving(false);
       return;
     }
+    if (testReportNo.trim() && !/^\d{6}$/.test(testReportNo.trim())) {
+      setError("Test report number must be 6 digits");
+      setSaving(false);
+      return;
+    }
     const body = {
       family,
       gradeIds,
@@ -329,6 +342,7 @@ function RecommendationModal({
       recCoolant: rec.coolant || null,
       recNotes: rec.notes.trim() || null,
       recTool: rec.tool.trim() || null,
+      testReportNo: testReportNo.trim() || null,
     };
     // This row keeps its own material if still chosen; the others get new rows.
     const own = existing ? (materialIds.includes(existing.material.id) ? existing.material.id : materialIds[0]) : null;
@@ -455,6 +469,18 @@ function RecommendationModal({
         <div>
           <Label>Notes (optional)</Label>
           <Textarea dir="auto" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+        </div>
+        <div className="max-w-xs">
+          <Label>Test report No. (optional, 6 digits)</Label>
+          <Input
+            inputMode="numeric"
+            maxLength={6}
+            value={testReportNo}
+            onChange={(e) => setTestReportNo(e.target.value.replace(/\D/g, ""))}
+            placeholder="e.g. 123456"
+            aria-label="Test report number"
+            className="font-mono"
+          />
         </div>
         <fieldset className="space-y-2 rounded-lg border border-neutral-200 p-3 dark:border-neutral-700" data-recommended-conditions>
           <legend className="px-1 text-sm font-semibold text-neutral-800 dark:text-neutral-200">Recommended working conditions (optional — shown on Materials)</legend>

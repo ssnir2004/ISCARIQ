@@ -99,6 +99,7 @@ export function MaterialGrades({ material, title, onClose }: { material: Materia
                       <th className={`${cell} font-medium`}>Coolant</th>
                       <th className={`${cell} font-medium`}>Tool</th>
                       <th className={`${cell} font-medium`}>Notes</th>
+                      {inApp(app).some((r) => r.testReportNo) && <th className={`${cell} font-medium`}>Test report</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -126,6 +127,7 @@ export function MaterialGrades({ material, title, onClose }: { material: Materia
                         <td className={`${cell} whitespace-pre-line`} dir="auto">
                           {r.recNotes}
                         </td>
+                        {inApp(app).some((x) => x.testReportNo) && <td className={`${cell} font-mono tabular-nums`}>{r.testReportNo}</td>}
                       </tr>
                     ))}
                   </tbody>

@@ -720,6 +720,8 @@ model GradeRecommendation {
   recNotes     String?
   // The recommended tool, described in free text.
   recTool      String?
+  // Test report the recommendation is based on (6 digits).
+  testReportNo String?
   position     Int           @default(0)
   createdAt    DateTime      @default(now())
 

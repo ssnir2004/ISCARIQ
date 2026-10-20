@@ -295,6 +295,7 @@ export interface GradeRecommendation {
   recCoolant: "NONE" | "AIR" | "OIL" | "WET" | null;
   recNotes: string | null;
   recTool: string | null;
+  testReportNo: string | null;
   position: number;
 }
 
