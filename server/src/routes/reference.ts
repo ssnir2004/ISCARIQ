@@ -700,6 +700,12 @@ const recommendationSchema = z
     recCoolant: z.enum(["NONE", "AIR", "OIL", "WET"]).nullable().optional(),
     recNotes: z.string().trim().max(1000).nullable().optional(),
     recTool: z.string().trim().max(1000).nullable().optional(),
+    testReportNo: z
+      .string()
+      .trim()
+      .regex(/^(\d{6})?$/, "Test report number must be 6 digits")
+      .nullable()
+      .optional(),
   })
   .refine((r) => !(r.vcMin && r.vcRec && r.vcMin > r.vcRec) && !(r.vcRec && r.vcMax && r.vcRec > r.vcMax) && !(r.vcMin && r.vcMax && r.vcMin > r.vcMax), {
     message: "Cutting speeds must be min ≤ recommended ≤ max",
@@ -729,6 +735,7 @@ function recommendationData({ gradeIds, applicationIds, ...rest }: Recommendatio
     notes: rest.notes || null,
     recNotes: rest.recNotes || null,
     recTool: rest.recTool || null,
+    testReportNo: rest.testReportNo || null,
     grades: mode === "create" ? { connect: grades } : { set: grades },
     applications: mode === "create" ? { connect: applications } : { set: applications },
   };
