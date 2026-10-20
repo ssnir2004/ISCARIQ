@@ -49,6 +49,8 @@ export function Materials() {
   const [viewing, setViewing] = useState<Material | null>(null);
   const formRef = useRef<HTMLDivElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
+  // Bumped by "+ Subcategory" to open the add form.
+  const [addSignal, setAddSignal] = useState(0);
 
   const categoryOf = (g: Iso513Group) => data.find((m) => m.isCategory && m.iso513Group === g);
   const categoryName = (g: Iso513Group) =>
@@ -64,6 +66,7 @@ export function Materials() {
     setForm({ ...EMPTY_FORM, iso513Group: g });
     setEditing(null);
     setError(null);
+    setAddSignal((n) => n + 1);
     focusForm(true);
   }
 
@@ -126,7 +129,7 @@ export function Materials() {
     <div className="max-w-3xl">
       <PageHeader title="Materials (ISO 513)" />
       <div ref={formRef} className="scroll-mt-4">
-        <AddSection label="subcategory" editing={editing !== null} onCancelEdit={cancelEdit}>
+        <AddSection label="subcategory" editing={editing !== null} onCancelEdit={cancelEdit} openSignal={addSignal}>
           <Card className="mb-6 p-4">
             <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-neutral-100">
               {editing

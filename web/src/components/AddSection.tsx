@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Button } from "./ui";
 
 // An add form hidden behind a "+ Add …" button that opens and closes it
@@ -8,15 +8,21 @@ export function AddSection({
   label,
   editing = false,
   onCancelEdit,
+  openSignal,
   children,
 }: {
   // What is added, e.g. "insert" -> "+ Add insert".
   label: string;
   editing?: boolean;
   onCancelEdit?: () => void;
+  // Opens the form whenever it changes (e.g. a "+ Subcategory" button elsewhere).
+  openSignal?: number;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (openSignal) setOpen(true);
+  }, [openSignal]);
   const shown = open || editing;
 
   function toggle() {
