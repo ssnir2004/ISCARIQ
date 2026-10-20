@@ -1,5 +1,6 @@
 import type { GradeRecommendation } from "./types";
 import { ALL_SCOPE } from "./gradeCases";
+import { toUnits, type Units } from "./units";
 
 // Display helpers for recommended cutting conditions (GradeRecommendation).
 
@@ -17,8 +18,11 @@ export function rangeText(min: number | null | undefined, max: number | null | u
 }
 
 // "400 – 550 – 700" style range for compact places (grade card).
-export function vcText(r: Pick<GradeRecommendation, "vcMin" | "vcRec" | "vcMax">) {
-  return [r.vcMin, r.vcRec, r.vcMax].filter((v) => v != null).join(" – ");
+export function vcText(r: Pick<GradeRecommendation, "vcMin" | "vcRec" | "vcMax">, units: Units = "metric") {
+  return [r.vcMin, r.vcRec, r.vcMax]
+    .filter((v) => v != null)
+    .map((v) => toUnits(v, "speed", units))
+    .join(" – ");
 }
 
 // The ones that apply on a board: all on "All", else those for that

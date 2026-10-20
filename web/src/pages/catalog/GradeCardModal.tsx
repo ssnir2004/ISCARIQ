@@ -6,10 +6,13 @@ import type { Grade, GradeCase, GradeRecommendation, ToolLine } from "../../lib/
 import { coolantLabel, operationLabel, rangeText, vcText } from "../../lib/gradeRecommendations";
 import { Button, Modal } from "../../components/ui";
 import { groupsIn } from "../../lib/gradeGroups";
+import { toUnits, unitLabel, useUnits } from "../../lib/units";
 
 // A grade's full card (opened from the Grades search): everything known
 // about it in one place, including its cases across all applications.
 export function GradeCardModal({ grade, onClose, onEdit }: { grade: Grade; onClose: () => void; onEdit: () => void }) {
+  // Cutting data in the units chosen on the Conditions screen.
+  const [units] = useUnits();
   const [cases, setCases] = useState<GradeCase[] | null>(null);
   const [recs, setRecs] = useState<GradeRecommendation[] | null>(null);
   const [tools, setTools] = useState<ToolLine[] | null>(null);
@@ -149,9 +152,21 @@ export function GradeCardModal({ grade, onClose, onEdit }: { grade: Grade; onClo
                     <span className="text-xs text-neutral-500 dark:text-neutral-400">
                       {[r.applications.map((a) => a.name).join("/"), operationLabel(r), coolantLabel(r)].filter(Boolean).join(" · ")}
                     </span>
-                    {vcText(r) && <span className="font-semibold tabular-nums">Vc {vcText(r)} m/min</span>}
-                    {rangeText(r.apMin, r.apMax) && <span className="tabular-nums">DOC {rangeText(r.apMin, r.apMax)} mm</span>}
-                    {rangeText(r.feedMin, r.feedMax) && <span className="tabular-nums">f {rangeText(r.feedMin, r.feedMax)} mm/rev</span>}
+                    {vcText(r, units) && (
+                      <span className="font-semibold tabular-nums">
+                        Vc {vcText(r, units)} {unitLabel("speed", units)}
+                      </span>
+                    )}
+                    {rangeText(toUnits(r.apMin, "length", units), toUnits(r.apMax, "length", units)) && (
+                      <span className="tabular-nums">
+                        DOC {rangeText(toUnits(r.apMin, "length", units), toUnits(r.apMax, "length", units))} {unitLabel("length", units)}
+                      </span>
+                    )}
+                    {rangeText(toUnits(r.feedMin, "feed", units), toUnits(r.feedMax, "feed", units)) && (
+                      <span className="tabular-nums">
+                        f {rangeText(toUnits(r.feedMin, "feed", units), toUnits(r.feedMax, "feed", units))} {unitLabel("feed", units)}
+                      </span>
+                    )}
                   </li>
                 ))}
               </ul>
