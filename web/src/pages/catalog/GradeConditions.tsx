@@ -5,7 +5,8 @@ import { ISO513_COLORS, MATERIAL_GROUPS } from "../../lib/npaKnowledgeConstants"
 import { FAMILY_GROUPS } from "../../lib/gradeGroups";
 import { ALL_SCOPE } from "../../lib/gradeCases";
 import type { Application, Grade, GradeFamily, GradeRecommendation, Iso513Group, Material } from "../../lib/types";
-import { COOLANT_LABEL, coolantLabel, feedUnitLabel, num, operationLabel, rangeText, recommendationsFor } from "../../lib/gradeRecommendations";
+import { COOLANT_LABEL, coolantLabel, operationLabel, rangeText, recommendationsFor } from "../../lib/gradeRecommendations";
+import { fmt, fromUnits, toUnits, unitLabel, UnitsToggle, useUnits, type Quantity, type Units } from "../../lib/units";
 import { Button, Input, Label, Modal, Select, Textarea } from "../../components/ui";
 
 // Recommended cutting conditions for a family's grades, as a table per ISO
@@ -29,6 +30,10 @@ export function GradeConditions({
   const { data: all, reload } = useResource<GradeRecommendation>(`/grade-recommendations?family=${family}`);
   const [editing, setEditing] = useState<GradeRecommendation | "new" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Metric / imperial display (values are stored metric).
+  const [units, setUnits] = useUnits();
+  const L = (q: Quantity) => unitLabel(q, units);
+  const range = (min: number | null, max: number | null, q: Quantity) => rangeText(toUnits(min, q, units), toUnits(max, q, units));
   const rows = recommendationsFor(all, scope);
   const groups = MATERIAL_GROUPS.filter((g) => FAMILY_GROUPS[family].includes(g.value));
 
@@ -51,7 +56,12 @@ export function GradeConditions({
   return (
     <div className="space-y-4" data-grade-conditions>
       <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-neutral-500 dark:text-neutral-400">V in m/min (recommended in bold), DOC in mm, f in mm/rev.</p>
+        <div className="flex flex-wrap items-center gap-3">
+          <UnitsToggle units={units} onChange={setUnits} />
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">
+            V in {L("speed")} (recommended in bold), DOC in {L("length")}, f in {L("feed")}.
+          </p>
+        </div>
         <Button onClick={() => setEditing("new")}>+ Add recommendation</Button>
       </div>
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
@@ -93,14 +103,14 @@ export function GradeConditions({
                     <th className="border-b border-neutral-200 px-2 py-1.5 font-medium dark:border-neutral-700">Application</th>
                     <th className="border-b border-neutral-200 px-2 py-1.5 font-medium dark:border-neutral-700">Operation</th>
                     <th className="border-b border-neutral-200 px-2 py-1.5 font-medium dark:border-neutral-700">Grade</th>
-                    {hasVc && <th className="border-b border-neutral-200 px-2 py-1.5 text-center font-medium dark:border-neutral-700">V (m/min)</th>}
-                    {hasDoc && <th className="border-b border-neutral-200 px-2 py-1.5 text-center font-medium dark:border-neutral-700">DOC (mm)</th>}
-                    {hasFeed && <th className="border-b border-neutral-200 px-2 py-1.5 text-center font-medium dark:border-neutral-700">f (mm/rev)</th>}
+                    {hasVc && <th className="border-b border-neutral-200 px-2 py-1.5 text-center font-medium dark:border-neutral-700">V ({L("speed")})</th>}
+                    {hasDoc && <th className="border-b border-neutral-200 px-2 py-1.5 text-center font-medium dark:border-neutral-700">DOC ({L("length")})</th>}
+                    {hasFeed && <th className="border-b border-neutral-200 px-2 py-1.5 text-center font-medium dark:border-neutral-700">f ({L("feed")})</th>}
                     {hasCoolant && <th className="border-b border-neutral-200 px-2 py-1.5 font-medium dark:border-neutral-700">Coolant</th>}
-                    {has.vc && <th className={`${recTh} text-center`}>Rec. Vc (m/min)</th>}
+                    {has.vc && <th className={`${recTh} text-center`}>Rec. Vc ({L("speed")})</th>}
                     {has.feed && <th className={`${recTh} text-center`}>Rec. f</th>}
-                    {has.ap && <th className={`${recTh} text-center`}>Rec. Ap (mm)</th>}
-                    {has.ae && <th className={`${recTh} text-center`}>Rec. Ae (mm)</th>}
+                    {has.ap && <th className={`${recTh} text-center`}>Rec. Ap ({L("length")})</th>}
+                    {has.ae && <th className={`${recTh} text-center`}>Rec. Ae ({L("length")})</th>}
                     {has.coolant && <th className={recTh}>Rec. coolant</th>}
                     {has.tool && <th className={recTh}>Rec. tool</th>}
                     {has.notes && <th className={recTh}>Rec. notes</th>}
@@ -143,24 +153,24 @@ export function GradeConditions({
                               {r.vcRec != null ? (
                                 // min  REC  max, with the recommended speed in bold.
                                 <span className="inline-flex items-baseline gap-2">
-                                  <span>{num(r.vcMin)}</span>
-                                  <span className="text-base font-extrabold">{num(r.vcRec)}</span>
-                                  <span>{num(r.vcMax)}</span>
+                                  <span>{fmt(r.vcMin, "speed", units)}</span>
+                                  <span className="text-base font-extrabold">{fmt(r.vcRec, "speed", units)}</span>
+                                  <span>{fmt(r.vcMax, "speed", units)}</span>
                                 </span>
                               ) : (
-                                <span className="text-base font-extrabold">{rangeText(r.vcMin, r.vcMax)}</span>
+                                <span className="text-base font-extrabold">{range(r.vcMin, r.vcMax, "speed")}</span>
                               )}
                             </td>
                           )}
-                          {hasDoc && <td className={`${cell} text-center whitespace-nowrap tabular-nums`}>{rangeText(r.apMin, r.apMax) || "-"}</td>}
-                          {hasFeed && <td className={`${cell} text-center whitespace-nowrap tabular-nums`}>{rangeText(r.feedMin, r.feedMax) || "-"}</td>}
+                          {hasDoc && <td className={`${cell} text-center whitespace-nowrap tabular-nums`}>{range(r.apMin, r.apMax, "length") || "-"}</td>}
+                          {hasFeed && <td className={`${cell} text-center whitespace-nowrap tabular-nums`}>{range(r.feedMin, r.feedMax, "feed") || "-"}</td>}
                           {hasCoolant && <td className={cell}>{coolantLabel(r)}</td>}
-                          {has.vc && <td className={`${cell} text-center font-bold whitespace-nowrap tabular-nums`}>{num(r.recVc) || "-"}</td>}
+                          {has.vc && <td className={`${cell} text-center font-bold whitespace-nowrap tabular-nums`}>{fmt(r.recVc, "speed", units) || "-"}</td>}
                           {has.feed && (
-                            <td className={`${cell} text-center whitespace-nowrap tabular-nums`}>{r.recFeed != null ? `${num(r.recFeed)} ${feedUnitLabel(r.recFeedUnit)}` : "-"}</td>
+                            <td className={`${cell} text-center whitespace-nowrap tabular-nums`}>{r.recFeed != null ? `${fmt(r.recFeed, "feed", units)} ${unitLabel("feed", units, r.recFeedUnit)}` : "-"}</td>
                           )}
-                          {has.ap && <td className={`${cell} text-center whitespace-nowrap tabular-nums`}>{num(r.recAp) || "-"}</td>}
-                          {has.ae && <td className={`${cell} text-center whitespace-nowrap tabular-nums`}>{num(r.recAe) || "-"}</td>}
+                          {has.ap && <td className={`${cell} text-center whitespace-nowrap tabular-nums`}>{fmt(r.recAp, "length", units) || "-"}</td>}
+                          {has.ae && <td className={`${cell} text-center whitespace-nowrap tabular-nums`}>{fmt(r.recAe, "length", units) || "-"}</td>}
                           {has.coolant && <td className={cell}>{r.recCoolant ? COOLANT_LABEL[r.recCoolant] : "-"}</td>}
                           {has.tool && (
                             <td className={`${cell} whitespace-pre-line`} dir="auto">
@@ -243,6 +253,13 @@ function RecommendationModal({
 }) {
   const { data: materials } = useResource<Material>("/materials");
   const { data: applications } = useResource<Application>("/applications");
+  // Values are typed in the units chosen when the form opened.
+  const [liveUnits] = useUnits();
+  const [u] = useState<Units>(liveUnits);
+  const q = (v: number | null | undefined, k: Quantity) => fmt(v, k, u);
+  // Back to metric; a field left as it opened keeps its stored value exactly.
+  const toMetric = (text: string, k: Quantity, original: number | null | undefined) =>
+    text.trim() === "" ? null : text === q(original, k) ? (original ?? null) : fromUnits(Number(text), k, u);
   // Several work materials can be chosen: the recommendation is saved once
   // per material (editing keeps this row for one of them and adds the rest).
   const [materialIds, setMaterialIds] = useState<string[]>(existing ? [existing.material.id] : []);
@@ -251,19 +268,19 @@ function RecommendationModal({
   const [semiFinish, setSemiFinish] = useState(existing?.semiFinish ?? false);
   const [finish, setFinish] = useState(existing?.finish ?? false);
   const [gradeIds, setGradeIds] = useState<string[]>(existing ? existing.grades.map((g) => g.id) : []);
-  const [vc, setVc] = useState({ min: num(existing?.vcMin), rec: num(existing?.vcRec), max: num(existing?.vcMax) });
-  const [ap, setAp] = useState({ min: num(existing?.apMin), max: num(existing?.apMax) });
-  const [feed, setFeed] = useState({ min: num(existing?.feedMin), max: num(existing?.feedMax) });
+  const [vc, setVc] = useState({ min: q(existing?.vcMin, "speed"), rec: q(existing?.vcRec, "speed"), max: q(existing?.vcMax, "speed") });
+  const [ap, setAp] = useState({ min: q(existing?.apMin, "length"), max: q(existing?.apMax, "length") });
+  const [feed, setFeed] = useState({ min: q(existing?.feedMin, "feed"), max: q(existing?.feedMax, "feed") });
   const [dry, setDry] = useState(existing?.dry ?? false);
   const [wet, setWet] = useState(existing?.wet ?? false);
   const [notes, setNotes] = useState(existing?.notes ?? "");
   // Recommended working conditions (optional; shown on the Materials screen).
   const [rec, setRec] = useState({
-    vc: num(existing?.recVc),
-    feed: num(existing?.recFeed),
+    vc: q(existing?.recVc, "speed"),
+    feed: q(existing?.recFeed, "feed"),
     feedUnit: existing?.recFeedUnit ?? "PER_REV",
-    ap: num(existing?.recAp),
-    ae: num(existing?.recAe),
+    ap: q(existing?.recAp, "length"),
+    ae: q(existing?.recAe, "length"),
     coolant: existing?.recCoolant ?? "",
     notes: existing?.recNotes ?? "",
     tool: existing?.recTool ?? "",
@@ -278,7 +295,6 @@ function RecommendationModal({
     .filter((g) => chosenGroups.length === 0 || g.iso513Groups.some((x) => chosenGroups.includes(x)) || gradeIds.includes(g.id))
     .sort((a, b) => a.name.localeCompare(b.name));
   const toggle = (list: string[], id: string) => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
-  const toNumber = (v: string) => (v.trim() === "" ? null : Number(v));
 
   async function save() {
     setError(null);
@@ -295,21 +311,21 @@ function RecommendationModal({
       rough,
       semiFinish,
       finish,
-      vcMin: toNumber(vc.min),
-      vcRec: toNumber(vc.rec),
-      vcMax: toNumber(vc.max),
-      apMin: toNumber(ap.min),
-      apMax: toNumber(ap.max),
-      feedMin: toNumber(feed.min),
-      feedMax: toNumber(feed.max),
+      vcMin: toMetric(vc.min, "speed", existing?.vcMin),
+      vcRec: toMetric(vc.rec, "speed", existing?.vcRec),
+      vcMax: toMetric(vc.max, "speed", existing?.vcMax),
+      apMin: toMetric(ap.min, "length", existing?.apMin),
+      apMax: toMetric(ap.max, "length", existing?.apMax),
+      feedMin: toMetric(feed.min, "feed", existing?.feedMin),
+      feedMax: toMetric(feed.max, "feed", existing?.feedMax),
       dry,
       wet,
       notes: notes.trim() || null,
-      recVc: toNumber(rec.vc),
-      recFeed: toNumber(rec.feed),
+      recVc: toMetric(rec.vc, "speed", existing?.recVc),
+      recFeed: toMetric(rec.feed, "feed", existing?.recFeed),
       recFeedUnit: rec.feedUnit,
-      recAp: toNumber(rec.ap),
-      recAe: toNumber(rec.ae),
+      recAp: toMetric(rec.ap, "length", existing?.recAp),
+      recAe: toMetric(rec.ae, "length", existing?.recAe),
       recCoolant: rec.coolant || null,
       recNotes: rec.notes.trim() || null,
       recTool: rec.tool.trim() || null,
@@ -404,7 +420,7 @@ function RecommendationModal({
           </div>
         </div>
         <div>
-          <Label>V (m/min) — recommended is optional</Label>
+          <Label>V ({unitLabel("speed", u)}) — recommended is optional</Label>
           <div className="grid grid-cols-3 gap-2">
             <Input type="number" min="0" step="any" placeholder="Min" aria-label="Vc min" value={vc.min} onChange={(e) => setVc({ ...vc, min: e.target.value })} />
             <Input
@@ -422,14 +438,14 @@ function RecommendationModal({
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label>DOC (mm)</Label>
+            <Label>DOC ({unitLabel("length", u)})</Label>
             <div className="grid grid-cols-2 gap-2">
               <Input type="number" min="0" step="any" placeholder="Min" aria-label="DOC min" value={ap.min} onChange={(e) => setAp({ ...ap, min: e.target.value })} />
               <Input type="number" min="0" step="any" placeholder="Max" aria-label="DOC max" value={ap.max} onChange={(e) => setAp({ ...ap, max: e.target.value })} />
             </div>
           </div>
           <div>
-            <Label>f (mm/rev)</Label>
+            <Label>f ({unitLabel("feed", u)})</Label>
             <div className="grid grid-cols-2 gap-2">
               <Input type="number" min="0" step="any" placeholder="Min" aria-label="Feed min" value={feed.min} onChange={(e) => setFeed({ ...feed, min: e.target.value })} />
               <Input type="number" min="0" step="any" placeholder="Max" aria-label="Feed max" value={feed.max} onChange={(e) => setFeed({ ...feed, max: e.target.value })} />
@@ -444,7 +460,7 @@ function RecommendationModal({
           <legend className="px-1 text-sm font-semibold text-neutral-800 dark:text-neutral-200">Recommended working conditions (optional — shown on Materials)</legend>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div>
-              <Label>Vc (m/min)</Label>
+              <Label>Vc ({unitLabel("speed", u)})</Label>
               <Input type="number" min="0" step="any" aria-label="Recommended Vc" value={rec.vc} onChange={(e) => setRec({ ...rec, vc: e.target.value })} />
             </div>
             <div>
@@ -457,17 +473,17 @@ function RecommendationModal({
                   onChange={(e) => setRec({ ...rec, feedUnit: e.target.value as GradeRecommendation["recFeedUnit"] })}
                   className="w-auto"
                 >
-                  <option value="PER_REV">mm/rev</option>
-                  <option value="PER_TOOTH">mm/t</option>
+                  <option value="PER_REV">{unitLabel("feed", u, "PER_REV")}</option>
+                  <option value="PER_TOOTH">{unitLabel("feed", u, "PER_TOOTH")}</option>
                 </Select>
               </div>
             </div>
             <div>
-              <Label>Ap (mm)</Label>
+              <Label>Ap ({unitLabel("length", u)})</Label>
               <Input type="number" min="0" step="any" aria-label="Recommended ap" value={rec.ap} onChange={(e) => setRec({ ...rec, ap: e.target.value })} />
             </div>
             <div>
-              <Label>Ae (mm)</Label>
+              <Label>Ae ({unitLabel("length", u)})</Label>
               <Input type="number" min="0" step="any" aria-label="Recommended ae" value={rec.ae} onChange={(e) => setRec({ ...rec, ae: e.target.value })} />
             </div>
           </div>

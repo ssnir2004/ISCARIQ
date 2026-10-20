@@ -1,6 +1,7 @@
 import { Modal } from "../../components/ui";
 import { useResource } from "../../lib/useResource";
-import { COOLANT_LABEL, feedUnitLabel, num } from "../../lib/gradeRecommendations";
+import { COOLANT_LABEL } from "../../lib/gradeRecommendations";
+import { fmt, unitLabel, UnitsToggle, useUnits } from "../../lib/units";
 import type { GradeFamily, GradeRecommendation, Material } from "../../lib/types";
 
 // The grades recommended for a work material (from the Grades cutting
@@ -68,10 +69,12 @@ export function MaterialGrades({ material, title, onClose }: { material: Materia
       .sort((a, b) => a.family.localeCompare(b.family) || a.position - b.position);
 
   const cell = "border-b border-neutral-200 px-2 py-1.5 align-top dark:border-neutral-700";
+  const [units, setUnits] = useUnits();
 
   return (
     <Modal title={`Recommended grades — ${title}`} onClose={onClose} wide>
       <div className="space-y-5" data-material-grades>
+        <UnitsToggle units={units} onChange={setUnits} />
         {loading ? (
           <p className="text-sm text-neutral-500 dark:text-neutral-400">Loading…</p>
         ) : recs.length === 0 ? (
@@ -89,10 +92,10 @@ export function MaterialGrades({ material, title, onClose }: { material: Materia
                       <th className={`${cell} font-medium`}>Grades</th>
                       <th className={`${cell} font-medium`}>Family</th>
                       {material.isCategory && <th className={`${cell} font-medium`}>Material</th>}
-                      <th className={`${cell} text-center font-medium`}>Vc (m/min)</th>
+                      <th className={`${cell} text-center font-medium`}>Vc ({unitLabel("speed", units)})</th>
                       <th className={`${cell} text-center font-medium`}>f</th>
-                      <th className={`${cell} text-center font-medium`}>Ap (mm)</th>
-                      <th className={`${cell} text-center font-medium`}>Ae (mm)</th>
+                      <th className={`${cell} text-center font-medium`}>Ap ({unitLabel("length", units)})</th>
+                      <th className={`${cell} text-center font-medium`}>Ae ({unitLabel("length", units)})</th>
                       <th className={`${cell} font-medium`}>Coolant</th>
                       <th className={`${cell} font-medium`}>Tool</th>
                       <th className={`${cell} font-medium`}>Notes</th>
@@ -112,10 +115,10 @@ export function MaterialGrades({ material, title, onClose }: { material: Materia
                         </td>
                         <td className={cell}>{FAMILY_LABEL[r.family]}</td>
                         {material.isCategory && <td className={cell}>{r.material.name}</td>}
-                        <td className={`${cell} text-center font-bold whitespace-nowrap tabular-nums`}>{num(r.recVc) || "-"}</td>
-                        <td className={`${cell} text-center whitespace-nowrap tabular-nums`}>{r.recFeed != null ? `${num(r.recFeed)} ${feedUnitLabel(r.recFeedUnit)}` : "-"}</td>
-                        <td className={`${cell} text-center whitespace-nowrap tabular-nums`}>{num(r.recAp) || "-"}</td>
-                        <td className={`${cell} text-center whitespace-nowrap tabular-nums`}>{num(r.recAe) || "-"}</td>
+                        <td className={`${cell} text-center font-bold whitespace-nowrap tabular-nums`}>{fmt(r.recVc, "speed", units) || "-"}</td>
+                        <td className={`${cell} text-center whitespace-nowrap tabular-nums`}>{r.recFeed != null ? `${fmt(r.recFeed, "feed", units)} ${unitLabel("feed", units, r.recFeedUnit)}` : "-"}</td>
+                        <td className={`${cell} text-center whitespace-nowrap tabular-nums`}>{fmt(r.recAp, "length", units) || "-"}</td>
+                        <td className={`${cell} text-center whitespace-nowrap tabular-nums`}>{fmt(r.recAe, "length", units) || "-"}</td>
                         <td className={cell}>{r.recCoolant ? COOLANT_LABEL[r.recCoolant] : "-"}</td>
                         <td className={`${cell} whitespace-pre-line`} dir="auto" data-rec-tool>
                           {r.recTool}
