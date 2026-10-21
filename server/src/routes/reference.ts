@@ -1032,6 +1032,30 @@ gradeChartRouter.get("/", async (_req, res) => {
   res.json(await prisma.gradeChartBox.findMany());
 });
 
+// Kinds of cut each chart shows (registered before "/:scope/:group/..." routes).
+const CUT_TYPES = ["CONTINUOUS", "LIGHT", "HEAVY"] as const;
+
+gradeChartRouter.get("/settings", async (_req, res) => {
+  res.json(await prisma.gradeChartSetting.findMany());
+});
+
+gradeChartRouter.put("/settings/:scope/:group", async (req, res) => {
+  const { scope } = req.params;
+  const group = iso513GroupSchema.safeParse(req.params.group);
+  const body = z.object({ cutTypes: z.array(z.enum(CUT_TYPES)).min(1, "Choose at least one kind of cut") }).safeParse(req.body);
+  if (!group.success || !body.success) return res.status(400).json({ error: body.success ? "Invalid chart" : body.error.issues[0]?.message });
+  if (!(await validScope(scope))) return res.status(404).json({ error: "Unknown application" });
+  // Kept in axis order.
+  const cutTypes = CUT_TYPES.filter((c) => body.data.cutTypes.includes(c));
+  res.json(
+    await prisma.gradeChartSetting.upsert({
+      where: { scope_iso513Group: { scope, iso513Group: group.data } },
+      create: { scope, iso513Group: group.data, cutTypes },
+      update: { cutTypes },
+    })
+  );
+});
+
 const MIN_BOX = 4;
 const chartBoxSchema = z
   .object({
