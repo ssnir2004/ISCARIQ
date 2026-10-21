@@ -142,11 +142,13 @@ function WorkpieceIcon({ grooves }: { grooves: 0 | 4 | 8 }) {
 }
 
 // Toughness axis markers: the kinds of cut, from continuous to heavily interrupted.
-const CUT_TYPES: { grooves: 0 | 4 | 8; label: string }[] = [
-  { grooves: 0, label: "Continuous cut" },
-  { grooves: 4, label: "Light interrupted cut" },
-  { grooves: 8, label: "Heavy interrupted cut" },
+type CutType = "CONTINUOUS" | "LIGHT" | "HEAVY";
+const CUT_TYPES: { key: CutType; grooves: 0 | 4 | 8; label: string; short: string }[] = [
+  { key: "CONTINUOUS", grooves: 0, label: "Continuous cut", short: "Continuous" },
+  { key: "LIGHT", grooves: 4, label: "Light interrupted cut", short: "Light interrupted" },
+  { key: "HEAVY", grooves: 8, label: "Heavy interrupted cut", short: "Heavy interrupted" },
 ];
+const ALL_CUTS: CutType[] = CUT_TYPES.map((c) => c.key);
 
 export function GradesChart({
   scope,
@@ -171,6 +173,9 @@ export function GradesChart({
   onOpenCases: (grade: Grade) => void;
 }) {
   const { data: savedBoxes, reload } = useResource<GradeChartBox>("/grade-chart");
+  // Kinds of cut this chart's toughness axis shows (a group chart falls back
+  // to its board's chart; default all three).
+  const { data: settings, reload: reloadSettings } = useResource<{ scope: string; iso513Group: Iso513Group; cutTypes: CutType[] }>("/grade-chart/settings");
   // Blocks moved in this session, by block key, applied before the save
   // returns; null means "no saved box" (after a reset).
   const [local, setLocal] = useState<Record<string, Box | null>>({});
@@ -207,6 +212,22 @@ export function GradesChart({
   const baseScope = scope.replace(/~[^~]+$/, "");
   const baseFor = (gradeId: string) =>
     baseScope === scope ? undefined : savedBoxes.find((b) => b.scope === baseScope && b.iso513Group === group && b.gradeId === gradeId);
+
+  const settingFor = (s: string) => settings.find((x) => x.scope === s && x.iso513Group === group)?.cutTypes;
+  const cutTypes = settingFor(scope) ?? settingFor(baseScope) ?? ALL_CUTS;
+  const shownCuts = CUT_TYPES.filter((c) => cutTypes.includes(c.key));
+
+  async function toggleCut(key: CutType) {
+    const next = cutTypes.includes(key) ? cutTypes.filter((c) => c !== key) : [...cutTypes, key];
+    if (next.length === 0) return;
+    setError(null);
+    try {
+      await api.put(`/grade-chart/settings/${encodeURIComponent(scope)}/${group}`, { cutTypes: next });
+      await reloadSettings();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to save the kinds of cut");
+    }
+  }
 
   // Group grades into blocks: merged grades share their mergeId's block.
   const blocks: Block[] = [];
@@ -509,6 +530,28 @@ export function GradesChart({
         </div>
       </div>
       {error && <p className="mb-2 text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {editing && (
+        <div className="mb-2 flex flex-wrap items-center gap-2 text-xs" data-cut-types>
+          <span className="text-neutral-500 dark:text-neutral-400">Kinds of cut on this chart:</span>
+          {CUT_TYPES.map((c) => {
+            const on = cutTypes.includes(c.key);
+            return (
+              <button
+                key={c.key}
+                type="button"
+                aria-pressed={on}
+                disabled={on && cutTypes.length === 1}
+                onClick={() => toggleCut(c.key)}
+                className={`rounded-full border px-2.5 py-0.5 ${
+                  on ? "border-blue-600 bg-blue-600 text-white" : "border-neutral-300 text-neutral-600 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                } disabled:opacity-60`}
+              >
+                {c.short}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       <div className="flex gap-2">
         {/* Y axis label */}
@@ -658,8 +701,9 @@ export function GradesChart({
           </div>
           {/* X axis: kinds of cut along the toughness axis, and its label */}
           <div className="mt-2 flex items-start gap-2" data-x-axis>
-            <div className="grid flex-1 grid-cols-3">
-              {CUT_TYPES.map((c) => (
+            {/* Only the kinds of cut this chart covers, spread along the axis. */}
+            <div className="grid flex-1" style={{ gridTemplateColumns: `repeat(${shownCuts.length}, minmax(0, 1fr))` }}>
+              {shownCuts.map((c) => (
                 <div key={c.label} className="flex flex-col items-center gap-1">
                   <WorkpieceIcon grooves={c.grooves} />
                   <span className="max-w-[7rem] text-center text-sm leading-tight font-bold text-neutral-900 dark:text-neutral-100">{c.label}</span>

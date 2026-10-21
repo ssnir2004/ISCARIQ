@@ -766,6 +766,16 @@ model GradeCompetitor {
   @@index([gradeId])
 }
 
+// Per chart (board scope + ISO group): which kinds of cut its toughness axis
+// shows (CONTINUOUS, LIGHT, HEAVY); no row = all three.
+model GradeChartSetting {
+  scope       String
+  iso513Group Iso513Group
+  cutTypes    String[]
+
+  @@id([scope, iso513Group])
+}
+
 model GradeChartBox {
   scope       String
   iso513Group Iso513Group
