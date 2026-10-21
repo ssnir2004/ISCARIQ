@@ -7,6 +7,7 @@ import { GradesBoard } from "./GradesBoard";
 import { GradeFormCases } from "./GradeFormCases";
 import { RulesOfThumb } from "../../components/RulesOfThumb";
 import { CodeKey } from "../../components/CodeKey";
+import { GradeFamiliesChart } from "./GradeFamiliesChart";
 import { ISO513_COLORS, MATERIAL_GROUPS } from "../../lib/npaKnowledgeConstants";
 import { FAMILY_GROUPS } from "../../lib/gradeGroups";
 import { useResource } from "../../lib/useResource";
@@ -532,6 +533,7 @@ export function GradesHub() {
   return (
     <div>
       <PageHeader title="Grades" />
+      <GradeFamiliesChart activeTab={tab.slug} />
       <div role="tablist" aria-label="Grade families" className="mb-6 flex flex-wrap gap-2">
         {GRADE_TABS.map((t) => (
           <NavLink
