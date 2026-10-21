@@ -34,6 +34,17 @@ function MaterialDetails({ m }: { m: Material }) {
   );
 }
 
+const COLLAPSED_KEY = "iscariq.materials.collapsed";
+
+function readCollapsed(): Iso513Group[] {
+  try {
+    const v = JSON.parse(localStorage.getItem(COLLAPSED_KEY) ?? "[]");
+    return Array.isArray(v) ? v : [];
+  } catch {
+    return [];
+  }
+}
+
 export function Materials() {
   const { data, reload } = useResource<Material>("/materials");
   // For each material's recommended grades, by application (Grades → Conditions).
@@ -51,6 +62,19 @@ export function Materials() {
   const nameRef = useRef<HTMLInputElement>(null);
   // Bumped by "+ Subcategory" to open the add form.
   const [addSignal, setAddSignal] = useState(0);
+  // ISO groups whose card is collapsed (remembered).
+  const [collapsed, setCollapsed] = useState<Iso513Group[]>(readCollapsed);
+  function setGroupOpen(g: Iso513Group, open: boolean) {
+    setCollapsed((c) => {
+      const next = open ? c.filter((x) => x !== g) : [...new Set([...c, g])];
+      try {
+        localStorage.setItem(COLLAPSED_KEY, JSON.stringify(next));
+      } catch {
+        // not remembered
+      }
+      return next;
+    });
+  }
 
   const categoryOf = (g: Iso513Group) => data.find((m) => m.isCategory && m.iso513Group === g);
   const categoryName = (g: Iso513Group) =>
@@ -67,6 +91,7 @@ export function Materials() {
     setEditing(null);
     setError(null);
     setAddSignal((n) => n + 1);
+    setGroupOpen(g, true);
     focusForm(true);
   }
 
@@ -213,11 +238,26 @@ export function Materials() {
         {MATERIAL_GROUPS.map(({ value: g }) => {
           const category = categoryOf(g);
           const subs = data.filter((m) => !m.isCategory && m.iso513Group === g);
+          const open = !collapsed.includes(g);
           return (
-            <Card key={g} className="overflow-hidden border-l-4" style={{ borderLeftColor: ISO513_COLORS[g] }}>
-              <div className="flex items-start justify-between gap-3 p-3">
+            <Card key={g} className="overflow-hidden border-l-4" style={{ borderLeftColor: ISO513_COLORS[g] }} data-material-group={g}>
+              {/* Clicking the header (outside its buttons) collapses / expands the card. */}
+              <div
+                className="flex cursor-pointer items-start justify-between gap-3 p-3"
+                onClick={(e) => !(e.target as HTMLElement).closest("button, a, input") && setGroupOpen(g, !open)}
+              >
                 <div className="text-sm">
                   <div>
+                    <button
+                      type="button"
+                      onClick={() => setGroupOpen(g, !open)}
+                      aria-expanded={open}
+                      aria-label={open ? `Collapse ${g}` : `Expand ${g}`}
+                      className="mr-1.5 w-4 text-xs text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
+                      data-group-toggle
+                    >
+                      {open ? "▼" : "▶"}
+                    </button>
                     <span className="mr-2">
                       <Iso513Badge group={g} />
                     </span>
@@ -253,9 +293,14 @@ export function Materials() {
                     )}
                     {category?.hardness && <span className="ml-2 text-neutral-500 dark:text-neutral-400">({category.hardness})</span>}
                     {category?.description && <span className="ml-2 text-neutral-500 dark:text-neutral-400">— {category.description}</span>}
+                    {!open && (
+                      <span className="ml-2 text-xs text-neutral-400 dark:text-neutral-500">
+                        ({subs.length} subcategor{subs.length === 1 ? "y" : "ies"})
+                      </span>
+                    )}
                   </div>
-                  {category && <MaterialDetails m={category} />}
-                  {category && (
+                  {open && category && <MaterialDetails m={category} />}
+                  {open && category && (
                     <MaterialGradesSummary
                       recs={recommendationsFor(recommendations, category)}
                       onOpen={() => setGradesOf({ material: category, title: `${g} — ${categoryName(g)}` })}
@@ -273,6 +318,7 @@ export function Materials() {
                   )}
                 </div>
               </div>
+              {open && (
               <div className="border-t border-neutral-200 dark:border-neutral-800">
                 {subs.length === 0 ? (
                   <p className="py-2 pr-3 pl-10 text-xs text-neutral-400 dark:text-neutral-500">No subcategories yet</p>
@@ -311,6 +357,7 @@ export function Materials() {
                   ))
                 )}
               </div>
+              )}
             </Card>
           );
         })}
