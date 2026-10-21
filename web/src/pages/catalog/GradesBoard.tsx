@@ -262,6 +262,7 @@ export function GradesBoard({ data, startEdit, remove, family }: GlossaryListCon
         boardGrades.length === 0 && <p className="py-8 text-center text-sm text-neutral-500 dark:text-neutral-400">No grades yet.</p>
       ) : view === "map" ? (
         <GradesMap
+          scope={storeScope(scope)}
           groups={visibleGroups.map((g) => g.value)}
           columnFor={(group) => orderColumn(group, boardGrades, savedFor(group), scope)}
           onPick={setCardFor}
