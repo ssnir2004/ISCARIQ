@@ -7,7 +7,7 @@ import { GradesBoard } from "./GradesBoard";
 import { GradeFormCases } from "./GradeFormCases";
 import { RulesOfThumb } from "../../components/RulesOfThumb";
 import { CodeKey } from "../../components/CodeKey";
-import { GradeFamiliesChart } from "./GradeFamiliesChart";
+import { GradeFamiliesChart, TabCharts } from "./GradeFamiliesChart";
 import { ISO513_COLORS, MATERIAL_GROUPS } from "../../lib/npaKnowledgeConstants";
 import { FAMILY_GROUPS } from "../../lib/gradeGroups";
 import { useResource } from "../../lib/useResource";
@@ -551,6 +551,8 @@ export function GradesHub() {
           </NavLink>
         ))}
       </div>
+      {/* Charts for this tab (e.g. ceramic types). */}
+      <TabCharts tab={tab.slug} />
       <RulesOfThumb key={`rules:${tab.family}`} scope={`grades:${tab.family}`} />
       {/* The family's insert designation key (e.g. CBN), editable per tab. */}
       <CodeKey key={`codekey:${tab.family}`} settingKey={`codekey.${tab.family.toLowerCase()}`} />
