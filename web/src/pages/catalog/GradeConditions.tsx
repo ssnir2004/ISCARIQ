@@ -1,4 +1,4 @@
-import { Fragment, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useState, type ChangeEvent, type ReactNode } from "react";
 import { api, ApiError } from "../../lib/api";
 import { useResource } from "../../lib/useResource";
 import { ISO513_COLORS, MATERIAL_GROUPS } from "../../lib/npaKnowledgeConstants";
@@ -6,13 +6,30 @@ import { FAMILY_GROUPS } from "../../lib/gradeGroups";
 import { ALL_SCOPE } from "../../lib/gradeCases";
 import type { Application, Grade, GradeFamily, GradeRecommendation, Iso513Group, Material } from "../../lib/types";
 import { COOLANT_LABEL, coolantLabel, operationLabel, rangeText, recommendationsFor } from "../../lib/gradeRecommendations";
-import { fmt, fromUnits, toUnits, unitLabel, UnitsToggle, useUnits, type Quantity, type Units } from "../../lib/units";
+import { fmt, fromUnits, toUnits, unitLabel, UnitsToggle, useUnits, type Quantity } from "../../lib/units";
 import { Button, Input, Label, Modal, Select, Textarea } from "../../components/ui";
 
 // Recommended cutting conditions for a family's grades, as a table per ISO
 // material (like the catalog's "Recommended Cutting Conditions" slides):
 // work material, application, rough / finish, grades, cutting speed Vc
 // (m/min: min / recommended / max) and coolant.
+
+// The form's number fields and what each measures (stored metric).
+const NUM_FIELDS = {
+  vcMin: "speed",
+  vcRec: "speed",
+  vcMax: "speed",
+  apMin: "length",
+  apMax: "length",
+  feedMin: "feed",
+  feedMax: "feed",
+  recVc: "speed",
+  recFeed: "feed",
+  recAp: "length",
+  recAe: "length",
+} as const satisfies Record<string, Quantity>;
+type NumKey = keyof typeof NUM_FIELDS;
+const NUM_KEYS = Object.keys(NUM_FIELDS) as NumKey[];
 
 export function GradeConditions({
   family,
@@ -260,13 +277,28 @@ function RecommendationModal({
 }) {
   const { data: materials } = useResource<Material>("/materials");
   const { data: applications } = useResource<Application>("/applications");
-  // Values are typed in the units chosen when the form opened.
-  const [liveUnits] = useUnits();
-  const [u] = useState<Units>(liveUnits);
-  const q = (v: number | null | undefined, k: Quantity) => fmt(v, k, u);
-  // Back to metric; a field left as it opened keeps its stored value exactly.
-  const toMetric = (text: string, k: Quantity, original: number | null | undefined) =>
-    text.trim() === "" ? null : text === q(original, k) ? (original ?? null) : fromUnits(Number(text), k, u);
+  // Cutting data is kept metric and shown / typed in the chosen units; the
+  // switch in the form converts every field (a field not typed in keeps its
+  // stored value exactly).
+  const [u, setU] = useUnits();
+  const [nums, setNums] = useState(() =>
+    Object.fromEntries(
+      NUM_KEYS.map((k) => {
+        const v = existing?.[k] ?? null;
+        return [k, { metric: v, text: fmt(v, NUM_FIELDS[k], u) }];
+      })
+    ) as Record<NumKey, { metric: number | null; text: string }>
+  );
+  useEffect(() => {
+    setNums((n) => Object.fromEntries(NUM_KEYS.map((k) => [k, { ...n[k], text: fmt(n[k].metric, NUM_FIELDS[k], u) }])) as typeof n);
+  }, [u]);
+  const num = (k: NumKey) => ({
+    value: nums[k].text,
+    onChange: (e: ChangeEvent<HTMLInputElement>) => {
+      const text = e.target.value;
+      setNums((n) => ({ ...n, [k]: { text, metric: text.trim() === "" ? null : fromUnits(Number(text), NUM_FIELDS[k], u) } }));
+    },
+  });
   // Several work materials can be chosen: the recommendation is saved once
   // per material (editing keeps this row for one of them and adds the rest).
   const [materialIds, setMaterialIds] = useState<string[]>(existing ? [existing.material.id] : []);
@@ -275,20 +307,13 @@ function RecommendationModal({
   const [semiFinish, setSemiFinish] = useState(existing?.semiFinish ?? false);
   const [finish, setFinish] = useState(existing?.finish ?? false);
   const [gradeIds, setGradeIds] = useState<string[]>(existing ? existing.grades.map((g) => g.id) : []);
-  const [vc, setVc] = useState({ min: q(existing?.vcMin, "speed"), rec: q(existing?.vcRec, "speed"), max: q(existing?.vcMax, "speed") });
-  const [ap, setAp] = useState({ min: q(existing?.apMin, "length"), max: q(existing?.apMax, "length") });
-  const [feed, setFeed] = useState({ min: q(existing?.feedMin, "feed"), max: q(existing?.feedMax, "feed") });
   const [dry, setDry] = useState(existing?.dry ?? false);
   const [wet, setWet] = useState(existing?.wet ?? false);
   const [notes, setNotes] = useState(existing?.notes ?? "");
   const [testReportNo, setTestReportNo] = useState(existing?.testReportNo ?? "");
   // Recommended working conditions (optional; shown on the Materials screen).
   const [rec, setRec] = useState({
-    vc: q(existing?.recVc, "speed"),
-    feed: q(existing?.recFeed, "feed"),
     feedUnit: existing?.recFeedUnit ?? "PER_REV",
-    ap: q(existing?.recAp, "length"),
-    ae: q(existing?.recAe, "length"),
     coolant: existing?.recCoolant ?? "",
     notes: existing?.recNotes ?? "",
     tool: existing?.recTool ?? "",
@@ -324,21 +349,21 @@ function RecommendationModal({
       rough,
       semiFinish,
       finish,
-      vcMin: toMetric(vc.min, "speed", existing?.vcMin),
-      vcRec: toMetric(vc.rec, "speed", existing?.vcRec),
-      vcMax: toMetric(vc.max, "speed", existing?.vcMax),
-      apMin: toMetric(ap.min, "length", existing?.apMin),
-      apMax: toMetric(ap.max, "length", existing?.apMax),
-      feedMin: toMetric(feed.min, "feed", existing?.feedMin),
-      feedMax: toMetric(feed.max, "feed", existing?.feedMax),
+      vcMin: nums.vcMin.metric,
+      vcRec: nums.vcRec.metric,
+      vcMax: nums.vcMax.metric,
+      apMin: nums.apMin.metric,
+      apMax: nums.apMax.metric,
+      feedMin: nums.feedMin.metric,
+      feedMax: nums.feedMax.metric,
       dry,
       wet,
       notes: notes.trim() || null,
-      recVc: toMetric(rec.vc, "speed", existing?.recVc),
-      recFeed: toMetric(rec.feed, "feed", existing?.recFeed),
+      recVc: nums.recVc.metric,
+      recFeed: nums.recFeed.metric,
       recFeedUnit: rec.feedUnit,
-      recAp: toMetric(rec.ap, "length", existing?.recAp),
-      recAe: toMetric(rec.ae, "length", existing?.recAe),
+      recAp: nums.recAp.metric,
+      recAe: nums.recAe.metric,
       recCoolant: rec.coolant || null,
       recNotes: rec.notes.trim() || null,
       recTool: rec.tool.trim() || null,
@@ -361,6 +386,10 @@ function RecommendationModal({
   return (
     <Modal title={existing ? "Edit recommendation" : "Add recommendation"} onClose={onClose} full>
       <div className="mx-auto max-w-6xl space-y-4" data-recommendation-form>
+        <div className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-300">
+          <span>Units:</span>
+          <UnitsToggle units={u} onChange={setU} />
+        </div>
         <div>
           <Label>Work material</Label>
           <div className="space-y-1.5" data-material-choices>
@@ -436,33 +465,32 @@ function RecommendationModal({
         <div>
           <Label>V ({unitLabel("speed", u)}) — recommended is optional</Label>
           <div className="grid grid-cols-3 gap-2">
-            <Input type="number" min="0" step="any" placeholder="Min" aria-label="Vc min" value={vc.min} onChange={(e) => setVc({ ...vc, min: e.target.value })} />
+            <Input type="number" min="0" step="any" placeholder="Min" aria-label="Vc min" {...num("vcMin")} />
             <Input
               type="number"
               min="0"
               step="any"
               placeholder="Recommended"
               aria-label="Vc recommended"
-              value={vc.rec}
-              onChange={(e) => setVc({ ...vc, rec: e.target.value })}
+              {...num("vcRec")}
               className="font-bold"
             />
-            <Input type="number" min="0" step="any" placeholder="Max" aria-label="Vc max" value={vc.max} onChange={(e) => setVc({ ...vc, max: e.target.value })} />
+            <Input type="number" min="0" step="any" placeholder="Max" aria-label="Vc max" {...num("vcMax")} />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
             <Label>DOC ({unitLabel("length", u)})</Label>
             <div className="grid grid-cols-2 gap-2">
-              <Input type="number" min="0" step="any" placeholder="Min" aria-label="DOC min" value={ap.min} onChange={(e) => setAp({ ...ap, min: e.target.value })} />
-              <Input type="number" min="0" step="any" placeholder="Max" aria-label="DOC max" value={ap.max} onChange={(e) => setAp({ ...ap, max: e.target.value })} />
+              <Input type="number" min="0" step="any" placeholder="Min" aria-label="DOC min" {...num("apMin")} />
+              <Input type="number" min="0" step="any" placeholder="Max" aria-label="DOC max" {...num("apMax")} />
             </div>
           </div>
           <div>
             <Label>f ({unitLabel("feed", u)})</Label>
             <div className="grid grid-cols-2 gap-2">
-              <Input type="number" min="0" step="any" placeholder="Min" aria-label="Feed min" value={feed.min} onChange={(e) => setFeed({ ...feed, min: e.target.value })} />
-              <Input type="number" min="0" step="any" placeholder="Max" aria-label="Feed max" value={feed.max} onChange={(e) => setFeed({ ...feed, max: e.target.value })} />
+              <Input type="number" min="0" step="any" placeholder="Min" aria-label="Feed min" {...num("feedMin")} />
+              <Input type="number" min="0" step="any" placeholder="Max" aria-label="Feed max" {...num("feedMax")} />
             </div>
           </div>
         </div>
@@ -487,12 +515,12 @@ function RecommendationModal({
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div>
               <Label>Vc ({unitLabel("speed", u)})</Label>
-              <Input type="number" min="0" step="any" aria-label="Recommended Vc" value={rec.vc} onChange={(e) => setRec({ ...rec, vc: e.target.value })} />
+              <Input type="number" min="0" step="any" aria-label="Recommended Vc" {...num("recVc")} />
             </div>
             <div>
               <Label>f</Label>
               <div className="flex gap-1">
-                <Input type="number" min="0" step="any" aria-label="Recommended feed" value={rec.feed} onChange={(e) => setRec({ ...rec, feed: e.target.value })} />
+                <Input type="number" min="0" step="any" aria-label="Recommended feed" {...num("recFeed")} />
                 <Select
                   aria-label="Feed unit"
                   value={rec.feedUnit}
@@ -506,11 +534,11 @@ function RecommendationModal({
             </div>
             <div>
               <Label>Ap ({unitLabel("length", u)})</Label>
-              <Input type="number" min="0" step="any" aria-label="Recommended ap" value={rec.ap} onChange={(e) => setRec({ ...rec, ap: e.target.value })} />
+              <Input type="number" min="0" step="any" aria-label="Recommended ap" {...num("recAp")} />
             </div>
             <div>
               <Label>Ae ({unitLabel("length", u)})</Label>
-              <Input type="number" min="0" step="any" aria-label="Recommended ae" value={rec.ae} onChange={(e) => setRec({ ...rec, ae: e.target.value })} />
+              <Input type="number" min="0" step="any" aria-label="Recommended ae" {...num("recAe")} />
             </div>
           </div>
           <div>
