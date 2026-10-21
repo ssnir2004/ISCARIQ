@@ -18,7 +18,7 @@ type Box = { x: number; y: number; w: number; h: number };
 type Block = { key: string; mergeId: string | null; grades: Grade[]; index: number };
 // One drag can move several selected blocks together (resizing is always one block).
 type DragItem = { key: string; start: Box; box: Box };
-type Drag = { items: DragItem[]; mode: "move" | "resize"; startX: number; startY: number; target: HTMLElement };
+type Drag = { items: DragItem[]; mode: "move" | "resize"; startX: number; startY: number };
 // Selection rectangle drawn by dragging on empty chart space (plot percentages).
 type Marquee = { x0: number; y0: number; x1: number; y1: number; additive: boolean };
 
@@ -286,7 +286,6 @@ export function GradesChart({
       mode,
       startX: e.clientX,
       startY: e.clientY,
-      target: e.target as HTMLElement,
     };
     dragRef.current = next;
     setDrag(next);
@@ -353,15 +352,9 @@ export function GradesChart({
     setDrag(null);
     if (!d) return;
     const moved = d.items.filter((i) => !sameBox(i.box, i.start));
-    if (moved.length === 0) {
-      if (d.items.length !== 1) return;
-      // A click: open the cases of the grade clicked (or the block's only grade).
-      const block = blocks.find((b) => b.key === d.items[0].key);
-      const clickedId = d.target.closest<HTMLElement>("[data-grade-id]")?.dataset.gradeId;
-      const grade = block?.grades.find((g) => g.id === clickedId) ?? (block?.grades.length === 1 ? block.grades[0] : undefined);
-      if (grade && caseCount(grade.id) > 0) onOpenCases(grade);
-      return;
-    }
+    // A click without moving does nothing in edit mode: cases open only in
+    // view mode.
+    if (moved.length === 0) return;
     const previous = Object.fromEntries(moved.map((i) => [i.key, local[i.key]]));
     setLocal((l) => ({ ...l, ...Object.fromEntries(moved.map((i) => [i.key, i.box])) }));
     setError(null);
