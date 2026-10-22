@@ -11,6 +11,8 @@ export interface DecodedPart {
   title?: string;
   code: string;
   text?: string;
+  // The code key row to show when it isn't the code itself (e.g. "M…W").
+  lookup?: string;
 }
 export interface Decoded {
   kind: string;
@@ -24,9 +26,12 @@ const squash = (s: string) => s.toUpperCase().replace(/\s+/g, "");
 // The ISO 1832 base shared by CBN, ceramic and PCD inserts (e.g. CNGA 120408).
 const ISO_BASE = "ISO insert (shape, clearance, tolerance, type, size, thickness, corner radius — see the Carbide code key)";
 
-// ISO 1832 carbide insert, e.g. WNMG 080408 E-GN.
+// ISO 1832 carbide insert, e.g. WNMG 080408 E-GN. Spaces after the shape
+// letters separate parts like dashes (so "080408 SF" is chipformer SF, not
+// cutting edge S); the cutting edge letter stands alone.
 function decodeIsoInsert(text: string): Decoded | null {
-  const m = squash(text).match(/^([A-Z])([A-Z])([A-Z])([A-Z])(\d{2})(T\d|\d{2})(\d{2})([FETS])?-?(.+)?$/);
+  const d = text.toUpperCase().trim().replace(/^([A-Z]{4})\s+/, "$1").replace(/\s+/g, "-").replace(/-+/g, "-");
+  const m = d.match(/^([A-Z])([A-Z])([A-Z])([A-Z])(\d{2})(T\d|\d{2})(\d{2})-?([FETS](?=-|$))?-?(.+)?$/);
   if (!m) return null;
   return {
     kind: "ISO insert",
