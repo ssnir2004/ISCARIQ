@@ -549,7 +549,7 @@ function Decoder({ data, name }: { data: CodeKeyData; name: DecoderName }) {
               {result.parts.map((p, n) => {
                 const index = data.sections.findIndex((s) => (p.key && s.key === p.key) || (p.title && s.title === p.title));
                 const section = data.sections[index];
-                const row = section ? findRow(section.rows, p.code) : undefined;
+                const row = section ? findRow(section.rows, p.lookup ?? p.code) : undefined;
                 const known = !!p.text || !!row;
                 return (
                   <tr key={n} className="border-t border-neutral-200 first:border-t-0 dark:border-neutral-800" data-decoded-part={p.key ?? p.title ?? "base"}>
