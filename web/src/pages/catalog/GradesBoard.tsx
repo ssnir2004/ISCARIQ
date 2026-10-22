@@ -29,6 +29,8 @@ import { FAMILY_GROUPS, groupsIn, setsIn } from "../../lib/gradeGroups";
 type Dragging = { group: Iso513Group; id: string; startY: number; active: boolean; index: number | null };
 
 const ALL = "all";
+// Competitors named on a grade's card (the grade card lists them all).
+const CARD_COMPETITORS = 4;
 const TAB_STORAGE_KEY = "iscariq.grades.boardTab";
 const VIEW_STORAGE_KEY = "iscariq.grades.view";
 const CHART_GROUP_STORAGE_KEY = "iscariq.grades.chartGroup";
@@ -421,8 +423,9 @@ export function GradesBoard({ data, startEdit, remove, family }: GlossaryListCon
                               </div>
                               {grade.chartNote && <div className="mt-0.5 font-bold text-neutral-900 dark:text-neutral-100">{grade.chartNote}</div>}
                               {grade.competitors && grade.competitors.length > 0 && (
-                                <div className="mt-0.5 text-neutral-500 dark:text-neutral-400" data-card-competitors>
-                                  vs {grade.competitors.map((c) => c.name).join(", ")}
+                                <div className="mt-0.5 text-neutral-500 dark:text-neutral-400" data-card-competitors title={grade.competitors.map((c) => c.name).join(", ")}>
+                                  vs {grade.competitors.slice(0, CARD_COMPETITORS).map((c) => c.name).join(", ")}
+                                  {grade.competitors.length > CARD_COMPETITORS && ` +${grade.competitors.length - CARD_COMPETITORS} more`}
                                 </div>
                               )}
                               {grade.description && (

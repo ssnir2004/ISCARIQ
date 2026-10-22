@@ -124,10 +124,10 @@ export function GradeCardModal({ grade, onClose, onEdit }: { grade: Grade; onClo
               <dt className="text-neutral-500 dark:text-neutral-400">Competes with</dt>
               <dd data-card-competes>
                 <ul className="space-y-0.5">
-                  {grade.competitors.map((c, i) => (
-                    <li key={i}>
-                      {c.brand && <span className="text-neutral-500 dark:text-neutral-400">{c.brand} · </span>}
-                      <span className="font-semibold text-neutral-900 dark:text-neutral-100">{c.name}</span>
+                  {byBrand(grade.competitors).map(([brand, names]) => (
+                    <li key={brand}>
+                      {brand && <span className="text-neutral-500 dark:text-neutral-400">{brand} · </span>}
+                      <span className="font-semibold text-neutral-900 dark:text-neutral-100">{names.join(", ")}</span>
                     </li>
                   ))}
                 </ul>
@@ -229,4 +229,11 @@ export function GradeCardModal({ grade, onClose, onEdit }: { grade: Grade; onClo
       </div>
     </Modal>
   );
+}
+
+// Competitors by brand, in their order (a brand's names together).
+function byBrand(competitors: { brand: string; name: string }[]): [string, string[]][] {
+  const brands = new Map<string, string[]>();
+  for (const c of competitors) brands.set(c.brand, [...(brands.get(c.brand) ?? []), c.name]);
+  return [...brands];
 }
