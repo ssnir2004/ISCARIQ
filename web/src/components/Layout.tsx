@@ -18,6 +18,7 @@ const NAV = [
   { to: "/catalog/shapes", label: "Shapes" },
   { to: "/catalog/chipbreakers", label: "Chipbreakers" },
   { to: "/catalog/grades", label: "Grades" },
+  { to: "/catalog/code-keys", label: "Code keys" },
   { to: "/catalog/applications", label: "Applications" },
   { to: "/catalog/substrates", label: "Substrates" },
   { to: "/catalog/coatings", label: "Coatings" },
