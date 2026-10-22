@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ClipboardEvent, type ReactNode } from "react";
 import { api, ApiError } from "../lib/api";
-import { decodeIsoTurning } from "../lib/isoTurning";
+import { DECODERS, findRow, type DecoderName } from "../lib/insertDecoders";
 import { Button, Card, Input, Textarea } from "./ui";
 
 // A code key for product designations (e.g. "Code key for CBN inserts"):
@@ -16,9 +16,9 @@ export interface CodeKeyData {
   example: string;
   sections: CodeKeySection[];
   tables?: CodeKeyTable[];
-  // A designation decoder shown above the tables ("iso-turning": ISO turning
-  // toolholders and boring bars; sections keyed "p<position>").
-  decoder?: "iso-turning";
+  // A designation decoder shown above the tables (see insertDecoders, e.g.
+  // "iso-turning": ISO turning toolholders, sections keyed "p<position>").
+  decoder?: DecoderName;
 }
 interface CodeKeySection {
   title: string;
@@ -53,7 +53,9 @@ function readOpen(key: string) {
 }
 
 // `defaultTitle` names a key not written yet (e.g. "Grade identification key").
-export function CodeKey({ settingKey, defaultTitle = "Code key" }: { settingKey: string; defaultTitle?: string }) {
+// `decoder` adds a designation decoder that reads this key's tables (a key
+// can also name its own decoder).
+export function CodeKey({ settingKey, defaultTitle = "Code key", decoder }: { settingKey: string; defaultTitle?: string; decoder?: DecoderName }) {
   const [data, setData] = useState<CodeKeyData | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [open, setOpen] = useState(() => readOpen(settingKey));
@@ -133,7 +135,7 @@ export function CodeKey({ settingKey, defaultTitle = "Code key" }: { settingKey:
         (draft ? (
           <CodeKeyEditor draft={draft} setDraft={setDraft} error={error} saving={saving} onSave={save} onCancel={() => setDraft(null)} />
         ) : data ? (
-          <CodeKeyView data={data} />
+          <CodeKeyView data={data} decoder={decoder ?? data.decoder} />
         ) : (
           <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">No code key yet.</p>
         ))}
@@ -165,11 +167,11 @@ function Example({ data }: { data: CodeKeyData }) {
   );
 }
 
-function CodeKeyView({ data }: { data: CodeKeyData }) {
+function CodeKeyView({ data, decoder }: { data: CodeKeyData; decoder?: DecoderName }) {
   return (
     <div>
       {data.example && <Example data={data} />}
-      {data.decoder === "iso-turning" && <Decoder data={data} />}
+      {decoder && <Decoder data={data} name={decoder} />}
       <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3">
         {data.sections.map((s, i) => (
           <div key={i} className="overflow-hidden rounded-lg border border-neutral-200 dark:border-neutral-700" data-code-key-section={s.title}>
@@ -512,37 +514,38 @@ function PicturePaste({ value, onChange }: { value: string | null; onChange: (da
 }
 
 // Type a designation (e.g. MWLNR 2525M-08W) to see each position's meaning.
-function Decoder({ data }: { data: CodeKeyData }) {
+function Decoder({ data, name }: { data: CodeKeyData; name: DecoderName }) {
   const [text, setText] = useState("");
-  const result = text.trim() ? decodeIsoTurning(text) : null;
+  const { decode, examples } = DECODERS[name];
+  const result = text.trim() ? decode(text) : null;
   return (
     <div className="mb-3 rounded-lg border border-blue-200 bg-blue-50/50 p-3 dark:border-blue-900 dark:bg-blue-950/20" data-code-decoder>
       <Input
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder="Decode a designation, e.g. MWLNR 2525M-08W or S25S MWLNR-08W"
+        placeholder={`Decode a designation, e.g. ${examples}`}
         aria-label="Designation to decode"
         className="max-w-xl font-mono"
       />
       {text.trim() && !result && (
-        <p className="mt-2 text-sm text-red-600 dark:text-red-400">Not a toolholder (e.g. MWLNR 2525M-08W) or boring bar (e.g. S25S MWLNR-08W) designation.</p>
+        <p className="mt-2 text-sm text-red-600 dark:text-red-400">Can't read this designation (e.g. {examples}).</p>
       )}
       {result && (
         <div className="mt-2">
           <p className="mb-1 text-xs font-semibold text-neutral-600 dark:text-neutral-300">{result.kind}</p>
           <table className="text-sm" data-decoded>
             <tbody>
-              {result.parts.map((p) => {
-                const index = data.sections.findIndex((s) => s.key === p.key);
+              {result.parts.map((p, n) => {
+                const index = data.sections.findIndex((s) => (p.key && s.key === p.key) || (p.title && s.title === p.title));
                 const section = data.sections[index];
-                const row = section?.rows.find((r) => r.code === p.code);
+                const row = section ? findRow(section.rows, p.code) : undefined;
                 const known = !!p.text || !!row;
                 return (
-                  <tr key={p.key} className="border-t border-neutral-200 first:border-t-0 dark:border-neutral-800" data-decoded-part={p.key}>
+                  <tr key={n} className="border-t border-neutral-200 first:border-t-0 dark:border-neutral-800" data-decoded-part={p.key ?? p.title ?? "base"}>
                     <td className="py-1 pr-3 font-mono font-bold" style={{ color: index >= 0 ? COLORS[index % COLORS.length] : undefined }}>
                       {p.code}
                     </td>
-                    <td className="py-1 pr-3 text-neutral-500 dark:text-neutral-400">{section?.title ?? p.key}</td>
+                    <td className="py-1 pr-3 text-neutral-500 dark:text-neutral-400">{section?.title ?? p.title ?? ""}</td>
                     <td className={`py-1 ${known ? "text-neutral-800 dark:text-neutral-100" : "text-red-600 dark:text-red-400"}`}>
                       {p.text ?? row?.meaning ?? "Unknown code"}
                     </td>

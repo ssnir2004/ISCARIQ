@@ -7,6 +7,7 @@ import { GradesBoard } from "./GradesBoard";
 import { GradeFormCases } from "./GradeFormCases";
 import { RulesOfThumb } from "../../components/RulesOfThumb";
 import { CodeKey } from "../../components/CodeKey";
+import type { DecoderName } from "../../lib/insertDecoders";
 import { GradeFamiliesChart, TabCharts } from "./GradeFamiliesChart";
 import { ISO513_COLORS, MATERIAL_GROUPS } from "../../lib/npaKnowledgeConstants";
 import { FAMILY_GROUPS } from "../../lib/gradeGroups";
@@ -497,6 +498,9 @@ export function GradesScreen({ family, title, hideHeader = false }: { family: Gr
 
 // One "Grades" page with a tab per grade family; each tab is that family's
 // Grades screen. The tab is part of the URL (/catalog/grades/<slug>).
+// Each family's insert designation decoder (reads its code key).
+const FAMILY_DECODER: Record<GradeFamily, DecoderName> = { CARBIDE: "iso-insert", CBN: "cbn", CERAMIC: "ceramic", PCD: "pcd" };
+
 const GRADE_TABS: { slug: string; family: GradeFamily; label: string }[] = [
   { slug: "sc", family: "CARBIDE", label: "Grades (Carbide)" },
   { slug: "cbn", family: "CBN", label: "Grades (CBN)" },
@@ -555,9 +559,7 @@ export function GradesHub() {
       <TabCharts tab={tab.slug} />
       <RulesOfThumb key={`rules:${tab.family}`} scope={`grades:${tab.family}`} />
       {/* The family's insert designation key (e.g. CBN), editable per tab. */}
-      <CodeKey key={`codekey:${tab.family}`} settingKey={`codekey.${tab.family.toLowerCase()}`} />
-      {/* How the family's grade names read (e.g. what each part of a grade code means). */}
-      <CodeKey key={`gradekey:${tab.family}`} settingKey={`gradekey.${tab.family.toLowerCase()}`} defaultTitle="Grade identification key" />
+      <CodeKey key={`codekey:${tab.family}`} settingKey={`codekey.${tab.family.toLowerCase()}`} decoder={FAMILY_DECODER[tab.family]} />
       <GradesScreen key={tab.family} family={tab.family} title={tab.label} hideHeader />
     </div>
   );
