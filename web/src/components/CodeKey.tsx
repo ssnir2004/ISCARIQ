@@ -52,7 +52,8 @@ function readOpen(key: string) {
   }
 }
 
-export function CodeKey({ settingKey }: { settingKey: string }) {
+// `defaultTitle` names a key not written yet (e.g. "Grade identification key").
+export function CodeKey({ settingKey, defaultTitle = "Code key" }: { settingKey: string; defaultTitle?: string }) {
   const [data, setData] = useState<CodeKeyData | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [open, setOpen] = useState(() => readOpen(settingKey));
@@ -84,7 +85,7 @@ export function CodeKey({ settingKey }: { settingKey: string }) {
     setError(null);
     setSaving(true);
     const clean: CodeKeyData = {
-      title: draft.title.trim() || "Code key",
+      title: draft.title.trim() || defaultTitle,
       subtitle: draft.subtitle?.trim() || undefined,
       example: draft.example.trim(),
       sections: draft.sections
@@ -119,11 +120,11 @@ export function CodeKey({ settingKey }: { settingKey: string }) {
       <div className="flex items-center gap-2">
         <button type="button" onClick={toggle} aria-expanded={open} className="flex flex-1 items-center gap-2 text-left">
           <span className="text-xs text-neutral-500">{open ? "▼" : "▶"}</span>
-          <span className="font-semibold text-neutral-900 dark:text-neutral-100">{data?.title ?? "Code key"}</span>
+          <span className="font-semibold text-neutral-900 dark:text-neutral-100">{data?.title ?? defaultTitle}</span>
           {data?.subtitle && <span className="text-xs text-neutral-500 dark:text-neutral-400">{data.subtitle}</span>}
         </button>
         {open && !draft && (
-          <Button variant="ghost" onClick={() => setDraft(structuredClone(data ?? { title: "Code key", example: "", sections: [] }))} data-code-key-edit>
+          <Button variant="ghost" onClick={() => setDraft(structuredClone(data ?? { title: defaultTitle, example: "", sections: [] }))} data-code-key-edit>
             {data ? "Edit" : "+ Add code key"}
           </Button>
         )}
