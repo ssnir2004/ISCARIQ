@@ -556,6 +556,8 @@ export function GradesHub() {
       <RulesOfThumb key={`rules:${tab.family}`} scope={`grades:${tab.family}`} />
       {/* The family's insert designation key (e.g. CBN), editable per tab. */}
       <CodeKey key={`codekey:${tab.family}`} settingKey={`codekey.${tab.family.toLowerCase()}`} />
+      {/* How the family's grade names read (e.g. what each part of a grade code means). */}
+      <CodeKey key={`gradekey:${tab.family}`} settingKey={`gradekey.${tab.family.toLowerCase()}`} defaultTitle="Grade identification key" />
       <GradesScreen key={tab.family} family={tab.family} title={tab.label} hideHeader />
     </div>
   );
