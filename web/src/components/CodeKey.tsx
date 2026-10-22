@@ -44,21 +44,32 @@ interface CodeKeyTable {
 const COLORS = ["#2563eb", "#16a34a", "#d97706", "#9333ea", "#dc2626", "#0891b2", "#be185d", "#4d7c0f"];
 const OPEN_KEY = "iscariq.codeKeyOpen.";
 
-function readOpen(key: string) {
+function readOpen(key: string, defaultOpen: boolean) {
   try {
-    return localStorage.getItem(OPEN_KEY + key) === "1";
+    const stored = localStorage.getItem(OPEN_KEY + key);
+    return stored === null ? defaultOpen : stored === "1";
   } catch {
-    return false;
+    return defaultOpen;
   }
 }
 
 // `defaultTitle` names a key not written yet (e.g. "Grade identification key").
 // `decoder` adds a designation decoder that reads this key's tables (a key
-// can also name its own decoder).
-export function CodeKey({ settingKey, defaultTitle = "Code key", decoder }: { settingKey: string; defaultTitle?: string; decoder?: DecoderName }) {
+// can also name its own decoder). `defaultOpen` until the panel is toggled.
+export function CodeKey({
+  settingKey,
+  defaultTitle = "Code key",
+  decoder,
+  defaultOpen = false,
+}: {
+  settingKey: string;
+  defaultTitle?: string;
+  decoder?: DecoderName;
+  defaultOpen?: boolean;
+}) {
   const [data, setData] = useState<CodeKeyData | null>(null);
   const [loaded, setLoaded] = useState(false);
-  const [open, setOpen] = useState(() => readOpen(settingKey));
+  const [open, setOpen] = useState(() => readOpen(settingKey, defaultOpen));
   const [draft, setDraft] = useState<CodeKeyData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);

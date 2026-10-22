@@ -18,6 +18,7 @@ import { Tools } from "./pages/catalog/Tools";
 import { CuttingConditions } from "./pages/catalog/CuttingConditions";
 import { Shapes } from "./pages/catalog/Shapes";
 import { Chipbreakers } from "./pages/catalog/Chipbreakers";
+import { CodeKeys } from "./pages/catalog/CodeKeys";
 import { GradesHub } from "./pages/catalog/Grades";
 import { Applications } from "./pages/catalog/Applications";
 import { Substrates } from "./pages/catalog/Substrates";
@@ -77,6 +78,7 @@ function AppRoutes() {
         <Route path="/catalog/cutting-conditions" element={<CuttingConditions />} />
         <Route path="/catalog/shapes" element={<Shapes />} />
         <Route path="/catalog/chipbreakers" element={<Chipbreakers />} />
+        <Route path="/catalog/code-keys" element={<CodeKeys />} />
         <Route path="/catalog/grades" element={<GradesHub />} />
         <Route path="/catalog/grades/:slug" element={<GradesHub />} />
         {/* Old per-family addresses */}
