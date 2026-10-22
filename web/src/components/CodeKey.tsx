@@ -1,5 +1,6 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ClipboardEvent, type ReactNode } from "react";
 import { api, ApiError } from "../lib/api";
+import { decodeIsoTurning } from "../lib/isoTurning";
 import { Button, Card, Input, Textarea } from "./ui";
 
 // A code key for product designations (e.g. "Code key for CBN inserts"):
@@ -15,12 +16,18 @@ export interface CodeKeyData {
   example: string;
   sections: CodeKeySection[];
   tables?: CodeKeyTable[];
+  // A designation decoder shown above the tables ("iso-turning": ISO turning
+  // toolholders and boring bars; sections keyed "p<position>").
+  decoder?: "iso-turning";
 }
 interface CodeKeySection {
   title: string;
+  // Identifies the part for a decoder (e.g. "p5" = position 5).
+  key?: string;
   // This part as it appears in the example (highlighted there), if it does.
   sample?: string;
-  rows: { code: string; meaning: string; details?: string }[];
+  // `image`: a small picture of the code (e.g. the insert shape), pasted in.
+  rows: { code: string; meaning: string; details?: string; image?: string }[];
   // Shown under the table (e.g. how the code's digits read).
   note?: string;
 }
@@ -84,13 +91,15 @@ export function CodeKey({ settingKey }: { settingKey: string }) {
         .filter((s) => s.title.trim())
         .map((s) => ({
           title: s.title.trim(),
+          key: s.key?.trim() || undefined,
           sample: s.sample?.trim() || undefined,
           rows: s.rows
             .filter((r) => r.code.trim() || r.meaning.trim())
-            .map((r) => ({ code: r.code.trim(), meaning: r.meaning.trim(), details: r.details?.trim() || undefined })),
+            .map((r) => ({ code: r.code.trim(), meaning: r.meaning.trim(), details: r.details?.trim() || undefined, image: r.image || undefined })),
           note: s.note?.trim() || undefined,
         })),
       tables: draft.tables?.filter((t) => t.title.trim() || t.rows.length),
+      decoder: draft.decoder,
     };
     try {
       await api.put(`/settings/${settingKey}`, { value: JSON.stringify(clean) });
@@ -159,6 +168,7 @@ function CodeKeyView({ data }: { data: CodeKeyData }) {
   return (
     <div>
       {data.example && <Example data={data} />}
+      {data.decoder === "iso-turning" && <Decoder data={data} />}
       <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3">
         {data.sections.map((s, i) => (
           <div key={i} className="overflow-hidden rounded-lg border border-neutral-200 dark:border-neutral-700" data-code-key-section={s.title}>
@@ -178,6 +188,7 @@ function CodeKeyView({ data }: { data: CodeKeyData }) {
                       </span>
                     </td>
                     <td className="px-3 py-1 text-neutral-700 dark:text-neutral-300">
+                      {r.image && <img src={r.image} alt={r.code} className="float-right ml-2 h-12 max-w-20 rounded bg-white object-contain" data-code-image />}
                       {r.meaning}
                       {r.details && (
                         <div className="mt-0.5 text-xs leading-snug text-neutral-500 dark:text-neutral-400" data-code-details>
@@ -360,6 +371,7 @@ function CodeKeyEditor({
                   placeholder="Details / use case (optional)"
                   aria-label="Details"
                 />
+                <PicturePaste value={r.image ?? null} onChange={(image) => setSection(i, { ...s, rows: s.rows.map((x, k) => (k === n ? { ...x, image: image ?? undefined } : x)) })} />
                 <button type="button" className={small} disabled={n === 0} onClick={() => setSection(i, { ...s, rows: move(s.rows, n, n - 1) })} aria-label="Move code up">
                   ↑
                 </button>
@@ -456,6 +468,91 @@ function TableEditor({ table, onChange, onRemove }: { table: CodeKeyTable; onCha
         aria-label="Table cells"
         className="font-mono text-xs"
       />
+    </div>
+  );
+}
+
+// A small picture field for a code: paste (Ctrl+V when focused) or choose a
+// file; the picture shows in place, ✕ removes it.
+function PicturePaste({ value, onChange }: { value: string | null; onChange: (dataUrl: string | null) => void }) {
+  const input = useRef<HTMLInputElement>(null);
+  const read = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => onChange(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+  function onPaste(e: ClipboardEvent<HTMLDivElement>) {
+    const file = Array.from(e.clipboardData.items)
+      .find((i) => i.type.startsWith("image/"))
+      ?.getAsFile();
+    if (!file) return;
+    e.preventDefault();
+    read(file);
+  }
+  return (
+    <div className="flex shrink-0 items-center gap-1" data-code-picture>
+      <div
+        tabIndex={0}
+        onPaste={onPaste}
+        onClick={() => input.current?.click()}
+        title="Picture: click, then Ctrl+V to paste — or choose a file"
+        className="flex h-9 w-14 cursor-pointer items-center justify-center overflow-hidden rounded border border-dashed border-neutral-300 bg-white text-[10px] text-neutral-400 outline-none focus:border-blue-500 dark:border-neutral-600"
+      >
+        {value ? <img src={value} alt="" className="h-full w-full object-contain" /> : "Picture"}
+      </div>
+      {value && (
+        <button type="button" className={small} onClick={() => onChange(null)} aria-label="Remove picture">
+          ✕
+        </button>
+      )}
+      <input ref={input} type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && read(e.target.files[0])} />
+    </div>
+  );
+}
+
+// Type a designation (e.g. MWLNR 2525M-08W) to see each position's meaning.
+function Decoder({ data }: { data: CodeKeyData }) {
+  const [text, setText] = useState("");
+  const result = text.trim() ? decodeIsoTurning(text) : null;
+  return (
+    <div className="mb-3 rounded-lg border border-blue-200 bg-blue-50/50 p-3 dark:border-blue-900 dark:bg-blue-950/20" data-code-decoder>
+      <Input
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="Decode a designation, e.g. MWLNR 2525M-08W or S25S MWLNR-08W"
+        aria-label="Designation to decode"
+        className="max-w-xl font-mono"
+      />
+      {text.trim() && !result && (
+        <p className="mt-2 text-sm text-red-600 dark:text-red-400">Not a toolholder (e.g. MWLNR 2525M-08W) or boring bar (e.g. S25S MWLNR-08W) designation.</p>
+      )}
+      {result && (
+        <div className="mt-2">
+          <p className="mb-1 text-xs font-semibold text-neutral-600 dark:text-neutral-300">{result.kind}</p>
+          <table className="text-sm" data-decoded>
+            <tbody>
+              {result.parts.map((p) => {
+                const index = data.sections.findIndex((s) => s.key === p.key);
+                const section = data.sections[index];
+                const row = section?.rows.find((r) => r.code === p.code);
+                const known = !!p.text || !!row;
+                return (
+                  <tr key={p.key} className="border-t border-neutral-200 first:border-t-0 dark:border-neutral-800" data-decoded-part={p.key}>
+                    <td className="py-1 pr-3 font-mono font-bold" style={{ color: index >= 0 ? COLORS[index % COLORS.length] : undefined }}>
+                      {p.code}
+                    </td>
+                    <td className="py-1 pr-3 text-neutral-500 dark:text-neutral-400">{section?.title ?? p.key}</td>
+                    <td className={`py-1 ${known ? "text-neutral-800 dark:text-neutral-100" : "text-red-600 dark:text-red-400"}`}>
+                      {p.text ?? row?.meaning ?? "Unknown code"}
+                    </td>
+                    <td className="py-1 pl-2">{row?.image && <img src={row.image} alt="" className="h-10 max-w-16 rounded bg-white object-contain" />}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

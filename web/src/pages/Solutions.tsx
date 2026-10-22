@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { GlossaryPage, type GlossaryListContext } from "./catalog/GlossaryPage";
 import { Button, Input, PageHeader, Select } from "../components/ui";
+import { CodeKey } from "../components/CodeKey";
 import { api, ApiError } from "../lib/api";
 import { useResource } from "../lib/useResource";
 import type { Application } from "../lib/types";
@@ -123,6 +124,8 @@ export function Solutions() {
           </button>
         ))}
       </div>
+      {/* The application's code key (e.g. Turning: ISO toolholders), editable here. */}
+      {tab && <CodeKey key={`codekey:${tab.id}`} settingKey={`codekey.app.${tab.id}`} />}
       {(tab || isAll) && (
         // Keyed so each tab's list and form start fresh.
         <GlossaryPage
