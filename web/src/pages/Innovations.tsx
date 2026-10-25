@@ -3,6 +3,7 @@ import { GlossaryPage, type GlossaryExtraSection, type GlossaryListContext, type
 import { Button, Label, Textarea } from "../components/ui";
 import { useResource } from "../lib/useResource";
 import type { Application, InnovationUse } from "../lib/types";
+import { byCategory } from "../lib/useCategories";
 
 // ISCAR innovations over the years, by brand: a timeline from the oldest
 // brand to the newest, each with its year, product picture, field and
@@ -114,8 +115,16 @@ function Timeline({ data, startEdit, remove }: GlossaryListContext) {
                     <div data-innovation-uses>
                       <p className="text-xs font-semibold tracking-wide text-neutral-500 uppercase dark:text-neutral-400">Uses</p>
                       <ul className="gap-6 space-y-0.5 text-xs lg:columns-2">
-                        {uses.map((u, n) => (
-                          <li key={n} className="break-inside-avoid text-neutral-600 dark:text-neutral-300" data-innovation-use={u.name}>
+                        {byCategory(uses).flatMap(([category, group]) => [
+                          ...(category
+                            ? [
+                                <li key={`c:${category}`} className="break-after-avoid pt-1 font-bold text-blue-700 uppercase first:pt-0 dark:text-blue-300">
+                                  {category}
+                                </li>,
+                              ]
+                            : []),
+                          ...group.map((u, n) => (
+                          <li key={`${category}:${n}`} className="break-inside-avoid text-neutral-600 dark:text-neutral-300" data-innovation-use={u.name}>
                             <span className="font-semibold text-neutral-800 dark:text-neutral-100">{u.name}:</span>{" "}
                             {u.inserts.map((i, n) => {
                               const label = i.note ? `${i.name} (${i.note})` : i.name;
@@ -133,7 +142,8 @@ function Timeline({ data, startEdit, remove }: GlossaryListContext) {
                               );
                             })}
                           </li>
-                        ))}
+                          )),
+                        ])}
                       </ul>
                     </div>
                   )}

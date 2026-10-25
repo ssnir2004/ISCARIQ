@@ -202,6 +202,8 @@ export interface ChipbreakerRange {
 export interface InnovationUse {
   id?: string;
   name: string;
+  // Its subcategory within the brand (e.g. PENTA-CUT "PENTA 24").
+  category?: string | null;
   // `link`: the insert family's page in the e-catalog.
   inserts: { name: string; note: string | null; link?: string | null }[];
 }

@@ -1270,6 +1270,13 @@ export const innovationUseRouter = Router();
 const innovationUsesSchema = z.array(
   z.object({
     name: z.string().trim().min(1, "Enter a name for every use").max(200),
+    category: z
+      .string()
+      .trim()
+      .max(100)
+      .nullable()
+      .optional()
+      .transform((c) => c || null),
     inserts: z
       .array(
         z.object({
@@ -1298,7 +1305,7 @@ innovationUseRouter.put("/:innovationId", async (req, res) => {
   if (!(await prisma.innovation.findUnique({ where: { id: innovationId }, select: { id: true } }))) return res.status(404).json({ error: "Not found" });
   await prisma.$transaction([
     prisma.innovationUse.deleteMany({ where: { innovationId } }),
-    prisma.innovationUse.createMany({ data: parsed.data.map((u, position) => ({ innovationId, name: u.name, inserts: u.inserts, position })) }),
+    prisma.innovationUse.createMany({ data: parsed.data.map((u, position) => ({ innovationId, name: u.name, category: u.category, inserts: u.inserts, position })) }),
   ]);
   res.json(await prisma.innovationUse.findMany({ where: { innovationId }, orderBy: { position: "asc" } }));
 });

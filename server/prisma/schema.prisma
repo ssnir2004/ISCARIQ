@@ -868,6 +868,9 @@ model InnovationUse {
   innovation   Innovation @relation(fields: [innovationId], references: [id], onDelete: Cascade)
   innovationId String
   name         String
+  // Its subcategory within the brand (e.g. PENTA-CUT "PENTA 24"); uses are
+  // shown grouped by it.
+  category     String?
   position     Int        @default(0)
   // [{ name: "GIPA", note: "W=3-6" }, ...]
   inserts      Json       @default("[]")
