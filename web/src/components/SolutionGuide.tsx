@@ -51,9 +51,10 @@ const fmt = (n: number) => String(Number(n.toFixed(2)));
 
 // The insert width for parting a bar of diameter d from the width table
 // (rows like ["Ø5–22 mm", "DOC / 5"]): the depth of cut is from the bar's
-// outside to its center (d / 2), divided by the factor of d's row (the last
-// row starting at or below d; the first or last row outside the table).
-function widthRule(rows: [string, string][], d: number) {
+// outside to its center (d / 2), or for a tube with bore b its wall
+// ((d - b) / 2), divided by the factor of d's row (the last row starting at
+// or below d; the first or last row outside the table).
+function widthRule(rows: [string, string][], d: number, bore = 0) {
   const parsed = rows
     .map(([range, rule], row) => {
       const r = range.match(/(\d+(?:\.\d+)?)\s*[–-]\s*(\d+(?:\.\d+)?)/);
@@ -64,7 +65,7 @@ function widthRule(rows: [string, string][], d: number) {
     .sort((a, b) => a.from - b.from);
   if (parsed.length === 0) return null;
   const hit = [...parsed].reverse().find((r) => r.from <= d) ?? parsed[0];
-  const doc = d / 2;
+  const doc = (d - bore) / 2;
   return { row: hit.row, factor: hit.factor, doc, width: doc / hit.factor, outside: d < parsed[0].from || d > parsed[parsed.length - 1].to };
 }
 
@@ -83,6 +84,8 @@ export function SolutionGuide({ applicationId, brands }: { applicationId: string
   const [open, setOpen] = useState(() => readOpen(key));
   const [segment, setSegment] = useState(0);
   const [diameter, setDiameter] = useState("");
+  // A tube's bore (inner diameter), if parting a tube.
+  const [bore, setBore] = useState("");
   const [draft, setDraft] = useState<GuideData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -98,7 +101,10 @@ export function SolutionGuide({ applicationId, brands }: { applicationId: string
   const shown = draft ?? data;
   const d = Number(diameter);
   const hasD = diameter.trim() !== "" && d > 0;
-  const rule = hasD && shown.table ? widthRule(shown.table.rows, d) : null;
+  const b = Number(bore);
+  const hasBore = bore.trim() !== "" && b > 0;
+  const badBore = hasD && hasBore && b >= d;
+  const rule = hasD && !badBore && shown.table ? widthRule(shown.table.rows, d, hasBore ? b : 0) : null;
 
   function toggle() {
     setOpen((o) => {
@@ -165,11 +171,16 @@ export function SolutionGuide({ applicationId, brands }: { applicationId: string
                 Part Ø (mm)
                 <Input type="number" min="0" step="any" value={diameter} onChange={(e) => pickDiameter(e.target.value)} className="w-24" aria-label="Part diameter" />
               </label>
+              <label className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-300" title="For a tube: its inner diameter (leave empty for a solid bar)">
+                Tube bore Ø (mm)
+                <Input type="number" min="0" step="any" value={bore} onChange={(e) => setBore(e.target.value)} className="w-24" placeholder="Solid" aria-label="Tube bore diameter" />
+              </label>
+              {badBore && <span className="text-sm text-red-600 dark:text-red-400">The bore must be smaller than the part Ø.</span>}
               {rule && (
                 <span className="rounded-lg bg-amber-50 px-3 py-1.5 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-200" data-guide-width>
                   Recommended insert width ≈ <span className="font-bold">{fmt(rule.width)} mm</span>{" "}
                   <span className="text-xs opacity-80">
-                    (DOC = Ø{fmt(d)} ÷ 2 = {fmt(rule.doc)} mm, ÷ {fmt(rule.factor)}
+                    (DOC = {hasBore ? `(Ø${fmt(d)} − Ø${fmt(b)})` : `Ø${fmt(d)}`} ÷ 2 = {fmt(rule.doc)} mm, ÷ {fmt(rule.factor)}
                     {rule.outside && ", outside the table's range"})
                   </span>
                 </span>
