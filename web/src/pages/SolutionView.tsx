@@ -6,6 +6,7 @@ import { api, ApiError } from "../lib/api";
 import { PARTS, str } from "./Innovations";
 import { SolutionUses } from "./SolutionUses";
 import { SolutionBrandEdit, type BrandDetails } from "./SolutionBrandEdit";
+import { GuideMentions } from "../components/SolutionGuide";
 
 // A solution (brand) page: its picture and details (editable here), its
 // uses (with their inserts) and its cases (see PictureCases).
@@ -93,6 +94,8 @@ export function SolutionView() {
             )}
           </p>
           {brand.description && <p className="whitespace-pre-line text-neutral-700 dark:text-neutral-200">{brand.description}</p>}
+          {/* Where the brand is in its applications' selection guides. */}
+          <GuideMentions brandName={brand.name} applications={brand.applications ?? []} />
         </div>
         {parts.length > 0 && (
           <aside className="flex w-full shrink-0 flex-col gap-3 border-neutral-200 text-sm md:w-56 md:border-l md:pl-4 dark:border-neutral-800">

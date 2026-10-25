@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { GlossaryPage, type GlossaryListContext } from "./catalog/GlossaryPage";
 import { Button, Input, PageHeader, Select } from "../components/ui";
+import { SolutionGuide } from "../components/SolutionGuide";
 import { api, ApiError } from "../lib/api";
 import { useResource } from "../lib/useResource";
 import type { Application } from "../lib/types";
@@ -123,6 +124,8 @@ export function Solutions() {
           </button>
         ))}
       </div>
+      {/* The application's selection guide, if it has one (e.g. Parting: tools by part diameter). */}
+      {tab && <SolutionGuide key={`guide:${tab.id}`} applicationId={tab.id} brands={brands} />}
       {(tab || isAll) && (
         // Keyed so each tab's list and form start fresh.
         <GlossaryPage
