@@ -14,6 +14,9 @@ export interface GuideTool {
   name: string;
   // The Solutions brand it belongs to when the name differs (e.g. "PENTA-CUT" for "PENTA-CUT 17").
   brand?: string;
+  // The brand's use category it links to (e.g. "PENTA 17"); by default the
+  // brand's category the rest of the name matches (PENTA-CUT 17 -> PENTA 17).
+  category?: string;
   width?: string;
   note?: string;
   isNew?: boolean;
@@ -43,6 +46,9 @@ const guideKey = (applicationId: string) => `guide.app.${applicationId}`;
 // Brand names match ignoring case, spaces and dashes (PENTACUT = PENTA-CUT).
 const brandKey = (name: string) => name.toUpperCase().replace(/[^A-Z0-9]/g, "");
 const toolBrand = (t: GuideTool) => brandKey(t.brand || t.name);
+// Whether a tool is of a brand: its brand, else a name that starts with the
+// brand's (e.g. "PENTA IQ GRIP D32" is PENTA IQ GRIP).
+const isOf = (t: GuideTool, brandName: string) => (t.brand ? toolBrand(t) === brandKey(brandName) : brandKey(t.name).startsWith(brandKey(brandName)));
 
 const OPEN_KEY = "iscariq.guide.open.";
 const PRIORITY = ["1st · First choice", "2nd", "3rd", "4th", "5th", "6th"];
@@ -77,7 +83,28 @@ function readOpen(key: string) {
   }
 }
 
-export function SolutionGuide({ applicationId, brands }: { applicationId: string; brands: { id: string; name: string }[] }) {
+// A Solutions brand as the guide links to it, with its uses' categories.
+type GuideBrand = { id: string; name: string; uses?: unknown };
+type BrandLink = { id: string; category?: string } | undefined;
+
+// The brand page a tool links to, at its use category: the tool's own, else
+// the brand's category matching what the name adds to the brand's (e.g.
+// PENTA-CUT 17 -> "PENTA 17": the category ending in "17").
+function linkOf(t: GuideTool, brands: GuideBrand[]): BrandLink {
+  // The longest brand name the tool is of (PENTA IQ GRIP rather than a shorter one).
+  const brand = brands.filter((b) => isOf(t, b.name)).sort((a, b) => brandKey(b.name).length - brandKey(a.name).length)[0];
+  if (!brand) return undefined;
+  const categories = [
+    ...new Set(((brand.uses as { category?: string | null }[] | undefined) ?? []).map((u) => u.category).filter((c): c is string => !!c)),
+  ];
+  const own = t.category && categories.find((c) => brandKey(c) === brandKey(t.category!));
+  if (own) return { id: brand.id, category: own };
+  const rest = brandKey(t.name).replace(brandKey(brand.name), "");
+  const match = rest ? categories.find((c) => brandKey(c) === rest || brandKey(c).endsWith(rest)) : undefined;
+  return { id: brand.id, category: match ?? t.category };
+}
+
+export function SolutionGuide({ applicationId, brands }: { applicationId: string; brands: GuideBrand[] }) {
   const key = guideKey(applicationId);
   const [data, setData] = useState<GuideData | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -139,7 +166,7 @@ export function SolutionGuide({ applicationId, brands }: { applicationId: string
   }
 
   const seg = shown.segments[Math.min(segment, shown.segments.length - 1)];
-  const brandOf = (t: GuideTool) => brands.find((b) => brandKey(b.name) === toolBrand(t));
+  const brandOf = (t: GuideTool) => linkOf(t, brands);
 
   return (
     <section className="mb-4 rounded-xl border border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900" data-solution-guide>
@@ -237,12 +264,16 @@ export function SolutionGuide({ applicationId, brands }: { applicationId: string
   );
 }
 
-function ToolLabel({ tool, brandOf }: { tool: GuideTool; brandOf: (t: GuideTool) => { id: string } | undefined }) {
+function ToolLabel({ tool, brandOf }: { tool: GuideTool; brandOf: (t: GuideTool) => BrandLink }) {
   const brand = brandOf(tool);
   return (
     <span className="flex flex-wrap items-center gap-1">
       {brand ? (
-        <Link to={`/solutions/brand/${brand.id}`} className="font-semibold text-blue-700 hover:underline dark:text-blue-300">
+        <Link
+          to={`/solutions/brand/${brand.id}${brand.category ? `?category=${encodeURIComponent(brand.category)}` : ""}`}
+          title={brand.category ? `${brand.category} uses` : undefined}
+          className="font-semibold text-blue-700 hover:underline dark:text-blue-300"
+        >
           {tool.name}
         </Link>
       ) : (
@@ -253,7 +284,7 @@ function ToolLabel({ tool, brandOf }: { tool: GuideTool; brandOf: (t: GuideTool)
   );
 }
 
-function Matrix({ columns, active, brandOf }: { columns: GuideColumn[]; active?: GuideColumn; brandOf: (t: GuideTool) => { id: string } | undefined }) {
+function Matrix({ columns, active, brandOf }: { columns: GuideColumn[]; active?: GuideColumn; brandOf: (t: GuideTool) => BrandLink }) {
   const rows = Math.max(...columns.map((c) => c.tools.length));
   return (
     <div className="overflow-x-auto">
@@ -298,7 +329,7 @@ function Matrix({ columns, active, brandOf }: { columns: GuideColumn[]; active?:
   );
 }
 
-function Products({ products, diameter, brandOf }: { products: GuideTool[]; diameter?: number; brandOf: (t: GuideTool) => { id: string } | undefined }) {
+function Products({ products, diameter, brandOf }: { products: GuideTool[]; diameter?: number; brandOf: (t: GuideTool) => BrandLink }) {
   return (
     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4" data-guide-products>
       {products.map((p, i) => {
@@ -394,7 +425,10 @@ function ToolsEditor({ tools, onChange, withMaxDia = false }: { tools: GuideTool
               ✕
             </Button>
           </div>
-          <Input value={t.brand ?? ""} placeholder="Brand (if not the name)" aria-label="Brand" onChange={(e) => set(i, { brand: e.target.value || undefined })} />
+          <div className="flex gap-1">
+            <Input value={t.brand ?? ""} placeholder="Brand (if not the name)" aria-label="Brand" onChange={(e) => set(i, { brand: e.target.value || undefined })} />
+            <Input value={t.category ?? ""} placeholder="Use category" title="The brand's use category to link to (e.g. PENTA 17)" aria-label="Category" onChange={(e) => set(i, { category: e.target.value || undefined })} />
+          </div>
           <div className="flex gap-1">
             <Input value={t.width ?? ""} placeholder="Width" aria-label="Width" onChange={(e) => set(i, { width: e.target.value || undefined })} />
             {withMaxDia && (
@@ -460,10 +494,10 @@ export function GuideMentions({ brandName, applications }: { brandName: string; 
           const parts: string[] = [];
           for (const c of s.columns ?? [])
             c.tools.forEach((t, r) => {
-              if (toolBrand(t) === me) parts.push(`${named(t)}${r === 0 ? "1st (first choice)" : (PRIORITY[r] ?? `${r + 1}th`)} for ${c.label}${t.width ? `, ${t.width}` : ""}`);
+              if (isOf(t, brandName)) parts.push(`${named(t)}${r === 0 ? "1st (first choice)" : (PRIORITY[r] ?? `${r + 1}th`)} for ${c.label}${t.width ? `, ${t.width}` : ""}`);
             });
           for (const p of s.products ?? [])
-            if (toolBrand(p) === me) parts.push(`${named(p)}${p.width ? `width ${p.width}` : ""}${p.maxDia !== undefined ? `, up to Ø${p.maxDia}` : ""}`);
+            if (isOf(p, brandName)) parts.push(`${named(p)}${p.width ? `width ${p.width}` : ""}${p.maxDia !== undefined ? `, up to Ø${p.maxDia}` : ""}`);
           if (parts.length > 0) out.push({ app: app.name, title: `${guide.title} · ${s.title}`, text: parts.join("; ") });
         }
       }

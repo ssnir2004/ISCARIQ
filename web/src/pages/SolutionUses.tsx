@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Button, Input, Label, Modal, Textarea } from "../components/ui";
 import { api, ApiError } from "../lib/api";
 import type { InnovationUse } from "../lib/types";
@@ -14,6 +15,9 @@ type Insert = InnovationUse["inserts"][number];
 export function SolutionUses({ brandId }: { brandId: string }) {
   const [uses, setUses] = useState<InnovationUse[]>([]);
   const [editing, setEditing] = useState(false);
+  // ?category=PENTA 17 (e.g. from a selection guide): that category is scrolled to and highlighted.
+  const [params] = useSearchParams();
+  const focus = params.get("category");
 
   useEffect(() => {
     api
@@ -21,6 +25,16 @@ export function SolutionUses({ brandId }: { brandId: string }) {
       .then(setUses)
       .catch(() => setUses([]));
   }, [brandId]);
+
+  useEffect(() => {
+    if (!focus || uses.length === 0) return;
+    // After the page around it (cases, pictures) has laid out.
+    const timer = setTimeout(() => {
+      const el = [...document.querySelectorAll<HTMLElement>("[data-use-category]")].find((e) => e.dataset.useCategory?.toLowerCase() === focus.toLowerCase());
+      el?.scrollIntoView({ block: "start" });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [focus, uses]);
 
   return (
     <section className="mt-6" data-solution-uses>
@@ -32,7 +46,11 @@ export function SolutionUses({ brandId }: { brandId: string }) {
       </div>
       {uses.length === 0 && <p className="py-4 text-center text-sm text-neutral-500 dark:text-neutral-400">No uses yet.</p>}
       {byCategory(uses).map(([category, group]) => (
-        <div key={category} className="mb-4" data-use-category={category || undefined}>
+        <div
+          key={category}
+          className={`mb-4 scroll-mt-4 ${focus && category.toLowerCase() === focus.toLowerCase() ? "rounded-xl p-2 ring-2 ring-blue-500" : ""}`}
+          data-use-category={category || undefined}
+        >
           {category && (
             <h3 className="mb-2 border-b border-neutral-200 pb-1 text-sm font-bold tracking-wide text-blue-700 uppercase dark:border-neutral-800 dark:text-blue-300">
               {category} <span className="font-normal text-neutral-500 dark:text-neutral-400">({group.length})</span>
