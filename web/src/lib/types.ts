@@ -180,7 +180,10 @@ export interface GlossaryEntry {
 
 export type Shape = GlossaryEntry;
 export type Chipbreaker = GlossaryEntry;
-export type Application = GlossaryEntry;
+export type Application = GlossaryEntry & {
+  // Its cutting-condition parameters besides speed and feed (see conditionParams).
+  conditionParams?: string[];
+};
 
 // A trial / case study for a grade (usually a slide image). A null
 // applicationId / iso513Group means it applies to every application / group.
@@ -294,6 +297,10 @@ export interface GradeRecommendation {
   recFeedUnit: "PER_REV" | "PER_TOOTH";
   recAp: number | null;
   recAe: number | null;
+  recD: number | null;
+  recCW: number | null;
+  recDC: number | null;
+  recHoleD: number | null;
   recCoolant: "NONE" | "AIR" | "OIL" | "WET" | null;
   recNotes: string | null;
   recTool: string | null;

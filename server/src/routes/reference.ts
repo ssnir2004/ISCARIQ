@@ -697,6 +697,10 @@ const recommendationSchema = z
     recFeedUnit: z.enum(["PER_REV", "PER_TOOTH"]).default("PER_REV"),
     recAp: z.number().positive().nullable().optional(),
     recAe: z.number().positive().nullable().optional(),
+    recD: z.number().positive().nullable().optional(),
+    recCW: z.number().positive().nullable().optional(),
+    recDC: z.number().positive().nullable().optional(),
+    recHoleD: z.number().positive().nullable().optional(),
     recCoolant: z.enum(["NONE", "AIR", "OIL", "WET"]).nullable().optional(),
     recNotes: z.string().trim().max(1000).nullable().optional(),
     recTool: z.string().trim().max(1000).nullable().optional(),
@@ -1165,7 +1169,11 @@ applicationRouter.delete("/:id", async (req, res, next) => {
   next();
 });
 
-applicationRouter.use(glossaryRouter(prisma.application));
+applicationRouter.use(
+  glossaryRouter(prisma.application, {
+    conditionParams: z.array(z.enum(["D", "CW", "DC", "d", "ap", "ae"])).optional(),
+  })
+);
 export const coatingRouter = glossaryRouter(prisma.coating);
 
 // IMC group companies: name, description and building image, plus field of

@@ -8,6 +8,7 @@ import type { Application, Grade, GradeFamily, GradeRecommendation, Iso513Group,
 import { COOLANT_LABEL, coolantLabel, operationLabel, rangeText, recommendationsFor } from "../../lib/gradeRecommendations";
 import { fmt, fromUnits, toUnits, unitLabel, UnitsToggle, useUnits, type Quantity } from "../../lib/units";
 import { Button, Input, Label, Modal, Select, Textarea } from "../../components/ui";
+import { CONDITION_PARAMS, paramsFor } from "../../lib/conditionParams";
 
 // Recommended cutting conditions for a family's grades, as a table per ISO
 // material (like the catalog's "Recommended Cutting Conditions" slides):
@@ -27,6 +28,10 @@ const NUM_FIELDS = {
   recFeed: "feed",
   recAp: "length",
   recAe: "length",
+  recD: "length",
+  recCW: "length",
+  recDC: "length",
+  recHoleD: "length",
 } as const satisfies Record<string, Quantity>;
 type NumKey = keyof typeof NUM_FIELDS;
 const NUM_KEYS = Object.keys(NUM_FIELDS) as NumKey[];
@@ -99,13 +104,13 @@ export function GradeConditions({
         const has = {
           vc: groupRows.some((r) => r.recVc != null),
           feed: groupRows.some((r) => r.recFeed != null),
-          ap: groupRows.some((r) => r.recAp != null),
-          ae: groupRows.some((r) => r.recAe != null),
           coolant: groupRows.some((r) => r.recCoolant != null),
           tool: groupRows.some((r) => !!r.recTool),
           test: groupRows.some((r) => !!r.testReportNo),
           notes: groupRows.some((r) => !!r.recNotes),
         };
+        // The applications' parameters (D, CW, DC, d, ap, ae) some row has.
+        const paramCols = CONDITION_PARAMS.filter((p) => groupRows.some((r) => r[p.field] != null));
         const cell = "border-b border-neutral-200 px-2 py-2 dark:border-neutral-700";
         const recTh = "border-b border-neutral-200 bg-blue-50/60 px-2 py-1.5 font-medium dark:border-neutral-700 dark:bg-blue-900/20";
         return (
@@ -127,8 +132,11 @@ export function GradeConditions({
                     {hasCoolant && <th className="border-b border-neutral-200 px-2 py-1.5 font-medium dark:border-neutral-700">Coolant</th>}
                     {has.vc && <th className={`${recTh} text-center`}>Rec. Vc ({L("speed")})</th>}
                     {has.feed && <th className={`${recTh} text-center`}>Rec. f</th>}
-                    {has.ap && <th className={`${recTh} text-center`}>Rec. Ap ({L("length")})</th>}
-                    {has.ae && <th className={`${recTh} text-center`}>Rec. Ae ({L("length")})</th>}
+                    {paramCols.map((p) => (
+                      <th key={p.key} className={`${recTh} text-center`} title={p.label}>
+                        {p.key} ({L("length")})
+                      </th>
+                    ))}
                     {has.coolant && <th className={recTh}>Rec. coolant</th>}
                     {has.tool && <th className={recTh}>Rec. tool</th>}
                     {has.notes && <th className={recTh}>Rec. notes</th>}
@@ -188,8 +196,11 @@ export function GradeConditions({
                           {has.feed && (
                             <td className={`${cell} text-center whitespace-nowrap tabular-nums`}>{r.recFeed != null ? `${fmt(r.recFeed, "feed", units)} ${unitLabel("feed", units, r.recFeedUnit)}` : "-"}</td>
                           )}
-                          {has.ap && <td className={`${cell} text-center whitespace-nowrap tabular-nums`}>{fmt(r.recAp, "length", units) || "-"}</td>}
-                          {has.ae && <td className={`${cell} text-center whitespace-nowrap tabular-nums`}>{fmt(r.recAe, "length", units) || "-"}</td>}
+                          {paramCols.map((p) => (
+                            <td key={p.key} className={`${cell} text-center whitespace-nowrap tabular-nums`} data-param={p.key}>
+                              {fmt(r[p.field], "length", units) || "-"}
+                            </td>
+                          ))}
                           {has.coolant && <td className={cell}>{r.recCoolant ? COOLANT_LABEL[r.recCoolant] : "-"}</td>}
                           {has.tool && (
                             <td className={`${cell} whitespace-pre-line`} dir="auto">
@@ -321,6 +332,9 @@ function RecommendationModal({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // The chosen applications' parameters (ap and ae when none lists any).
+  const params = paramsFor(applications.filter((a) => applicationIds.includes(a.id)));
+  const showsAp = params.some((p) => p.key === "ap");
   const familyGroups = FAMILY_GROUPS[family];
   const chosenGroups = [...new Set(materials.filter((m) => materialIds.includes(m.id)).map((m) => m.iso513Group))];
   // Grades for the chosen materials' ISO groups (plus any already chosen).
@@ -364,6 +378,10 @@ function RecommendationModal({
       recFeedUnit: rec.feedUnit,
       recAp: nums.recAp.metric,
       recAe: nums.recAe.metric,
+      recD: nums.recD.metric,
+      recCW: nums.recCW.metric,
+      recDC: nums.recDC.metric,
+      recHoleD: nums.recHoleD.metric,
       recCoolant: rec.coolant || null,
       recNotes: rec.notes.trim() || null,
       recTool: rec.tool.trim() || null,
@@ -479,6 +497,7 @@ function RecommendationModal({
           </div>
         </div>
         <div className="grid grid-cols-2 gap-4">
+          {showsAp && (
           <div>
             <Label>DOC ({unitLabel("length", u)})</Label>
             <div className="grid grid-cols-2 gap-2">
@@ -486,6 +505,7 @@ function RecommendationModal({
               <Input type="number" min="0" step="any" placeholder="Max" aria-label="DOC max" {...num("apMax")} />
             </div>
           </div>
+          )}
           <div>
             <Label>f ({unitLabel("feed", u)})</Label>
             <div className="grid grid-cols-2 gap-2">
@@ -532,14 +552,15 @@ function RecommendationModal({
                 </Select>
               </div>
             </div>
-            <div>
-              <Label>Ap ({unitLabel("length", u)})</Label>
-              <Input type="number" min="0" step="any" aria-label="Recommended ap" {...num("recAp")} />
-            </div>
-            <div>
-              <Label>Ae ({unitLabel("length", u)})</Label>
-              <Input type="number" min="0" step="any" aria-label="Recommended ae" {...num("recAe")} />
-            </div>
+            {/* The chosen applications' parameters (Applications screen). */}
+            {params.map((p) => (
+              <div key={p.key} data-param-field={p.key}>
+                <Label>
+                  {p.label} ({unitLabel("length", u)})
+                </Label>
+                <Input type="number" min="0" step="any" aria-label={p.label} {...num(p.field)} />
+              </div>
+            ))}
           </div>
           <div>
             <Label>Recommended tool</Label>

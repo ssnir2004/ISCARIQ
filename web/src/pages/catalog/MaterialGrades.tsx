@@ -3,6 +3,7 @@ import { useResource } from "../../lib/useResource";
 import { COOLANT_LABEL } from "../../lib/gradeRecommendations";
 import { fmt, unitLabel, UnitsToggle, useUnits } from "../../lib/units";
 import type { GradeFamily, GradeRecommendation, Material } from "../../lib/types";
+import { CONDITION_PARAMS } from "../../lib/conditionParams";
 
 // The grades recommended for a work material (from the Grades cutting
 // conditions) with their recommended working conditions (Vc, f, Ap, Ae,
@@ -68,6 +69,7 @@ export function MaterialGrades({ material, title, onClose }: { material: Materia
       .filter((r) => (app === ANY ? r.applications.length === 0 : r.applications.some((a) => a.name === app)))
       .sort((a, b) => a.family.localeCompare(b.family) || a.position - b.position);
 
+  const paramsIn = (app: string) => CONDITION_PARAMS.filter((p) => inApp(app).some((r) => r[p.field] != null));
   const cell = "border-b border-neutral-200 px-2 py-1.5 align-top dark:border-neutral-700";
   const [units, setUnits] = useUnits();
 
@@ -94,8 +96,12 @@ export function MaterialGrades({ material, title, onClose }: { material: Materia
                       {material.isCategory && <th className={`${cell} font-medium`}>Material</th>}
                       <th className={`${cell} text-center font-medium`}>Vc ({unitLabel("speed", units)})</th>
                       <th className={`${cell} text-center font-medium`}>f</th>
-                      <th className={`${cell} text-center font-medium`}>Ap ({unitLabel("length", units)})</th>
-                      <th className={`${cell} text-center font-medium`}>Ae ({unitLabel("length", units)})</th>
+                      {/* The applications' parameters (D, CW, DC, d, ap, ae) some row has. */}
+                      {paramsIn(app).map((p) => (
+                        <th key={p.key} className={`${cell} text-center font-medium`} title={p.label}>
+                          {p.key} ({unitLabel("length", units)})
+                        </th>
+                      ))}
                       <th className={`${cell} font-medium`}>Coolant</th>
                       <th className={`${cell} font-medium`}>Tool</th>
                       <th className={`${cell} font-medium`}>Notes</th>
@@ -118,8 +124,11 @@ export function MaterialGrades({ material, title, onClose }: { material: Materia
                         {material.isCategory && <td className={cell}>{r.material.name}</td>}
                         <td className={`${cell} text-center font-bold whitespace-nowrap tabular-nums`}>{fmt(r.recVc, "speed", units) || "-"}</td>
                         <td className={`${cell} text-center whitespace-nowrap tabular-nums`}>{r.recFeed != null ? `${fmt(r.recFeed, "feed", units)} ${unitLabel("feed", units, r.recFeedUnit)}` : "-"}</td>
-                        <td className={`${cell} text-center whitespace-nowrap tabular-nums`}>{fmt(r.recAp, "length", units) || "-"}</td>
-                        <td className={`${cell} text-center whitespace-nowrap tabular-nums`}>{fmt(r.recAe, "length", units) || "-"}</td>
+                        {paramsIn(app).map((p) => (
+                          <td key={p.key} className={`${cell} text-center whitespace-nowrap tabular-nums`}>
+                            {fmt(r[p.field], "length", units) || "-"}
+                          </td>
+                        ))}
                         <td className={cell}>{r.recCoolant ? COOLANT_LABEL[r.recCoolant] : "-"}</td>
                         <td className={`${cell} whitespace-pre-line`} dir="auto" data-rec-tool>
                           {r.recTool}
