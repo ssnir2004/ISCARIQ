@@ -19,7 +19,7 @@ function Timeline({ data, startEdit, remove }: GlossaryListContext) {
   // so each can still be edited (e.g. given a year) or deleted.
   const withoutYear = data.filter((e) => yearOf(e) === null).sort((a, b) => a.name.localeCompare(b.name));
   const note = withoutYear.length > 0 && (
-    <section className="mt-8 max-w-5xl" data-innovations-no-year>
+    <section className="mt-8" data-innovations-no-year>
       <p className="mb-2 text-xs text-neutral-500 dark:text-neutral-400">
         {withoutYear.length} brand{withoutYear.length === 1 ? "" : "s"} without a launch year {withoutYear.length === 1 ? "is" : "are"} not on the timeline (see also{" "}
         <Link to="/solutions" className="text-blue-600 hover:underline dark:text-blue-400">
@@ -73,7 +73,7 @@ function Timeline({ data, startEdit, remove }: GlossaryListContext) {
               {year ?? "—"}
             </span>
             <span className="absolute top-4.5 -left-[7px] h-3 w-3 rounded-full bg-blue-600 ring-4 ring-white dark:ring-neutral-950" />
-            <article className="group flex max-w-5xl flex-col gap-4 rounded-xl border border-neutral-200 bg-white p-4 shadow-sm sm:flex-row dark:border-neutral-800 dark:bg-neutral-900">
+            <article className="group flex flex-col gap-4 rounded-xl border border-neutral-200 bg-white p-4 shadow-sm sm:flex-row dark:border-neutral-800 dark:bg-neutral-900">
               {/* White backing so product photos look the same in dark mode. */}
               {e.image ? (
                 <span className="flex h-40 w-full shrink-0 items-center justify-center rounded-lg bg-white ring-1 ring-neutral-200 sm:w-56 dark:ring-neutral-700">
@@ -84,7 +84,7 @@ function Timeline({ data, startEdit, remove }: GlossaryListContext) {
                   No picture
                 </span>
               )}
-              <div className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
+              <div className="flex min-w-0 flex-1 flex-col gap-1 text-sm sm:min-w-56">
                 <h3 className="text-xl font-bold text-neutral-900 dark:text-neutral-100">{e.name}</h3>
                 <p className="flex flex-wrap items-center gap-2">
                   {year !== null && (
@@ -106,15 +106,16 @@ function Timeline({ data, startEdit, remove }: GlossaryListContext) {
                   </Button>
                 </div>
               </div>
-              {/* Uses (with their inserts) and tool to the right of the description, keeping the card short. */}
+              {/* Uses (with their inserts) and tool to the right of the description, over about
+                  half the card's width (uses in two columns on wide screens) to keep the card short. */}
               {(uses.length > 0 || parts.length > 0) && (
-                <aside className="flex w-full shrink-0 flex-col gap-3 border-neutral-200 text-sm sm:w-72 sm:border-l sm:pl-4 dark:border-neutral-800" data-innovation-parts>
+                <aside className="flex w-full shrink-0 flex-col gap-3 border-neutral-200 text-sm sm:w-1/2 sm:border-l sm:pl-4 xl:w-[55%] dark:border-neutral-800" data-innovation-parts>
                   {uses.length > 0 && (
                     <div data-innovation-uses>
                       <p className="text-xs font-semibold tracking-wide text-neutral-500 uppercase dark:text-neutral-400">Uses</p>
-                      <ul className="space-y-0.5 text-xs">
+                      <ul className="gap-6 space-y-0.5 text-xs lg:columns-2">
                         {uses.map((u, n) => (
-                          <li key={n} className="text-neutral-600 dark:text-neutral-300" data-innovation-use={u.name}>
+                          <li key={n} className="break-inside-avoid text-neutral-600 dark:text-neutral-300" data-innovation-use={u.name}>
                             <span className="font-semibold text-neutral-800 dark:text-neutral-100">{u.name}:</span>{" "}
                             {u.inserts.map((i, n) => {
                               const label = i.note ? `${i.name} (${i.note})` : i.name;
