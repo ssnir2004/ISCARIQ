@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import { Button, Input, Label, Modal, Textarea } from "../components/ui";
 import { api, ApiError } from "../lib/api";
 import type { InnovationUse } from "../lib/types";
+import { byCategory } from "../lib/useCategories";
 
 // A brand's uses on its Solutions page (e.g. CUT-GRIP "Undercutting",
-// "Aluminum"), each a box with its inserts (e.g. GIPA, W=3-6). Edited as a
-// whole list in a window.
+// "Aluminum"), each a box with its inserts (e.g. GIPA, W=3-6), grouped by
+// their subcategory when they have one (e.g. PENTA-CUT "PENTA 24"). Edited as
+// a whole list in a window.
 
 type Insert = InnovationUse["inserts"][number];
 
@@ -28,11 +30,16 @@ export function SolutionUses({ brandId }: { brandId: string }) {
           Edit uses
         </Button>
       </div>
-      {uses.length === 0 ? (
-        <p className="py-4 text-center text-sm text-neutral-500 dark:text-neutral-400">No uses yet.</p>
-      ) : (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3">
-          {uses.map((u) => (
+      {uses.length === 0 && <p className="py-4 text-center text-sm text-neutral-500 dark:text-neutral-400">No uses yet.</p>}
+      {byCategory(uses).map(([category, group]) => (
+        <div key={category} className="mb-4" data-use-category={category || undefined}>
+          {category && (
+            <h3 className="mb-2 border-b border-neutral-200 pb-1 text-sm font-bold tracking-wide text-blue-700 uppercase dark:border-neutral-800 dark:text-blue-300">
+              {category} <span className="font-normal text-neutral-500 dark:text-neutral-400">({group.length})</span>
+            </h3>
+          )}
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3">
+          {group.map((u) => (
             <div key={u.id ?? u.name} className="rounded-xl border border-neutral-200 bg-white p-3 text-sm dark:border-neutral-800 dark:bg-neutral-900" data-use={u.name}>
               <h3 className="mb-2 font-semibold text-neutral-900 dark:text-neutral-100">{u.name}</h3>
               <div className="flex flex-wrap gap-1.5">
@@ -67,8 +74,9 @@ export function SolutionUses({ brandId }: { brandId: string }) {
               </div>
             </div>
           ))}
+          </div>
         </div>
-      )}
+      ))}
       {editing && (
         <UsesEditor
           brandId={brandId}
@@ -121,7 +129,9 @@ function UsesEditor({
   onClose: () => void;
   onSaved: (saved: InnovationUse[]) => void;
 }) {
-  const [uses, setUses] = useState<InnovationUse[]>(() => initial.map((u) => ({ name: u.name, inserts: u.inserts.map((i) => ({ ...i })) })));
+  const [uses, setUses] = useState<InnovationUse[]>(() => initial.map((u) => ({ name: u.name, category: u.category ?? null, inserts: u.inserts.map((i) => ({ ...i })) })));
+  // The brand's categories so far, offered when typing one.
+  const categories = [...new Set(uses.map((u) => u.category?.trim()).filter((c): c is string => !!c))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
   // Per use: the "paste a list" box text.
   const [pasting, setPasting] = useState<Record<number, string>>({});
   const [error, setError] = useState<string | null>(null);
@@ -153,12 +163,27 @@ function UsesEditor({
   return (
     <Modal title="Edit uses" onClose={onClose} wide>
       <div className="space-y-4" data-uses-editor>
+        <datalist id="use-categories">
+          {categories.map((c) => (
+            <option key={c} value={c} />
+          ))}
+        </datalist>
         {uses.map((u, index) => (
           <div key={index} className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-700" data-use-editor={index}>
             <div className="flex items-end gap-2">
               <div className="flex-1">
                 <Label>Use</Label>
                 <Input value={u.name} onChange={(e) => update(index, (x) => ({ ...x, name: e.target.value }))} placeholder="e.g. Undercutting" aria-label="Use name" />
+              </div>
+              <div className="w-44">
+                <Label>Category (optional)</Label>
+                <Input
+                  value={u.category ?? ""}
+                  onChange={(e) => update(index, (x) => ({ ...x, category: e.target.value || null }))}
+                  placeholder="e.g. PENTA 24"
+                  list="use-categories"
+                  aria-label="Use category"
+                />
               </div>
               <button type="button" className={small} disabled={index === 0} onClick={() => setUses((l) => move(l, index, index - 1))} aria-label="Move use up">
                 ↑

@@ -32,7 +32,7 @@ function readLastTab() {
 // Everything about a brand that the filter searches: its name, details,
 // applications, group and its uses with their inserts.
 function searchText(b: Brand) {
-  const uses = (b.uses as { name: string; inserts: { name: string; note: string | null }[] }[] | undefined) ?? [];
+  const uses = (b.uses as { name: string; category?: string | null; inserts: { name: string; note: string | null }[] }[] | undefined) ?? [];
   return [
     b.name,
     b.description,
@@ -41,7 +41,7 @@ function searchText(b: Brand) {
     b.toolDescription,
     b.year,
     ...(b.applications ?? []).map((a) => a.name),
-    ...uses.flatMap((u) => [u.name, ...u.inserts.flatMap((i) => [i.name, i.note])]),
+    ...uses.flatMap((u) => [u.name, u.category, ...u.inserts.flatMap((i) => [i.name, i.note])]),
   ]
     .filter((v) => v !== null && v !== undefined && v !== "")
     .join(" ")
