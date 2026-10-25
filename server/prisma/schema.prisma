@@ -501,6 +501,9 @@ model Application {
   name        String      @unique
   description String?
   image       String?
+  // The cutting-condition parameters its recommendations ask for besides speed
+  // and feed (keys: D, CW, DC, d, ap, ae; see the web's conditionParams).
+  conditionParams String[] @default([])
   grades      Grade[]
   gradeCases  GradeCase[]
   gradeGroups GradeApplicationGroups[]
@@ -716,6 +719,12 @@ model GradeRecommendation {
   recFeedUnit  FeedUnit      @default(PER_REV)
   recAp        Float?
   recAe        Float?
+  // Application parameters (mm): workpiece diameter D, cutting width CW,
+  // cutting diameter DC, pre-drilled hole diameter d.
+  recD         Float?
+  recCW        Float?
+  recDC        Float?
+  recHoleD     Float?
   recCoolant   CoolantType?
   recNotes     String?
   // The recommended tool, described in free text.
