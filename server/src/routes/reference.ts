@@ -1196,7 +1196,7 @@ export const innovationRouter = glossaryRouter(
   {
     include: {
       applications: { select: { id: true, name: true }, orderBy: { name: "asc" } },
-      uses: { select: { name: true, inserts: true }, orderBy: { position: "asc" } },
+      uses: { select: { name: true, category: true, inserts: true }, orderBy: { position: "asc" } },
       _count: { select: { cases: true } },
     },
     listWhere: (req) => (typeof req.query.applicationId === "string" ? { applications: { some: { id: req.query.applicationId } } } : undefined),
