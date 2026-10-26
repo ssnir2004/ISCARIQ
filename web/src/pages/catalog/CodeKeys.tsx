@@ -30,8 +30,15 @@ const TURNING_INSERTS: KeyType[] = [
   { id: "pcd", label: "PCD insert", settingKey: "codekey.pcd", defaultTitle: "PCD insert code key", decoder: "pcd" },
 ];
 
-// The Parting brands' insert keys.
-const PARTING_BRANDS: KeyType[] = [{ id: "do-grip", label: "DO-GRIP", settingKey: "codekey.dogrip", defaultTitle: "DO-GRIP code key", decoder: "do-grip" }];
+// The Parting families' keys (inserts and tools).
+const PARTING_BRANDS: KeyType[] = [
+  { id: "do-grip", label: "DO-GRIP", settingKey: "codekey.dogrip", defaultTitle: "DO-GRIP code key", decoder: "do-grip" },
+  { id: "tang-grip", label: "TANG-GRIP", settingKey: "codekey.tanggrip", defaultTitle: "TANG-GRIP code key", decoder: "tang-grip" },
+  { id: "penta", label: "PENTA", settingKey: "codekey.penta", defaultTitle: "PENTA code key", decoder: "penta" },
+  { id: "gim", label: "GIM (CUT-GRIP)", settingKey: "codekey.gim", defaultTitle: "GIM code key", decoder: "gim" },
+  { id: "bgm", label: "BGM (narrow)", settingKey: "codekey.bgm", defaultTitle: "BGM code key", decoder: "bgm" },
+  { id: "gft", label: "GFT (thin)", settingKey: "codekey.gft", defaultTitle: "GFT code key", decoder: "gft" },
+];
 
 const MORE_TYPES: Record<string, KeyType[]> = { [DEFAULT_TAB.toLowerCase()]: TURNING_INSERTS, parting: PARTING_BRANDS };
 

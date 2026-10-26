@@ -1,4 +1,5 @@
 import { decodeIsoTurning } from "./isoTurning";
+import { DO_GRIP_TOOLS, decodeBgm, decodeGft, decodeGim, decodePenta, decodeTag, decodeTool } from "./partingDecoders";
 
 // Designation decoders for the code keys: each splits a designation into
 // parts, each naming the key's section (by its key or title) and the code;
@@ -19,7 +20,7 @@ export interface Decoded {
   parts: DecodedPart[];
 }
 
-export type DecoderName = "iso-turning" | "iso-insert" | "cbn" | "ceramic" | "pcd" | "do-grip";
+export type DecoderName = "iso-turning" | "iso-insert" | "cbn" | "ceramic" | "pcd" | "do-grip" | "tang-grip" | "penta" | "gim" | "bgm" | "gft";
 
 const mm = (digits: string, scale = 1) => `${Number((Number(digits) * scale).toFixed(3))} mm`;
 const squash = (s: string) => s.toUpperCase().replace(/\s+/g, "");
@@ -114,8 +115,8 @@ function decodeDoGrip(text: string): Decoded | null {
   const m = text
     .toUpperCase()
     .replace(/\s+/g, "")
-    .match(/^(DG|HG)([NRL])([A-Z])?-?(\d{2})(\d{2})([A-Z]+)?(?:-(\d{1,2})(D)?)?$/);
-  if (!m) return null;
+    .match(/^(DG|HG)([NRL])([A-Z])?-?(\d{2})(\d{2})([A-Z]+)?(?:-(\d{1,2})(D)?)?(-XL)?$/);
+  if (!m) return decodeTool(text, DO_GRIP_TOOLS);
   const width = Number(m[4]) / 10;
   const radius = Number(m[5]) / 10;
   // JS = chipformer J with sharp corners (S); a lone S is a chipformer itself.
@@ -132,6 +133,7 @@ function decodeDoGrip(text: string): Decoded | null {
       ...(chip[1] ? [{ key: "dg-sharp", code: chip[1] }] : []),
       ...(m[7] ? [{ key: "dg-lead", code: m[7], text: `Lead angle ${Number(m[7])}°` }] : []),
       ...(m[8] ? [{ key: "dg-degree", code: m[8] }] : []),
+      ...(m[9] ? [{ key: "dg-xl", code: "XL" }] : []),
     ],
   };
 }
@@ -142,7 +144,12 @@ export const DECODERS: Record<DecoderName, { decode: (text: string) => Decoded |
   cbn: { decode: decodeCbn, examples: "CNGA 120408S (N) 2MT MF BI15HC" },
   ceramic: { decode: decodeCeramic, examples: "CNGA 120408 WL T01020 IS45C" },
   pcd: { decode: decodePcd, examples: "CNGA 120408F (N) L MD ID5" },
-  "do-grip": { decode: decodeDoGrip, examples: "DGR 3100JS-15D or DGN 3102J" },
+  "do-grip": { decode: decodeDoGrip, examples: "DGR 3100JS-15D, DGN 3102J or DGFH 32C-3" },
+  "tang-grip": { decode: decodeTag, examples: "TAG N3C, TAG R3C-15D or TGFH 26K-3" },
+  penta: { decode: decodePenta, examples: "PENTA 24R150J15D, PENTA 24N200J020 or PCHR 12-D22-2-IQ" },
+  gim: { decode: decodeGim, examples: "GIM 3J or GIM 2.2JS-15RA" },
+  bgm: { decode: decodeBgm, examples: "BGM N1001J or BGTR 16B-D20-JHP" },
+  gft: { decode: decodeGft, examples: "GFT 1.2J-0.14" },
 };
 
 // A table row for a code: exact, else a pattern row ("##", "BIxx", "ISxx")
