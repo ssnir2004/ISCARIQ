@@ -34,6 +34,7 @@ const TURNING_INSERTS: KeyType[] = [
 const PARTING_BRANDS: KeyType[] = [
   { id: "do-grip", label: "DO-GRIP", settingKey: "codekey.dogrip", defaultTitle: "DO-GRIP code key", decoder: "do-grip" },
   { id: "tang-grip", label: "TANG-GRIP", settingKey: "codekey.tanggrip", defaultTitle: "TANG-GRIP code key", decoder: "tang-grip" },
+  { id: "self-grip", label: "SELF-GRIP", settingKey: "codekey.selfgrip", defaultTitle: "SELF-GRIP code key", decoder: "self-grip" },
   { id: "penta", label: "PENTA", settingKey: "codekey.penta", defaultTitle: "PENTA code key", decoder: "penta" },
   { id: "gim", label: "GIM (CUT-GRIP)", settingKey: "codekey.gim", defaultTitle: "GIM code key", decoder: "gim" },
   { id: "bgm", label: "BGM (narrow)", settingKey: "codekey.bgm", defaultTitle: "BGM code key", decoder: "bgm" },

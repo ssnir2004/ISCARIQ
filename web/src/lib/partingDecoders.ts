@@ -93,18 +93,57 @@ export function decodeGft(text: string): Decoded | null {
   };
 }
 
+// SELF-GRIP insert: GFN 3J, GFN 3 (C type), GFR 3JS-8D, GFF 3R (face grooving).
+export function decodeSelfGrip(text: string): Decoded | null {
+  const s = squash(text);
+  const face = s.match(/^GFF(\d+(?:\.\d+)?)([NRL])$/);
+  if (face) {
+    return {
+      kind: "SELF-GRIP face grooving insert",
+      parts: [
+        { key: "i-family", code: "GFF" },
+        { key: "i-width", code: face[1], text: `Cutting width ${mm(Number(face[1]))}` },
+        { key: "i-hand", code: face[2] },
+      ],
+    };
+  }
+  const m = s.match(/^GF([NRL])(\d+(?:\.\d+)?)([A-RT-Z]*)(S)?(?:-(\d{1,2})D)?$/);
+  if (!m) return decodeTool(text, SELF_GRIP_TOOLS);
+  return {
+    kind: "SELF-GRIP insert",
+    parts: [
+      { key: "i-family", code: "GF" },
+      { key: "i-hand", code: m[1] },
+      { key: "i-width", code: m[2], text: `Cutting width ${mm(Number(m[2]))}` },
+      { key: "i-chip", code: m[3] || "-", lookup: m[3] || "(none)" },
+      ...(m[4] ? [{ key: "i-sharp", code: "S" }] : []),
+      ...(m[5] ? [{ key: "i-lead", code: `${m[5]}D`, text: `Lead angle ${Number(m[5])}°` }] : []),
+    ],
+  };
+}
+
 // Tool families per brand (longest first), and whether a hand letter follows.
 export const TANG_GRIP_TOOLS = ["TAGPAD", "TGFH", "TGFS", "TGSU", "TGAD", "TGAQ", "TGT", "ADMP", "THMP"];
 export const DO_GRIP_TOOLS = ["DGPAD", "DGFH", "DGFS", "DGAD", "HGAD", "DGAQ", "DGT"];
 export const PENTA_TOOLS = ["PCHB", "PCAD", "PCH"];
 export const BGM_TOOLS = ["BGT"];
+export const SELF_GRIP_TOOLS = ["SGFFA", "SGFFH", "SGFF", "SGFH", "SGFS", "SGTF", "SGAF", "SGB", "SGF"];
+
+// Face grooving tools: which of their numbers is the minimum face diameter
+// (blades: the first; integral tools: the second, after the shank).
+const FACE_DMIN: Record<string, number> = { SGFFA: 0, SGFFH: 0, SGFF: 1 };
 
 // A tool: its family (e.g. TGFH), hand (R / L / N, when given), then its
 // numbers and suffixes, e.g. TGFH 26K-3 (blade height 26, coolant, insert
 // width 3), TGFS 0-17-2 (angle 0°), DGTR 12B-2D24SH, TGTR 2020-D65-3-JHP-MC,
 // PCHR 16-24-5 (PENTA 24 seat), PCHR 12-D22-2-IQ.
 export function decodeTool(text: string, families: string[]): Decoded | null {
-  const d = text.toUpperCase().trim().replace(/\s+/g, "-");
+  const d = text
+    .toUpperCase()
+    .trim()
+    .replace(/D\s+(\d{2,3})\b/g, "D$1")
+    .replace(/(\d)\s*T\s*(\d{2})\b/g, "$1T$2")
+    .replace(/\s+/g, "-");
   const family = [...families].sort((a, b) => b.length - a.length).find((f) => d.startsWith(f));
   if (!family) return null;
   let rest = d.slice(family.length);
@@ -122,9 +161,25 @@ export function decodeTool(text: string, families: string[]): Decoded | null {
   let sized = false;
   let angled = !family.endsWith("FS");
   let pentaSize = false;
+  // Numbers seen so far (for the face grooving tools' minimum diameter).
+  let numbers = 0;
+  const dminAt = FACE_DMIN[family];
   for (const token of rest.split("-").filter(Boolean)) {
     let m: RegExpMatchArray | null;
-    if (!angled && /^\d{1,2}$/.test(token)) {
+    if (dminAt !== undefined && /^\d{2,3}$/.test(token) && numbers++ === dminAt) {
+      parts.push({ key: "t-dmin", code: token, text: `Minimum face grooving diameter ${Number(token)} mm` });
+      if (dminAt === 0) sized = true;
+    } else if (/^(R\/L|R|L|N)$/.test(token)) {
+      parts.push({ key: "t-hand", code: token });
+    } else if ((m = token.match(/^(\d{2})T(\d{2})$/)) && !sized) {
+      parts.push({ key: "t-height", code: m[1], text: `Blade height ${Number(m[1])} mm` }, { key: "t-suffix", code: `T${m[2]}`, lookup: "T##" });
+      sized = true;
+    } else if ((m = token.match(/^(\d{2,3})([KCB])?([RL])$/)) && !sized) {
+      parts.push({ key: "t-height", code: m[1], text: `Blade height / shank ${Number(m[1])} mm` });
+      if (m[2]) parts.push({ key: "t-suffix", code: m[2] });
+      parts.push({ key: "t-hand", code: m[3] });
+      sized = true;
+    } else if (!angled && /^\d{1,2}$/.test(token)) {
       // Multi-spindle blades (TGFS / DGFS) start with their angle a°.
       parts.push({ key: "t-angle", code: token, text: `Angle a° = ${Number(token)}°` });
       angled = true;
