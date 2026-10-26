@@ -122,16 +122,72 @@ export function decodeSelfGrip(text: string): Decoded | null {
   };
 }
 
+// CUT-GRIP inserts. Precision (ground): GIP 3.00E-0.40 (width, type, corner
+// radius, suffix), GIPI 3.00-1.5UL, GIP 1.57-0.15 RX, GIPA 4.00-2.00YZ-D.
+// Utility: GIMY 808 (width 8, radius 0.8), GIMY 315-UN, GDMW 2.4, GEMI 2002N
+// (width and radius x10), GIMY 635-318. Parting: GIM 3J (see decodeGim).
+const PRECISION = ["GIPA", "GIPI", "GIPM", "GIPY", "GIP", "GIFG", "GIFI", "GIF", "GIG", "GEPI", "GIA", "GITM", "GINI", "GIDA"];
+const UTILITY = ["GDMU", "GDMW", "GDMY", "GDMF", "GDMA", "GDMN", "GDMT", "GDMM", "GIMIY", "GIMY", "GIMF", "GIMN", "GIMT", "GIMM", "GEMI"];
+
+export function decodeCutGrip(text: string): Decoded | null {
+  const s = squash(text);
+  const fam = (list: string[]) => list.find((f) => s.startsWith(f) && /^[\d.]/.test(s.slice(f.length)));
+  const p = fam(PRECISION);
+  if (p) {
+    const m = s.slice(p.length).match(/^(\d+(?:\.\d+)?)([EK])?-(\d+(?:\.\d+)?)(UN|UR|UL|RX|LX|YZ|CB|L|R)?(?:-?(D))?$/);
+    if (!m) return null;
+    // GIDA sizes are x10 (80-40 = 8.0 mm, radius 4.0 mm).
+    const k = p === "GIDA" ? 10 : 1;
+    const w = Number(m[1]) / k;
+    const re = Number(m[3]) / k;
+    return {
+      kind: "CUT-GRIP precision insert",
+      parts: [
+        { key: "i-family", code: p },
+        { key: "i-width", code: m[1], text: `Cutting width ${mm(w)}` },
+        ...(m[2] ? [{ key: "i-type", code: m[2] }] : []),
+        { key: "i-radius", code: m[3], text: re > 0 && Math.abs(re * 2 - w) < 0.02 ? `Corner radius ${mm(re)} (full radius)` : `Corner radius ${mm(re)}` },
+        ...(m[4] ? [{ key: "i-variant", code: m[4] }] : []),
+        ...(m[5] ? [{ key: "i-variant", code: "D" }] : []),
+      ],
+    };
+  }
+  const u = fam(UTILITY);
+  if (u) {
+    const m = s.slice(u.length).match(/^(\d+(?:\.\d+)?)([A-Z]*?)(?:-(\d{3}))?(?:-?(UN))?$/);
+    if (!m) return null;
+    let w: number;
+    let re: number | null;
+    if (m[1].includes(".") || m[1].length <= 2) [w, re] = [Number(m[1]), null];
+    else if (m[3]) [w, re] = [Number(m[1]) / 100, Number(m[3]) / 100];
+    else if (u === "GEMI") [w, re] = [Number(m[1].slice(0, 2)) / 10, Number(m[1].slice(2)) / 10];
+    else [w, re] = [Number(m[1].slice(0, -2)), Number(m[1].slice(-2)) / 10];
+    return {
+      kind: "CUT-GRIP utility insert",
+      parts: [
+        { key: "i-family", code: u },
+        { key: "i-width", code: m[3] ? `${m[1]}-${m[3]}` : m[1], text: re === null ? `Cutting width ${mm(w)}` : `Cutting width ${mm(w)}, corner radius ${mm(re)}${Math.abs(re * 2 - w) < 0.02 ? " (full radius)" : ""}` },
+        ...(m[2] ? [{ key: "i-variant", code: m[2] }] : []),
+        ...(m[4] ? [{ key: "i-variant", code: "UN" }] : []),
+      ],
+    };
+  }
+  return decodeGim(text) ?? decodeTool(text, CUT_GRIP_TOOLS);
+}
+
 // Tool families per brand (longest first), and whether a hand letter follows.
 export const TANG_GRIP_TOOLS = ["TAGPAD", "TGFH", "TGFS", "TGSU", "TGAD", "TGAQ", "TGT", "ADMP", "THMP"];
 export const DO_GRIP_TOOLS = ["DGPAD", "DGFH", "DGFS", "DGAD", "HGAD", "DGAQ", "DGT"];
 export const PENTA_TOOLS = ["PCHB", "PCAD", "PCH"];
 export const BGM_TOOLS = ["BGT"];
+export const CUT_GRIP_TOOLS = ["CGFG", "CGH", "GHFG", "GHMP", "GHM", "GHD", "GHG", "GHS", "GEHS", "PHG", "PHS", "GAFG", "GAD", "PAD", "THD"];
 export const SELF_GRIP_TOOLS = ["SGFFA", "SGFFH", "SGFF", "SGFH", "SGFS", "SGTF", "SGAF", "SGB", "SGF"];
 
 // Face grooving tools: which of their numbers is the minimum face diameter
 // (blades: the first; integral tools: the second, after the shank).
-const FACE_DMIN: Record<string, number> = { SGFFA: 0, SGFFH: 0, SGFF: 1 };
+const FACE_DMIN: Record<string, number> = { SGFFA: 0, SGFFH: 0, SGFF: 1, GAFG: 0, GHFG: 1, CGFG: 1 };
+// Adapters whose first number is the insert width (e.g. GADR 8, PADR 2.4).
+const WIDTH_FIRST = new Set(["GAD", "PAD"]);
 
 // A tool: its family (e.g. TGFH), hand (R / L / N, when given), then its
 // numbers and suffixes, e.g. TGFH 26K-3 (blade height 26, coolant, insert
@@ -144,10 +200,13 @@ export function decodeTool(text: string, families: string[]): Decoded | null {
     .replace(/D\s+(\d{2,3})\b/g, "D$1")
     .replace(/(\d)\s*T\s*(\d{2})\b/g, "$1T$2")
     .replace(/\s+/g, "-");
-  const family = [...families].sort((a, b) => b.length - a.length).find((f) => d.startsWith(f));
+  // A CAMFIX shank before the family (e.g. C4 GHDR-3).
+  const camfix = d.match(/^C(\d)-/);
+  const body = camfix ? d.slice(camfix[0].length) : d;
+  const family = [...families].sort((a, b) => b.length - a.length).find((f) => body.startsWith(f));
   if (!family) return null;
-  let rest = d.slice(family.length);
-  const parts: DecodedPart[] = [{ key: "t-family", code: family }];
+  let rest = body.slice(family.length);
+  const parts: DecodedPart[] = [...(camfix ? [{ key: "t-suffix", code: `C${camfix[1]}`, lookup: "C#" }] : []), { key: "t-family", code: family }];
   const hand = rest.match(/^(R\/L|R|L|N)(?=S?(-|$))/);
   if (hand) {
     parts.push({ key: "t-hand", code: hand[1] });
@@ -161,14 +220,20 @@ export function decodeTool(text: string, families: string[]): Decoded | null {
   let sized = false;
   let angled = !family.endsWith("FS");
   let pentaSize = false;
+  let sizedWidth = !WIDTH_FIRST.has(family);
   // Numbers seen so far (for the face grooving tools' minimum diameter).
   let numbers = 0;
   const dminAt = FACE_DMIN[family];
   for (const token of rest.split("-").filter(Boolean)) {
     let m: RegExpMatchArray | null;
-    if (dminAt !== undefined && /^\d{2,3}$/.test(token) && numbers++ === dminAt) {
-      parts.push({ key: "t-dmin", code: token, text: `Minimum face grooving diameter ${Number(token)} mm` });
+    if (dminAt !== undefined && (m = token.match(/^(\d{2,3})([RL])?$/)) && numbers++ === dminAt) {
+      parts.push({ key: "t-dmin", code: m[1], text: `Minimum face grooving diameter ${Number(m[1])} mm` });
+      if (m[2]) parts.push({ key: "t-hand", code: m[2] });
       if (dminAt === 0) sized = true;
+    } else if (!sizedWidth && (m = token.match(/^(\d+(?:\.\d+)?)$/))) {
+      parts.push({ key: "t-width", code: m[1], text: `Insert width ${mm(Number(m[1]))}` });
+      sizedWidth = true;
+      sized = true;
     } else if (/^(R\/L|R|L|N)$/.test(token)) {
       parts.push({ key: "t-hand", code: token });
     } else if ((m = token.match(/^(\d{2})T(\d{2})$/)) && !sized) {
@@ -198,11 +263,20 @@ export function decodeTool(text: string, families: string[]): Decoded | null {
     } else if (pentaSize && /^\d$/.test(token)) {
       // e.g. PCHR 16-24-5: a variant of the tool (see the catalog).
       parts.push({ key: "t-suffix", code: token, lookup: "#" });
+    } else if (sized && /^\d{3}$/.test(token)) {
+      // e.g. GHDR 32-812: a pocket / insert variant (see the catalog).
+      parts.push({ key: "t-suffix", code: token, lookup: "###" });
     } else if ((m = token.match(/^(\d+(?:\.\d+)?)(N|R\/LE|RE|LE|R\/L|R|L|B)?(D\d{2,3})?(SH)?$/))) {
       parts.push({ key: "t-width", code: m[1], text: `Insert width ${mm(Number(m[1]))}` });
       if (m[2]) parts.push({ key: m[2] === "B" ? "t-suffix" : "t-hand", code: m[2] });
       if (m[3]) parts.push({ key: "t-dia", code: m[3], text: `${m[3]}: ${Number(m[3].slice(1))} mm` });
       if (m[4]) parts.push({ key: "t-suffix", code: "SH" });
+    } else if (sized && (m = token.match(/^(\d+(?:\.\d+)?)T(\d+(?:\.\d+)?)(PR)?$/))) {
+      // e.g. GHDL 2525-14T12: insert width 14, T12.
+      parts.push({ key: "t-width", code: m[1], text: `Insert width ${mm(Number(m[1]))}` }, { key: "t-suffix", code: `T${m[2]}`, lookup: "T##" });
+    } else if (sized && (m = token.match(/^(\d+(?:\.\d+)?)(DG|D|S)$/))) {
+      // e.g. CGHN 32-3D (double-ended), 32-3S (single-ended), 32-3DG.
+      parts.push({ key: "t-width", code: m[1], text: `Insert width ${mm(Number(m[1]))}` }, { key: "t-suffix", code: m[2] });
     } else if ((m = token.match(/^D(\d{2,3})$/))) {
       parts.push({ key: "t-dia", code: token, text: `${token}: ${Number(m[1])} mm` });
     } else if ((m = token.match(/^(\d)Z$/))) {
