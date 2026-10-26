@@ -175,11 +175,31 @@ export function decodeCutGrip(text: string): Decoded | null {
   return decodeGim(text) ?? decodeTool(text, CUT_GRIP_TOOLS);
 }
 
+// GROOVE4CUT insert (4 cutting edges): QGI 30N200PF020 (size 30, hand, width
+// and corner radius x100 mm, chipformer).
+export function decodeGroove4Cut(text: string): Decoded | null {
+  const m = squash(text).match(/^QGI(30)([NRL])(\d{3})([A-Z]+?)(\d{3})$/);
+  if (!m) return decodeTool(text, GROOVE4CUT_TOOLS);
+  const radius = Number(m[5]) / 100;
+  return {
+    kind: "GROOVE4CUT insert",
+    parts: [
+      { key: "i-family", code: "QGI" },
+      { key: "i-size", code: m[1] },
+      { key: "i-hand", code: m[2] },
+      { key: "i-width", code: m[3], text: `Cutting width ${mm(Number(m[3]) / 100)}` },
+      { key: "i-chip", code: m[4] },
+      { key: "i-radius", code: m[5], text: radius ? `Corner radius ${mm(radius)}` : "Sharp corners (no radius)" },
+    ],
+  };
+}
+
 // Tool families per brand (longest first), and whether a hand letter follows.
 export const TANG_GRIP_TOOLS = ["TAGPAD", "TGFH", "TGFS", "TGSU", "TGAD", "TGAQ", "TGT", "ADMP", "THMP"];
 export const DO_GRIP_TOOLS = ["DGPAD", "DGFH", "DGFS", "DGAD", "HGAD", "DGAQ", "DGT"];
 export const PENTA_TOOLS = ["PCHB", "PCAD", "PCH"];
 export const BGM_TOOLS = ["BGT"];
+export const GROOVE4CUT_TOOLS = ["QTH"];
 export const CUT_GRIP_TOOLS = ["CGFG", "CGH", "GHFG", "GHMP", "GHM", "GHD", "GHG", "GHS", "GEHS", "PHG", "PHS", "GAFG", "GAD", "PAD", "THD"];
 export const SELF_GRIP_TOOLS = ["SGFFA", "SGFFH", "SGFF", "SGFH", "SGFS", "SGTF", "SGAF", "SGB", "SGF"];
 
@@ -217,6 +237,8 @@ export function decodeTool(text: string, families: string[]): Decoded | null {
     rest = rest.slice(1);
   }
   const penta = family.startsWith("PC");
+  // GROOVE4CUT tools name their insert size after the shank (QTHR 16-30).
+  const quad = family === "QTH";
   let sized = false;
   let angled = !family.endsWith("FS");
   let pentaSize = false;
@@ -256,6 +278,8 @@ export function decodeTool(text: string, families: string[]): Decoded | null {
       parts.push({ key: "t-height", code: m[1], text: `Blade height / shank ${Number(m[1])} mm` });
       if (m[2]) parts.push({ key: "t-suffix", code: m[2] });
       sized = true;
+    } else if (quad && token === "30") {
+      parts.push({ key: "t-seat", code: token, text: "For QGI 30 inserts" });
     } else if (penta && (m = token.match(/^(17|24|34)(N)?$/))) {
       parts.push({ key: "t-penta", code: m[1], text: `For PENTA ${m[1]} inserts` });
       if (m[2]) parts.push({ key: "t-hand", code: "N" });
