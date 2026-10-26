@@ -6,9 +6,9 @@ import { useResource } from "../../lib/useResource";
 import type { Application } from "../../lib/types";
 
 // Code keys by application, then by type: each application has its tools key
-// (e.g. Turning: ISO toolholders and boring bars), and Turning also has the
-// insert keys of each grade family (carbide, CBN, ceramic, PCD), each with its
-// designation decoder.
+// (e.g. Turning: ISO toolholders and boring bars), Turning also has the insert
+// keys of each grade family (carbide, CBN, ceramic, PCD) and Parting the keys
+// of its brands (DO-GRIP), each with its designation decoder.
 
 const LAST_TAB_KEY = "iscariq.codekeys.tab";
 const LAST_TYPE_KEY = "iscariq.codekeys.type";
@@ -30,10 +30,15 @@ const TURNING_INSERTS: KeyType[] = [
   { id: "pcd", label: "PCD insert", settingKey: "codekey.pcd", defaultTitle: "PCD insert code key", decoder: "pcd" },
 ];
 
+// The Parting brands' insert keys.
+const PARTING_BRANDS: KeyType[] = [{ id: "do-grip", label: "DO-GRIP", settingKey: "codekey.dogrip", defaultTitle: "DO-GRIP code key", decoder: "do-grip" }];
+
+const MORE_TYPES: Record<string, KeyType[]> = { [DEFAULT_TAB.toLowerCase()]: TURNING_INSERTS, parting: PARTING_BRANDS };
+
 function keyTypes(app: Application): KeyType[] {
   // The tools key keeps its decoder in its own data (e.g. "iso-turning").
   const tools: KeyType = { id: "tools", label: "Tools", settingKey: `codekey.app.${app.id}`, defaultTitle: `${app.name} code key` };
-  return app.name.toLowerCase() === DEFAULT_TAB.toLowerCase() ? [tools, ...TURNING_INSERTS] : [tools];
+  return [tools, ...(MORE_TYPES[app.name.trim().toLowerCase()] ?? [])];
 }
 
 function read(key: string) {

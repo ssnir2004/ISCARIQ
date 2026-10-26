@@ -19,7 +19,7 @@ export interface Decoded {
   parts: DecodedPart[];
 }
 
-export type DecoderName = "iso-turning" | "iso-insert" | "cbn" | "ceramic" | "pcd";
+export type DecoderName = "iso-turning" | "iso-insert" | "cbn" | "ceramic" | "pcd" | "do-grip";
 
 const mm = (digits: string, scale = 1) => `${Number((Number(digits) * scale).toFixed(3))} mm`;
 const squash = (s: string) => s.toUpperCase().replace(/\s+/g, "");
@@ -106,12 +106,43 @@ function decodePcd(text: string): Decoded | null {
   };
 }
 
+// DO-GRIP parting insert, e.g. DGR 3100JS-15D: family DG (HG: 3 mm twisted
+// geometry), hand, a variant letter (e.g. DGNC), nominal width and corner
+// radii (x10 mm), chipformer (a trailing S: sharp corners), lead angle in
+// degrees. Sections keyed "dg-<part>".
+function decodeDoGrip(text: string): Decoded | null {
+  const m = text
+    .toUpperCase()
+    .replace(/\s+/g, "")
+    .match(/^(DG|HG)([NRL])([A-Z])?-?(\d{2})(\d{2})([A-Z]+)?(?:-(\d{1,2})(D)?)?$/);
+  if (!m) return null;
+  const width = Number(m[4]) / 10;
+  const radius = Number(m[5]) / 10;
+  // JS = chipformer J with sharp corners (S); a lone S is a chipformer itself.
+  const chip = m[6] && m[6].length > 1 && m[6].endsWith("S") ? [m[6].slice(0, -1), "S"] : m[6] ? [m[6]] : [];
+  return {
+    kind: "DO-GRIP insert",
+    parts: [
+      { key: "dg-family", code: m[1] },
+      { key: "dg-hand", code: m[2] },
+      ...(m[3] ? [{ key: "dg-variant", code: m[3] }] : []),
+      { key: "dg-width", code: m[4], text: `Nominal insert width ${width} mm` },
+      { key: "dg-radius", code: m[5], text: radius ? `Corner radii ${radius} mm` : "Corner radii 0 (sharp)" },
+      ...(chip[0] ? [{ key: "dg-chip", code: chip[0] }] : []),
+      ...(chip[1] ? [{ key: "dg-sharp", code: chip[1] }] : []),
+      ...(m[7] ? [{ key: "dg-lead", code: m[7], text: `Lead angle ${Number(m[7])}°` }] : []),
+      ...(m[8] ? [{ key: "dg-degree", code: m[8] }] : []),
+    ],
+  };
+}
+
 export const DECODERS: Record<DecoderName, { decode: (text: string) => Decoded | null; examples: string }> = {
   "iso-turning": { decode: decodeIsoTurning, examples: "MWLNR 2525M-08W or S25S MWLNR-08W" },
   "iso-insert": { decode: decodeIsoInsert, examples: "WNMG 080408 E-GN" },
   cbn: { decode: decodeCbn, examples: "CNGA 120408S (N) 2MT MF BI15HC" },
   ceramic: { decode: decodeCeramic, examples: "CNGA 120408 WL T01020 IS45C" },
   pcd: { decode: decodePcd, examples: "CNGA 120408F (N) L MD ID5" },
+  "do-grip": { decode: decodeDoGrip, examples: "DGR 3100JS-15D or DGN 3102J" },
 };
 
 // A table row for a code: exact, else a pattern row ("##", "BIxx", "ISxx")
