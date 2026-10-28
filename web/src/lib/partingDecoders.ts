@@ -554,6 +554,52 @@ export function decodeDoveIqGrip(text: string): Decoded | null {
   return isDoveIq(s) ? decodeTool(text, ["THD"]) : null;
 }
 
+// MINCUT: screw-clamped inserts MIFR 8-1.50-0.20 (size, width, corner radius),
+// MIGR / MIUR / MEFL; bars MIFHR 10C-8 (shank, coolant, insert size) and
+// trepanning cartridges IHSR 8-21 MIFR8 (Dmin-Dmax, insert).
+export function decodeMinCut(text: string): Decoded | null {
+  const s = squash(text);
+  let m = s.match(/^(MIF|MIG|MIU|MEF)([RL])(\d{1,2})-(\d+(?:\.\d+)?)-(\d+\.\d+)$/);
+  if (m) {
+    const w = Number(m[4]), re = Number(m[5]);
+    return {
+      kind: "MINCUT insert",
+      parts: [
+        { key: "i-family", code: m[1] },
+        { key: "i-hand", code: m[2] },
+        { key: "i-size", code: m[3], text: `Insert size ${m[3]}` },
+        { key: "i-width", code: m[4], text: `Cutting width ${mm(w)}` },
+        { key: "i-radius", code: m[5], text: re ? `Corner radius ${mm(re)}${Math.abs(re * 2 - w) < 0.02 ? " (full radius)" : ""}` : "Sharp corners (no radius)" },
+      ],
+    };
+  }
+  if ((m = s.match(/^MIFH([RL])(\d{1,2})(SC|C)?-(\d{1,2})(?:-([A-Z]+))?$/))) {
+    return {
+      kind: "MINCUT bar",
+      parts: [
+        { key: "t-family", code: "MIFH" },
+        { key: "t-hand", code: m[1] },
+        { key: "t-height", code: m[2], text: `Shank diameter ${mm(Number(m[2]))}` },
+        ...(m[3] ? [{ key: "t-suffix", code: m[3] }] : []),
+        { key: "t-seat", code: m[4], text: `For MINCUT size ${m[4]} inserts` },
+        ...(m[5] ? [{ key: "t-suffix", code: m[5] }] : []),
+      ],
+    };
+  }
+  if ((m = s.match(/^IHS([RL])(\d{1,2})-(\d{2})(MIF[RL])(\d{1,2})$/))) {
+    return {
+      kind: "MINCUT trepanning cartridge",
+      parts: [
+        { key: "t-family", code: "IHS" },
+        { key: "t-hand", code: m[1] },
+        { key: "t-dmin", code: `${m[2]}-${m[3]}`, text: `Axial grooving diameter ${Number(m[2])}–${Number(m[3])} mm` },
+        { key: "t-seat", code: m[5], text: `For ${m[4]} ${m[5]} inserts` },
+      ],
+    };
+  }
+  return null;
+}
+
 // Tool families per brand (longest first), and whether a hand letter follows.
 export const TANG_GRIP_TOOLS = ["TAGPAD", "TGFH", "TGFS", "TGSU", "TGAD", "TGAQ", "TGT", "ADMP", "THMP"];
 export const DO_GRIP_TOOLS = ["DGPAD", "DGFH", "DGFS", "DGAD", "HGAD", "DGAQ", "DGT"];
