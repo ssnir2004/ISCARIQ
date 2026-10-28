@@ -120,16 +120,23 @@ function decodeAnyPenta(text: string): Decoded | null {
   };
 }
 
-// QUICK-PENTA (safety lock SL inserts, QC tools) and PENTA IQ GRIP (PENTA D
-// inserts, PCHR/L-D## tools) have their own keys; PENTACUT has the rest of the
-// PENTA designations.
+// QUICK-PENTA (safety lock SL inserts, QC tools), PENTA IQ GRIP (PENTA D
+// inserts, PCHR/L-D## tools) and FLASHPENTA (PMN D inserts) have their own
+// keys; PENTACUT has the rest of the PENTA designations.
 const isQuickPenta = (d: Decoded) => d.parts.some((p) => p.key === "i-lock" || (p.key === "t-suffix" && p.code === "QC"));
+const isFlashPenta = (d: Decoded) => d.parts[0]?.code === "PMN";
 const isPentaIq = (d: Decoded) =>
   d.parts.some((p) => (p.key === "i-size" && p.code.startsWith("D") && d.parts[0].code === "PENTA") || p.key === "t-dia");
 
 export function decodePenta(text: string): Decoded | null {
   const d = decodeAnyPenta(text);
-  return d && !isQuickPenta(d) && !isPentaIq(d) ? d : null;
+  return d && !isQuickPenta(d) && !isPentaIq(d) && !isFlashPenta(d) ? d : null;
+}
+
+// FLASHPENTA: PMN D32-2C02, PMN D22-3J-1.5 (full radius).
+export function decodeFlashPenta(text: string): Decoded | null {
+  const d = decodeAnyPenta(text);
+  return d && isFlashPenta(d) ? d : null;
 }
 
 // PENTA IQ GRIP: PENTA D32N200C020, PENTA D22R200J-6D, PCHR 12-D22-2-IQ.
