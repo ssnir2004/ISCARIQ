@@ -310,6 +310,35 @@ export function decodeChamGroove(text: string): Decoded | null {
   return { kind: "CHAM-GROOVE insert", parts };
 }
 
+// QUICK-I-GROOVE: 4-edge internal inserts GQIN 1.50-0.10 (width, corner radius)
+// and bars GQHINR 16C-16.5-20 (shank, coolant, Dmin, reduced length).
+export function decodeQuickIGroove(text: string): Decoded | null {
+  const s = squash(text);
+  let m = s.match(/^GQIN(\d+\.\d+)-(\d+\.\d+)$/);
+  if (m) {
+    const re = Number(m[2]);
+    return {
+      kind: "QUICK-I-GROOVE insert",
+      parts: [
+        { key: "i-family", code: "GQIN" },
+        { key: "i-width", code: m[1], text: `Cutting width ${mm(Number(m[1]))}` },
+        { key: "i-radius", code: m[2], text: re ? `Corner radius ${mm(re)}` : "Sharp corners (no radius)" },
+      ],
+    };
+  }
+  m = s.match(/^GQHIN([RL])(\d{2})(C)?-(\d+(?:\.\d+)?)(?:-(\d{2,3}))?$/);
+  if (!m) return null;
+  const parts: DecodedPart[] = [
+    { key: "t-family", code: "GQHIN" },
+    { key: "t-hand", code: m[1] },
+    { key: "t-height", code: m[2], text: `Shank diameter ${mm(Number(m[2]))}` },
+  ];
+  if (m[3]) parts.push({ key: "t-suffix", code: "C" });
+  parts.push({ key: "t-dmin", code: m[4], text: `Minimum bore diameter ${mm(Number(m[4]))}` });
+  if (m[5]) parts.push({ key: "t-length", code: m[5], text: `Reduced (neck) length ${mm(Number(m[5]))}` });
+  return { kind: "QUICK-I-GROOVE bar", parts };
+}
+
 // Tool families per brand (longest first), and whether a hand letter follows.
 export const TANG_GRIP_TOOLS = ["TAGPAD", "TGFH", "TGFS", "TGSU", "TGAD", "TGAQ", "TGT", "ADMP", "THMP"];
 export const DO_GRIP_TOOLS = ["DGPAD", "DGFH", "DGFS", "DGAD", "HGAD", "DGAQ", "DGT"];
