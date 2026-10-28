@@ -42,6 +42,7 @@ const PARTING_BRANDS: KeyType[] = [
   { id: "quick-i-groove", label: "QUICK-I-GROOVE", settingKey: "codekey.quickigroove", defaultTitle: "QUICK-I-GROOVE code key", decoder: "quick-i-groove" },
   { id: "heliface", label: "HELIFACE", settingKey: "codekey.heliface", defaultTitle: "HELIFACE code key", decoder: "heliface" },
   { id: "sumo-grip", label: "SUMO-GRIP", settingKey: "codekey.sumogrip", defaultTitle: "SUMO-GRIP code key", decoder: "sumo-grip" },
+  { id: "dove-iq-grip", label: "DOVE IQ GRIP", settingKey: "codekey.doveiqgrip", defaultTitle: "DOVE IQ GRIP code key", decoder: "dove-iq-grip" },
   { id: "self-grip", label: "SELF-GRIP", settingKey: "codekey.selfgrip", defaultTitle: "SELF-GRIP code key", decoder: "self-grip" },
   { id: "groove4cut", label: "GROOVE4CUT", settingKey: "codekey.groove4cut", defaultTitle: "GROOVE4CUT code key", decoder: "groove4cut" },
   { id: "quick-penta", label: "QUICK-PENTA", settingKey: "codekey.quickpenta", defaultTitle: "QUICK-PENTA code key", decoder: "quick-penta" },

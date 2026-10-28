@@ -237,6 +237,8 @@ const UTILITY = ["GDMU", "GDMW", "GDMY", "GDMF", "GDMA", "GDMN", "GDMT", "GDMM",
 
 export function decodeCutGrip(text: string): Decoded | null {
   const s = squash(text);
+  // THDR/L-IQ holders belong to DOVE IQ GRIP.
+  if (isDoveIq(s)) return null;
   const fam = (list: string[]) => list.find((f) => s.startsWith(f) && /^[\d.]/.test(s.slice(f.length)));
   const p = fam(PRECISION);
   if (p) {
@@ -518,6 +520,38 @@ export function decodeSumoGrip(text: string): Decoded | null {
       { key: "i-chip", code: m[3] },
     ],
   };
+}
+
+// DOVE IQ GRIP: TIGER 1008Y-IQ (width 10, corner radius x10: 0.8 mm), TIGER
+// 1415-CW-IQ; holders THDR 2525-10T20-IQ and cartridges CR THDN-10-IQ.
+const isDoveIq = (s: string) => /^(CR)?THD.*-IQ$/.test(s);
+export function decodeDoveIqGrip(text: string): Decoded | null {
+  const s = squash(text);
+  let m = s.match(/^TIGER(\d{2})(\d{2})(?:([A-Z]+)|-([A-Z]+))-IQ$/);
+  if (m) {
+    const w = Number(m[1]), re = Number(m[2]) / 10;
+    return {
+      kind: "DOVE IQ GRIP insert",
+      parts: [
+        { key: "i-family", code: "TIGER" },
+        { key: "i-width", code: m[1] + m[2], text: `Cutting width ${mm(w)}, corner radius ${mm(re)}` },
+        m[3] ? { key: "i-chip", code: m[3] } : { key: "i-variant", code: m[4] },
+        { key: "i-iq", code: "IQ" },
+      ],
+    };
+  }
+  if ((m = s.match(/^CRTHD([NRL])-(\d{2})-IQ$/))) {
+    return {
+      kind: "DOVE IQ GRIP cartridge",
+      parts: [
+        { key: "t-family", code: "CR THD" },
+        { key: "t-hand", code: m[1] },
+        { key: "t-width", code: m[2], text: `Insert width ${mm(Number(m[2]))}` },
+        { key: "t-suffix", code: "IQ" },
+      ],
+    };
+  }
+  return isDoveIq(s) ? decodeTool(text, ["THD"]) : null;
 }
 
 // Tool families per brand (longest first), and whether a hand letter follows.
