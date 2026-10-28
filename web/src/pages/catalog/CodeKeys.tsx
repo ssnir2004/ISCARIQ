@@ -39,6 +39,7 @@ const PARTING_BRANDS: KeyType[] = [
   { id: "top-grip", label: "TOP-GRIP", settingKey: "codekey.topgrip", defaultTitle: "TOP-GRIP code key", decoder: "top-grip" },
   { id: "swisscut", label: "SWISSCUT", settingKey: "codekey.swisscut", defaultTitle: "SWISSCUT code key", decoder: "swisscut" },
   { id: "cham-groove", label: "CHAM-GROOVE", settingKey: "codekey.chamgroove", defaultTitle: "CHAM-GROOVE code key", decoder: "cham-groove" },
+  { id: "quick-i-groove", label: "QUICK-I-GROOVE", settingKey: "codekey.quickigroove", defaultTitle: "QUICK-I-GROOVE code key", decoder: "quick-i-groove" },
   { id: "self-grip", label: "SELF-GRIP", settingKey: "codekey.selfgrip", defaultTitle: "SELF-GRIP code key", decoder: "self-grip" },
   { id: "groove4cut", label: "GROOVE4CUT", settingKey: "codekey.groove4cut", defaultTitle: "GROOVE4CUT code key", decoder: "groove4cut" },
   { id: "penta", label: "PENTA", settingKey: "codekey.penta", defaultTitle: "PENTA code key", decoder: "penta" },
