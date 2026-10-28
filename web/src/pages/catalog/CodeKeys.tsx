@@ -44,6 +44,7 @@ const PARTING_BRANDS: KeyType[] = [
   { id: "self-grip", label: "SELF-GRIP", settingKey: "codekey.selfgrip", defaultTitle: "SELF-GRIP code key", decoder: "self-grip" },
   { id: "groove4cut", label: "GROOVE4CUT", settingKey: "codekey.groove4cut", defaultTitle: "GROOVE4CUT code key", decoder: "groove4cut" },
   { id: "quick-penta", label: "QUICK-PENTA", settingKey: "codekey.quickpenta", defaultTitle: "QUICK-PENTA code key", decoder: "quick-penta" },
+  { id: "penta-iq", label: "PENTA IQ GRIP", settingKey: "codekey.pentaiq", defaultTitle: "PENTA IQ GRIP code key", decoder: "penta-iq" },
   { id: "penta", label: "PENTACUT", settingKey: "codekey.penta", defaultTitle: "PENTACUT code key", decoder: "penta" },
   { id: "cut-grip", label: "CUT-GRIP", settingKey: "codekey.cutgrip", defaultTitle: "CUT-GRIP code key", decoder: "cut-grip" },
   { id: "bgm", label: "ISCAR-PARTING", settingKey: "codekey.bgm", defaultTitle: "ISCAR-PARTING code key", decoder: "bgm" },
