@@ -50,11 +50,14 @@ const PARTING_BRANDS: KeyType[] = [
 ];
 
 const MORE_TYPES: Record<string, KeyType[]> = { [DEFAULT_TAB.toLowerCase()]: TURNING_INSERTS, parting: PARTING_BRANDS };
+// Applications whose brand keys already cover their tools, so no Tools key.
+const NO_TOOLS_KEY = new Set(["parting"]);
 
 function keyTypes(app: Application): KeyType[] {
   // The tools key keeps its decoder in its own data (e.g. "iso-turning").
+  const name = app.name.trim().toLowerCase();
   const tools: KeyType = { id: "tools", label: "Tools", settingKey: `codekey.app.${app.id}`, defaultTitle: `${app.name} code key` };
-  return [tools, ...(MORE_TYPES[app.name.trim().toLowerCase()] ?? [])];
+  return [...(NO_TOOLS_KEY.has(name) ? [] : [tools]), ...(MORE_TYPES[name] ?? [])];
 }
 
 // Every key with a decoder, for the designation search (the Turning tools
