@@ -29,7 +29,7 @@ export function decodeTag(text: string): Decoded | null {
 // 17L03SP6D-RS (width x10), QUICK-PENTA PENTA 24N080NF01RS-SL (safety lock,
 // radius x10), face PENTA 34F239-0.15-22L, PENTA 17-100NP08LS, back turning
 // PENTA 17ER08-07K0RS, blanks PENTAS 27-10FT and FLASHPENTA PMN D32-2C02.
-export function decodePenta(text: string): Decoded | null {
+function decodeAnyPenta(text: string): Decoded | null {
   const s = squash(text);
   const radiusText = (re: number) => (re ? `Corner radius ${mm(re)}` : "Sharp corners (no radius)");
   let m = s.match(/^PENTAS27-(\d{2})FT$/);
@@ -118,6 +118,21 @@ export function decodePenta(text: string): Decoded | null {
       ...(m[8] ? [{ key: "i-lock", code: "SL" }] : []),
     ],
   };
+}
+
+// QUICK-PENTA (safety lock SL inserts, QC tools) has its own key; PENTACUT
+// has the rest of the PENTA designations.
+const isQuickPenta = (d: Decoded) => d.parts.some((p) => p.key === "i-lock" || (p.key === "t-suffix" && p.code === "QC"));
+
+export function decodePenta(text: string): Decoded | null {
+  const d = decodeAnyPenta(text);
+  return d && !isQuickPenta(d) ? d : null;
+}
+
+// QUICK-PENTA: PENTA 24N200C020SL, PENTA 24N080NF01RS-SL, PCHR 20-24-JHP-MC-QC.
+export function decodeQuickPenta(text: string): Decoded | null {
+  const d = decodeAnyPenta(text);
+  return d && isQuickPenta(d) ? d : null;
 }
 
 // CUT-GRIP utility insert: GIM 3J, GIM 2.2JS-15RA, GIM 3-4LA, GIM 4.6UT.

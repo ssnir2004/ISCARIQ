@@ -1,5 +1,5 @@
 import { decodeIsoTurning } from "./isoTurning";
-import { DO_GRIP_TOOLS, decodeBgm, decodeCutGrip, decodeGft, decodeGim, decodeGroove4Cut, decodeHeliGrip, decodePenta, decodeChamGroove, decodeHeliFace, decodeQuickIGroove, decodeSelfGrip, decodeSwissCut, decodeTag, decodeTopGrip, decodeTool } from "./partingDecoders";
+import { DO_GRIP_TOOLS, decodeBgm, decodeCutGrip, decodeGft, decodeGim, decodeGroove4Cut, decodeHeliGrip, decodePenta, decodeQuickPenta, decodeChamGroove, decodeHeliFace, decodeQuickIGroove, decodeSelfGrip, decodeSwissCut, decodeTag, decodeTopGrip, decodeTool } from "./partingDecoders";
 
 // Designation decoders for the code keys: each splits a designation into
 // parts, each naming the key's section (by its key or title) and the code;
@@ -20,7 +20,7 @@ export interface Decoded {
   parts: DecodedPart[];
 }
 
-export type DecoderName = "iso-turning" | "iso-insert" | "cbn" | "ceramic" | "pcd" | "do-grip" | "tang-grip" | "penta" | "gim" | "bgm" | "gft" | "self-grip" | "cut-grip" | "groove4cut" | "heli-grip" | "top-grip" | "swisscut" | "cham-groove" | "quick-i-groove" | "heliface";
+export type DecoderName = "iso-turning" | "iso-insert" | "cbn" | "ceramic" | "pcd" | "do-grip" | "tang-grip" | "penta" | "gim" | "bgm" | "gft" | "self-grip" | "cut-grip" | "groove4cut" | "heli-grip" | "top-grip" | "swisscut" | "cham-groove" | "quick-i-groove" | "heliface" | "quick-penta";
 
 const mm = (digits: string, scale = 1) => `${Number((Number(digits) * scale).toFixed(3))} mm`;
 const squash = (s: string) => s.toUpperCase().replace(/\s+/g, "");
@@ -146,7 +146,8 @@ export const DECODERS: Record<DecoderName, { decode: (text: string) => Decoded |
   pcd: { decode: decodePcd, examples: "CNGA 120408F (N) L MD ID5" },
   "do-grip": { decode: decodeDoGrip, examples: "DGR 3100JS-15D, DGN 3102J or DGFH 32C-3" },
   "tang-grip": { decode: decodeTag, examples: "TAG N3C, TAG R3C-15D or TGFH 26K-3" },
-  penta: { decode: decodePenta, examples: "PENTA 24N200J020, PENTA 24N080NF01RS-SL, PMN D32-2C02 or PCHR 16-24-5" },
+  "quick-penta": { decode: decodeQuickPenta, examples: "PENTA 24N200C020SL, PENTA 24N080NF01RS-SL or PCHR 20-24-JHP-MC-QC" },
+  penta: { decode: decodePenta, examples: "PENTA 24N200J020, PENTA 17L100P-15D-RS, PMN D32-2C02 or PCHR 16-24-5" },
   gim: { decode: decodeGim, examples: "GIM 3J or GIM 2.2JS-15RA" },
   bgm: { decode: decodeBgm, examples: "BGM N1001J or BGTR 16B-D20-JHP" },
   gft: { decode: decodeGft, examples: "GFT 1.2J-0.14" },
