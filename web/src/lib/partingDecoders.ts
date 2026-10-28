@@ -279,6 +279,37 @@ export function decodeSwissCut(text: string): Decoded | null {
   return { kind: "SWISSCUT insert", parts };
 }
 
+// CHAM-GROOVE insert: internal GIQR 8-1.50-0.05 (Dmin, width, corner radius),
+// deep GIQR 11-15-2.00-0.10 (Dmin 15), full radius GIQR 11-2.00-R100 (x100),
+// profiling GIQR 8-A18-0.15 / back boring GIQR 8-B18-0.15, face GFQR 12-1.50-0.20;
+// solid carbide bars MGCH 06, MGCH 08C, MGCH 06-L100.
+export function decodeChamGroove(text: string): Decoded | null {
+  const s = squash(text);
+  let m = s.match(/^MGCH(\d{2})(C)?(?:-L(\d{2,3}))?$/);
+  if (m) {
+    const parts: DecodedPart[] = [
+      { key: "t-family", code: "MGCH" },
+      { key: "t-height", code: m[1], text: `Shank diameter ${mm(Number(m[1]))}` },
+    ];
+    if (m[2]) parts.push({ key: "t-suffix", code: "C" });
+    if (m[3]) parts.push({ key: "t-length", code: `L${m[3]}`, text: `Bar length ${mm(Number(m[3]))}` });
+    return { kind: "CHAM-GROOVE bar", parts };
+  }
+  m = s.match(/^(GIQ|GFQ)([RL])(\d{1,2})-(?:(\d{2})-)?(?:([AB])(\d{2})|(\d+\.\d+))-(R)?(\d+(?:\.\d+)?)$/);
+  if (!m) return null;
+  const parts: DecodedPart[] = [
+    { key: "i-family", code: m[1] },
+    { key: "i-hand", code: m[2] },
+    { key: "i-size", code: m[3], text: `Insert size ${m[3]} (minimum ${m[1] === "GFQ" ? "face groove" : "bore"} diameter ${mm(Number(m[3]))})` },
+  ];
+  if (m[4]) parts.push({ key: "i-deep", code: m[4], text: `Deep grooving, minimum bore diameter ${mm(Number(m[4]))}` });
+  if (m[5]) parts.push({ key: "i-type", code: m[5] + m[6] });
+  else parts.push({ key: "i-width", code: m[7], text: `Cutting width ${mm(Number(m[7]))}` });
+  const re = m[8] ? Number(m[9]) / 100 : Number(m[9]);
+  parts.push({ key: "i-radius", code: (m[8] ?? "") + m[9], text: m[8] ? `Full radius ${mm(re)}` : re ? `Corner radius ${mm(re)}` : "Sharp corners (no radius)" });
+  return { kind: "CHAM-GROOVE insert", parts };
+}
+
 // Tool families per brand (longest first), and whether a hand letter follows.
 export const TANG_GRIP_TOOLS = ["TAGPAD", "TGFH", "TGFS", "TGSU", "TGAD", "TGAQ", "TGT", "ADMP", "THMP"];
 export const DO_GRIP_TOOLS = ["DGPAD", "DGFH", "DGFS", "DGAD", "HGAD", "DGAQ", "DGT"];
