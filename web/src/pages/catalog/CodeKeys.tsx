@@ -40,6 +40,7 @@ const PARTING_BRANDS: KeyType[] = [
   { id: "swisscut", label: "SWISSCUT", settingKey: "codekey.swisscut", defaultTitle: "SWISSCUT code key", decoder: "swisscut" },
   { id: "cham-groove", label: "CHAM-GROOVE", settingKey: "codekey.chamgroove", defaultTitle: "CHAM-GROOVE code key", decoder: "cham-groove" },
   { id: "quick-i-groove", label: "QUICK-I-GROOVE", settingKey: "codekey.quickigroove", defaultTitle: "QUICK-I-GROOVE code key", decoder: "quick-i-groove" },
+  { id: "heliface", label: "HELIFACE", settingKey: "codekey.heliface", defaultTitle: "HELIFACE code key", decoder: "heliface" },
   { id: "self-grip", label: "SELF-GRIP", settingKey: "codekey.selfgrip", defaultTitle: "SELF-GRIP code key", decoder: "self-grip" },
   { id: "groove4cut", label: "GROOVE4CUT", settingKey: "codekey.groove4cut", defaultTitle: "GROOVE4CUT code key", decoder: "groove4cut" },
   { id: "penta", label: "PENTA", settingKey: "codekey.penta", defaultTitle: "PENTA code key", decoder: "penta" },
@@ -123,10 +124,13 @@ export function CodeKeys() {
   const { data: brands } = useResource<Brand>("/innovations");
 
   const q = query.trim();
-  const decoded = q.length >= 3 ? searchable(applications).flatMap(({ app, type: t }) => {
+  const matched = q.length >= 3 ? searchable(applications).flatMap(({ app, type: t }) => {
     const r = DECODERS[t.decoder!].decode(q);
     return r ? [{ app, type: t, result: r }] : [];
   }) : [];
+  // The ISO toolholder key reads almost any letters-and-digits code, so it only
+  // counts when no brand family's key recognizes the designation.
+  const decoded = matched.some((d) => d.type.decoder !== "iso-turning") ? matched.filter((d) => d.type.decoder !== "iso-turning") : matched;
   const nq = norm(q);
   // The designation's chipformer as decoded (e.g. J, or JS with sharp corners).
   const chips = new Set(
