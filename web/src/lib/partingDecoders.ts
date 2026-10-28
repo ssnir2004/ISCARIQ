@@ -339,6 +339,62 @@ export function decodeQuickIGroove(text: string): Decoded | null {
   return { kind: "QUICK-I-GROOVE bar", parts };
 }
 
+// HELIFACE insert: HFPR 3003 (width 3, corner radius x10: 0.3 mm), HFPR 4020
+// (full radius), HFPN 2002. Tools: adapters HFAIR 140C-4T30DG / HGAIR 12-3T6
+// (Dmin, coolant, width T max depth), blades HFFR 48-4T25 / HFFH 100L-2,
+// holders HFHR 20-25-3T12 / HGHR 1212-12-3T6 / HFHR 20M, bars HFIR 16MC,
+// cartridges CR HFIR-16M / IH-HFAIR and IM40 HFIR-MC.
+const HELIFACE_TOOLS = ["HFPAD", "HFHP", "HFFH", "HFFA", "HFAI", "HFAE", "HGAI", "HGAE", "HFF", "HFH", "HFI", "HGH"];
+const HELIFACE_SHANK_FIRST = ["HFH", "HGH", "HFHP", "HFI"];
+export function decodeHeliFace(text: string): Decoded | null {
+  const s = squash(text);
+  let m = s.match(/^HFP([RLN])(\d)(\d{3})$/);
+  if (m) {
+    const w = Number(m[2]), re = Number(m[3]) / 10;
+    return {
+      kind: "HELIFACE insert",
+      parts: [
+        { key: "i-family", code: "HFP" },
+        { key: "i-hand", code: m[1] },
+        { key: "i-width", code: m[2] + m[3], text: `Cutting width ${mm(w)}, corner radius ${mm(re)}${Math.abs(re * 2 - w) < 0.02 ? " (full radius)" : ""}` },
+      ],
+    };
+  }
+  m = s.match(new RegExp(`^(IM\\d{2}|CR|IH-)?(${HELIFACE_TOOLS.join("|")})([RL])?-?(.*)$`));
+  if (!m) return null;
+  const family = m[2];
+  const parts: DecodedPart[] = [];
+  if (m[1]) parts.push({ key: "t-prefix", code: m[1].replace("-", "") });
+  parts.push({ key: "t-family", code: family });
+  if (m[3]) parts.push({ key: "t-hand", code: m[3] });
+  let shank = !HELIFACE_SHANK_FIRST.includes(family);
+  for (const token of m[4] ? m[4].split("-") : []) {
+    let t: RegExpMatchArray | null;
+    if ((t = token.match(/^(\d{4})$/))) {
+      parts.push({ key: "t-height", code: t[1], text: `Shank ${Number(t[1].slice(0, 2))} x ${Number(t[1].slice(2))} mm` });
+      shank = true;
+    } else if ((t = token.match(/^(\d{2})(MC|M)$/))) {
+      parts.push({ key: "t-height", code: t[1], text: `Shank / bar size ${mm(Number(t[1]))}` }, { key: "t-suffix", code: t[2] });
+      shank = true;
+    } else if ((t = token.match(/^(\d{2,3})([RL])?(C)?$/))) {
+      if (!shank) {
+        parts.push({ key: "t-height", code: t[1], text: `Shank size ${mm(Number(t[1]))}` });
+        shank = true;
+      } else parts.push({ key: "t-dmin", code: t[1], text: `Minimum face groove diameter ${mm(Number(t[1]))}` });
+      if (t[2]) parts.push({ key: "t-hand", code: t[2] });
+      if (t[3]) parts.push({ key: "t-suffix", code: "C" });
+    } else if ((t = token.match(/^(\d)T(\d{1,2})(DG)?$/))) {
+      parts.push({ key: "t-width", code: t[1], text: `Insert width ${mm(Number(t[1]))}` }, { key: "t-depth", code: `T${t[2]}`, text: `Maximum cutting depth ${mm(Number(t[2]))}` });
+      if (t[3]) parts.push({ key: "t-suffix", code: "DG" });
+    } else if ((t = token.match(/^(\d)(M)?$/))) {
+      parts.push({ key: "t-width", code: t[1], text: `Insert width ${mm(Number(t[1]))}` });
+      if (t[2]) parts.push({ key: "t-suffix", code: "M" });
+    } else if (token === "MC" || token === "M") parts.push({ key: "t-suffix", code: token });
+    else return null;
+  }
+  return { kind: "HELIFACE tool", parts };
+}
+
 // Tool families per brand (longest first), and whether a hand letter follows.
 export const TANG_GRIP_TOOLS = ["TAGPAD", "TGFH", "TGFS", "TGSU", "TGAD", "TGAQ", "TGT", "ADMP", "THMP"];
 export const DO_GRIP_TOOLS = ["DGPAD", "DGFH", "DGFS", "DGAD", "HGAD", "DGAQ", "DGT"];
