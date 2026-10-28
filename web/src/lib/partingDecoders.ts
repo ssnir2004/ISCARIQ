@@ -239,6 +239,46 @@ export function decodeTopGrip(text: string): Decoded | null {
   };
 }
 
+// SWISSCUT insert (SCI 22 / SCI 41): grooving and parting SCIL 22-050L12-00
+// (width x100, lead angle, corner radius x100) or SCIL 41-150L15K7 (rake angle
+// K), chipformers SCIL 22-100NP08 / SCIL 22-150NX080 (radius x100 / x1000),
+// back / front turning SCIR 22-BR10-05K15 (type, hand, radius x100, width x10,
+// rake angle).
+export function decodeSwissCut(text: string): Decoded | null {
+  const s = squash(text);
+  const head = s.match(/^SCI([RL])(22|41)-(.+)$/);
+  if (!head) return decodeTool(text, SWISSCUT_TOOLS);
+  const parts: DecodedPart[] = [
+    { key: "i-family", code: "SCI" },
+    { key: "i-hand", code: head[1] },
+    { key: "i-size", code: head[2] },
+  ];
+  const rest = head[3];
+  let m: RegExpMatchArray | null;
+  if ((m = rest.match(/^(\d{3})(NP|NX)(\d{2,3})$/))) {
+    const re = Number(m[3]) / (m[3].length === 3 ? 1000 : 100);
+    parts.push(
+      { key: "i-width", code: m[1], text: `Cutting width ${mm(Number(m[1]) / 100)}` },
+      { key: "i-chip", code: m[2] },
+      { key: "i-radius", code: m[3], text: re ? `Corner radius ${mm(re)}` : "Sharp corners (no radius)" },
+    );
+  } else if ((m = rest.match(/^(\d{3})(N|[RL](\d{1,2}))-?(?:K(\d{1,2})|(\d{2}))$/))) {
+    parts.push({ key: "i-width", code: m[1], text: `Cutting width ${mm(Number(m[1]) / 100)}` });
+    parts.push(m[3] ? { key: "i-lead", code: m[2], text: `Lead angle ${Number(m[3])}°, ${m[2][0] === "R" ? "right" : "left"}` } : { key: "i-lead", code: "N", text: "Neutral (no lead angle)" });
+    if (m[4] !== undefined) parts.push({ key: "i-rake", code: `K${m[4]}`, text: `Rake angle ${Number(m[4])}°` });
+    else parts.push({ key: "i-radius", code: m[5], text: Number(m[5]) ? `Corner radius ${mm(Number(m[5]) / 100)}` : "Sharp corners (no radius)" });
+  } else if ((m = rest.match(/^([BEA])([RL]|D)(A)?(\d{2})-(\d{2})K(\d{1,2})$/))) {
+    parts.push(
+      { key: "i-type", code: m[1] + (m[3] ?? "") },
+      { key: "i-dir", code: m[2] },
+      { key: "i-radius", code: m[4], text: Number(m[4]) ? `Corner radius ${mm(Number(m[4]) / 100)}` : "Sharp corners (no radius)" },
+      { key: "i-width", code: m[5], text: `Cutting width ${mm(Number(m[5]) / 10)}` },
+      { key: "i-rake", code: `K${m[6]}`, text: `Rake angle ${Number(m[6])}°` },
+    );
+  } else return null;
+  return { kind: "SWISSCUT insert", parts };
+}
+
 // Tool families per brand (longest first), and whether a hand letter follows.
 export const TANG_GRIP_TOOLS = ["TAGPAD", "TGFH", "TGFS", "TGSU", "TGAD", "TGAQ", "TGT", "ADMP", "THMP"];
 export const DO_GRIP_TOOLS = ["DGPAD", "DGFH", "DGFS", "DGAD", "HGAD", "DGAQ", "DGT"];
@@ -247,6 +287,7 @@ export const BGM_TOOLS = ["BGT"];
 export const GROOVE4CUT_TOOLS = ["QTH"];
 export const HELI_GRIP_TOOLS = ["HELII", "HELI", "HGFH"];
 export const TOP_GRIP_TOOLS = ["TGD", "TGH", "TGI"];
+export const SWISSCUT_TOOLS = ["SCH"];
 export const CUT_GRIP_TOOLS = ["CGFG", "CGH", "GHFG", "GHMP", "GHM", "GHD", "GHG", "GHS", "GEHS", "PHG", "PHS", "GAFG", "GAD", "PAD", "THD"];
 export const SELF_GRIP_TOOLS = ["SGFFA", "SGFFH", "SGFF", "SGFH", "SGFS", "SGTF", "SGAF", "SGB", "SGF"];
 
@@ -327,6 +368,9 @@ export function decodeTool(text: string, families: string[]): Decoded | null {
       sized = true;
     } else if (family === "HELII" && sized && (m = token.match(/^(\d)(\d{2})$/))) {
       parts.push({ key: "t-width", code: m[1], text: `Insert width ${mm(Number(m[1]))}` }, { key: "t-depth", code: m[2], text: `Max. grooving depth ${Number(m[2])} mm` });
+    } else if (family === "SCH" && (m = token.match(/^(22|41)(BF)$/))) {
+      // SWISSCUT holders: insert series and back and front clamping (e.g. 22BF).
+      parts.push({ key: "t-seat", code: m[1], text: `For SCI ${m[1]} inserts` }, { key: "t-suffix", code: "BF" });
     } else if (quad && token === "30") {
       parts.push({ key: "t-seat", code: token, text: "For QGI 30 inserts" });
     } else if (penta && (m = token.match(/^(17|24|34)(N)?$/))) {
