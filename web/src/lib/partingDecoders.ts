@@ -501,6 +501,25 @@ export function decodeHeliFace(text: string): Decoded | null {
   return { kind: "HELIFACE tool", parts };
 }
 
+// SUMO-GRIP insert: TAGB 608Y (width 6, corner radius x10: 0.8 mm), TAGB 1260H
+// (full radius), TAGBA 80-40YZ (width and radius x10); tools TGBHR 25C-14T20.
+export function decodeSumoGrip(text: string): Decoded | null {
+  const s = squash(text);
+  const m = s.match(/^TAGB(\d{1,2})(\d{2})([A-Z]+)$/) ?? s.match(/^TAGBA(\d{2})-(\d{2})([A-Z]+)$/);
+  if (!m) return decodeTool(text, SUMO_GRIP_TOOLS);
+  const a = s.startsWith("TAGBA");
+  const w = a ? Number(m[1]) / 10 : Number(m[1]);
+  const re = Number(m[2]) / 10;
+  return {
+    kind: "SUMO-GRIP insert",
+    parts: [
+      { key: "i-family", code: a ? "TAGBA" : "TAGB" },
+      { key: "i-width", code: a ? `${m[1]}-${m[2]}` : m[1] + m[2], text: `Cutting width ${mm(w)}, corner radius ${mm(re)}${Math.abs(re * 2 - w) < 0.02 ? " (full radius)" : ""}` },
+      { key: "i-chip", code: m[3] },
+    ],
+  };
+}
+
 // Tool families per brand (longest first), and whether a hand letter follows.
 export const TANG_GRIP_TOOLS = ["TAGPAD", "TGFH", "TGFS", "TGSU", "TGAD", "TGAQ", "TGT", "ADMP", "THMP"];
 export const DO_GRIP_TOOLS = ["DGPAD", "DGFH", "DGFS", "DGAD", "HGAD", "DGAQ", "DGT"];
@@ -510,6 +529,7 @@ export const GROOVE4CUT_TOOLS = ["QTH"];
 export const HELI_GRIP_TOOLS = ["HELII", "HELI", "HGFH"];
 export const TOP_GRIP_TOOLS = ["TGD", "TGH", "TGI"];
 export const SWISSCUT_TOOLS = ["SCH"];
+export const SUMO_GRIP_TOOLS = ["TGBH"];
 export const CUT_GRIP_TOOLS = ["CGFG", "CGH", "GHFG", "GHMP", "GHM", "GHD", "GHG", "GHS", "GEHS", "PHG", "PHS", "GAFG", "GAD", "PAD", "THD"];
 export const SELF_GRIP_TOOLS = ["SGFFA", "SGFFH", "SGFF", "SGFH", "SGFS", "SGTF", "SGAF", "SGB", "SGF"];
 

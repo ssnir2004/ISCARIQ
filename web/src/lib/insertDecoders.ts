@@ -1,5 +1,5 @@
 import { decodeIsoTurning } from "./isoTurning";
-import { DO_GRIP_TOOLS, decodeBgm, decodeCutGrip, decodeGft, decodeGim, decodeGroove4Cut, decodeFlashPenta, decodeHeliGrip, decodePenta, decodePentaIq, decodeQuickPenta, decodeChamGroove, decodeHeliFace, decodeQuickIGroove, decodeSelfGrip, decodeSwissCut, decodeTag, decodeTopGrip, decodeTool } from "./partingDecoders";
+import { DO_GRIP_TOOLS, decodeBgm, decodeCutGrip, decodeGft, decodeGim, decodeGroove4Cut, decodeFlashPenta, decodeHeliGrip, decodePenta, decodePentaIq, decodeQuickPenta, decodeChamGroove, decodeHeliFace, decodeQuickIGroove, decodeSelfGrip, decodeSumoGrip, decodeSwissCut, decodeTag, decodeTopGrip, decodeTool } from "./partingDecoders";
 
 // Designation decoders for the code keys: each splits a designation into
 // parts, each naming the key's section (by its key or title) and the code;
@@ -20,7 +20,7 @@ export interface Decoded {
   parts: DecodedPart[];
 }
 
-export type DecoderName = "iso-turning" | "iso-insert" | "cbn" | "ceramic" | "pcd" | "do-grip" | "tang-grip" | "penta" | "gim" | "bgm" | "gft" | "self-grip" | "cut-grip" | "groove4cut" | "heli-grip" | "top-grip" | "swisscut" | "cham-groove" | "quick-i-groove" | "heliface" | "quick-penta" | "penta-iq" | "flashpenta";
+export type DecoderName = "iso-turning" | "iso-insert" | "cbn" | "ceramic" | "pcd" | "do-grip" | "tang-grip" | "penta" | "gim" | "bgm" | "gft" | "self-grip" | "cut-grip" | "groove4cut" | "heli-grip" | "top-grip" | "swisscut" | "cham-groove" | "quick-i-groove" | "heliface" | "quick-penta" | "penta-iq" | "flashpenta" | "sumo-grip";
 
 const mm = (digits: string, scale = 1) => `${Number((Number(digits) * scale).toFixed(3))} mm`;
 const squash = (s: string) => s.toUpperCase().replace(/\s+/g, "");
@@ -159,6 +159,7 @@ export const DECODERS: Record<DecoderName, { decode: (text: string) => Decoded |
   heliface: { decode: decodeHeliFace, examples: "HFPR 4004, HFAIR 140C-4T30DG or HFHR 20-25-3T12" },
   "quick-i-groove": { decode: decodeQuickIGroove, examples: "GQIN 1.50-0.10 or GQHINR 16C-16.5-20" },
   "cham-groove": { decode: decodeChamGroove, examples: "GIQR 8-1.50-0.05, GIQL 11-15-2.00-R100 or MGCH 08C" },
+  "sumo-grip": { decode: decodeSumoGrip, examples: "TAGB 608Y, TAGBA 80-40YZ or TGBHR 25C-14T20" },
   swisscut: { decode: decodeSwissCut, examples: "SCIL 22-050L12-00, SCIR 22-BR10-05K15 or SCHR 10-22BF" },
   "top-grip": { decode: decodeTopGrip, examples: "TGMF 302, TGMA 404K or TGDR 2020-3M" },
   "heli-grip": { decode: decodeHeliGrip, examples: "GRIP 3002Y, GRIPA 3.00-0.40 or HELIR 2525-3T20" },
