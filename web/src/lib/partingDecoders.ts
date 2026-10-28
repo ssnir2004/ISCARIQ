@@ -260,6 +260,21 @@ export function decodeCutGrip(text: string): Decoded | null {
       ],
     };
   }
+  // TIGER / TIGERV wide inserts: width and corner radius x100 (TIGER 1453-152
+  // = 14.53 mm, R1.52) or in mm (TIGER 16.63-1.52); -CW variant.
+  const t = s.match(/^(TIGERV|TIGER)(\d{4}|\d+\.\d+)-(\d{3}|\d+\.\d+)(?:-(CW))?$/);
+  if (t) {
+    const w = t[2].includes(".") ? Number(t[2]) : Number(t[2]) / 100;
+    const re = t[3].includes(".") ? Number(t[3]) : Number(t[3]) / 100;
+    return {
+      kind: "CUT-GRIP utility insert",
+      parts: [
+        { key: "i-family", code: t[1] },
+        { key: "i-width", code: `${t[2]}-${t[3]}`, text: `Cutting width ${mm(w)}, corner radius ${mm(re)}` },
+        ...(t[4] ? [{ key: "i-variant", code: "CW" }] : []),
+      ],
+    };
+  }
   const u = fam(UTILITY);
   if (u) {
     const m = s.slice(u.length).match(/^(\d+(?:\.\d+)?)([A-Z]*?)(?:-(\d{3}))?(?:-?(UN))?$/);
