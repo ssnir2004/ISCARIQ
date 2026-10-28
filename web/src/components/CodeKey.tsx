@@ -61,11 +61,14 @@ export function CodeKey({
   defaultTitle = "Code key",
   decoder,
   defaultOpen = false,
+  decodeText,
 }: {
   settingKey: string;
   defaultTitle?: string;
   decoder?: DecoderName;
   defaultOpen?: boolean;
+  // A designation the decoder starts with (e.g. picked in a search).
+  decodeText?: string;
 }) {
   const [data, setData] = useState<CodeKeyData | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -146,7 +149,7 @@ export function CodeKey({
         (draft ? (
           <CodeKeyEditor draft={draft} setDraft={setDraft} error={error} saving={saving} onSave={save} onCancel={() => setDraft(null)} />
         ) : data ? (
-          <CodeKeyView data={data} decoder={decoder ?? data.decoder} />
+          <CodeKeyView data={data} decoder={decoder ?? data.decoder} decodeText={decodeText} />
         ) : (
           <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">No code key yet.</p>
         ))}
@@ -178,11 +181,11 @@ function Example({ data }: { data: CodeKeyData }) {
   );
 }
 
-function CodeKeyView({ data, decoder }: { data: CodeKeyData; decoder?: DecoderName }) {
+function CodeKeyView({ data, decoder, decodeText }: { data: CodeKeyData; decoder?: DecoderName; decodeText?: string }) {
   return (
     <div>
       {data.example && <Example data={data} />}
-      {decoder && <Decoder data={data} name={decoder} />}
+      {decoder && <Decoder data={data} name={decoder} initial={decodeText} />}
       <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3">
         {data.sections.map((s, i) => (
           <div key={i} className="overflow-hidden rounded-lg border border-neutral-200 dark:border-neutral-700" data-code-key-section={s.title}>
@@ -525,8 +528,8 @@ function PicturePaste({ value, onChange }: { value: string | null; onChange: (da
 }
 
 // Type a designation (e.g. MWLNR 2525M-08W) to see each position's meaning.
-function Decoder({ data, name }: { data: CodeKeyData; name: DecoderName }) {
-  const [text, setText] = useState("");
+function Decoder({ data, name, initial = "" }: { data: CodeKeyData; name: DecoderName; initial?: string }) {
+  const [text, setText] = useState(initial);
   const { decode, examples } = DECODERS[name];
   const result = text.trim() ? decode(text) : null;
   return (
