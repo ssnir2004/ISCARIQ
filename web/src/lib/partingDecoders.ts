@@ -24,23 +24,98 @@ export function decodeTag(text: string): Decoded | null {
   };
 }
 
-// PENTA insert: PENTA 24N200J020 (width and corner radius x100 mm), PENTA
-// 24R150J15D / D22R200J-6D (lead angle), PENTA 17N100P010R/LS.
+// PENTACUT insert: PENTA 24N200J020 (width and corner radius x100 mm), PENTA
+// 24R150J15D / D22R200J-6D (lead angle), PENTA 17N100P010R/LS, PENTA
+// 17L03SP6D-RS (width x10), QUICK-PENTA PENTA 24N080NF01RS-SL (safety lock,
+// radius x10), face PENTA 34F239-0.15-22L, PENTA 17-100NP08LS, back turning
+// PENTA 17ER08-07K0RS, blanks PENTAS 27-10FT and FLASHPENTA PMN D32-2C02.
 export function decodePenta(text: string): Decoded | null {
-  const m = squash(text).match(/^PENTA(17|24|34|D22|D32|D40)([NRL])(\d{3})([A-Z]+?)(\d{3})?(?:-?(\d{1,2})D)?(R\/LS|RS|LS)?$/);
+  const s = squash(text);
+  const radiusText = (re: number) => (re ? `Corner radius ${mm(re)}` : "Sharp corners (no radius)");
+  let m = s.match(/^PENTAS27-(\d{2})FT$/);
+  if (m) {
+    return {
+      kind: "PENTACUT blank",
+      parts: [
+        { key: "i-family", code: "PENTAS" },
+        { key: "i-size", code: "27" },
+        { key: "i-width", code: m[1], text: `Cutting edge width ${mm(Number(m[1]))}` },
+        { key: "i-chip", code: "FT" },
+      ],
+    };
+  }
+  if ((m = s.match(/^PENTA34F(\d{3})-(\d+\.\d+)-(\d{2})([RL])(S)?$/))) {
+    return {
+      kind: "PENTACUT face grooving insert",
+      parts: [
+        { key: "i-family", code: "PENTA" },
+        { key: "i-size", code: "34" },
+        { key: "i-size", code: "F", text: "Face grooving and recessing" },
+        { key: "i-width", code: m[1], text: `Cutting width ${mm(Number(m[1]) / 100)}` },
+        { key: "i-radius", code: m[2], text: radiusText(Number(m[2])) },
+        { key: "i-dmin", code: m[3], text: `Minimum axial grooving diameter ${mm(Number(m[3]))}` },
+        { key: "i-side", code: m[4] + (m[5] ?? "") },
+      ],
+    };
+  }
+  if ((m = s.match(/^PENTA17-(\d{3})(NP)(\d{2})(RS|LS)$/))) {
+    return {
+      kind: "PENTACUT insert",
+      parts: [
+        { key: "i-family", code: "PENTA" },
+        { key: "i-size", code: "17" },
+        { key: "i-width", code: m[1], text: `Cutting width ${mm(Number(m[1]) / 100)}` },
+        { key: "i-chip", code: m[2] },
+        { key: "i-radius", code: m[3], text: radiusText(Number(m[3]) / 100) },
+        { key: "i-side", code: m[4] },
+      ],
+    };
+  }
+  if ((m = s.match(/^PENTA17E([RL])(\d{2})-(\d{2})K(\d{1,2})(RS|LS)$/))) {
+    return {
+      kind: "PENTACUT back turning insert",
+      parts: [
+        { key: "i-family", code: "PENTA" },
+        { key: "i-size", code: "17" },
+        { key: "i-type", code: "E" },
+        { key: "i-hand", code: m[1] },
+        { key: "i-radius", code: m[2], text: radiusText(Number(m[2]) / 100) },
+        { key: "i-width", code: m[3], text: `Cutting width ${mm(Number(m[3]) / 10)}` },
+        { key: "i-rake", code: `K${m[4]}`, text: `Rake angle ${Number(m[4])}°` },
+        { key: "i-side", code: m[5] },
+      ],
+    };
+  }
+  if ((m = s.match(/^PMND(22|32|40)-(\d)([A-Z]+?)(?:(\d{2})|-(\d+(?:\.\d+)?))$/))) {
+    const re = m[4] ? Number(m[4]) / 10 : Number(m[5]);
+    return {
+      kind: "FLASHPENTA utility insert",
+      parts: [
+        { key: "i-family", code: "PMN" },
+        { key: "i-size", code: `D${m[1]}` },
+        { key: "i-width", code: m[2], text: `Cutting width ${mm(Number(m[2]))}` },
+        { key: "i-chip", code: m[3] },
+        { key: "i-radius", code: m[4] ?? `-${m[5]}`, text: `${radiusText(re)}${Math.abs(re * 2 - Number(m[2])) < 0.02 ? " (full radius)" : ""}` },
+      ],
+    };
+  }
+  m = s.match(/^PENTA(17|24|34|D22|D32|D40)([NRL])(\d{2,3})([A-Z]+?)(\d{2,3})?(?:-?(\d{1,2})D)?-?(R\/LS|RS|LS)?-?(SL)?$/);
   if (!m) return decodeTool(text, PENTA_TOOLS);
-  const radius = m[5] ? Number(m[5]) / 100 : null;
+  // Two digits are x10 (PENTA 17L03SP: 0.3 mm; NF01: 0.1 mm), three x100.
+  const width = Number(m[3]) / (m[3].length === 2 ? 10 : 100);
+  const radius = m[5] ? Number(m[5]) / (m[5].length === 2 ? 10 : 100) : null;
   return {
-    kind: "PENTA insert",
+    kind: m[8] ? "QUICK-PENTA insert" : "PENTACUT insert",
     parts: [
       { key: "i-family", code: "PENTA" },
       { key: "i-size", code: m[1] },
       { key: "i-hand", code: m[2] },
-      { key: "i-width", code: m[3], text: `Cutting width ${mm(Number(m[3]) / 100)}` },
+      { key: "i-width", code: m[3], text: `Cutting width ${mm(width)}` },
       { key: "i-chip", code: m[4] },
-      ...(m[5] ? [{ key: "i-radius", code: m[5], text: radius ? `Corner radius ${mm(radius)}` : "Sharp corners (no radius)" }] : []),
+      ...(m[5] ? [{ key: "i-radius", code: m[5], text: radiusText(radius!) }] : []),
       ...(m[6] ? [{ key: "i-lead", code: `${m[6]}D`, text: `Lead angle ${Number(m[6])}°` }] : []),
       ...(m[7] ? [{ key: "i-side", code: m[7] }] : []),
+      ...(m[8] ? [{ key: "i-lock", code: "SL" }] : []),
     ],
   };
 }
@@ -398,7 +473,7 @@ export function decodeHeliFace(text: string): Decoded | null {
 // Tool families per brand (longest first), and whether a hand letter follows.
 export const TANG_GRIP_TOOLS = ["TAGPAD", "TGFH", "TGFS", "TGSU", "TGAD", "TGAQ", "TGT", "ADMP", "THMP"];
 export const DO_GRIP_TOOLS = ["DGPAD", "DGFH", "DGFS", "DGAD", "HGAD", "DGAQ", "DGT"];
-export const PENTA_TOOLS = ["PCHB", "PCAD", "PCH"];
+export const PENTA_TOOLS = ["PCHB", "PCHP", "PCAD", "PCH"];
 export const BGM_TOOLS = ["BGT"];
 export const GROOVE4CUT_TOOLS = ["QTH"];
 export const HELI_GRIP_TOOLS = ["HELII", "HELI", "HGFH"];
@@ -443,7 +518,7 @@ export function decodeTool(text: string, families: string[]): Decoded | null {
   const penta = family.startsWith("PC");
   // GROOVE4CUT tools name their insert size after the shank (QTHR 16-30).
   const quad = family === "QTH";
-  let sized = false;
+  let sized = family === "PCAD";
   let angled = !family.endsWith("FS");
   let pentaSize = false;
   let sizedWidth = !WIDTH_FIRST.has(family);
@@ -489,9 +564,10 @@ export function decodeTool(text: string, families: string[]): Decoded | null {
       parts.push({ key: "t-seat", code: m[1], text: `For SCI ${m[1]} inserts` }, { key: "t-suffix", code: "BF" });
     } else if (quad && token === "30") {
       parts.push({ key: "t-seat", code: token, text: "For QGI 30 inserts" });
-    } else if (penta && (m = token.match(/^(17|24|34)(N)?$/))) {
+    } else if (penta && (m = token.match(/^(17|24|27|34)([NRL])?$/))) {
+      // The PENTA seat (27: PENTAS 27 wide blanks), and the insert's hand.
       parts.push({ key: "t-penta", code: m[1], text: `For PENTA ${m[1]} inserts` });
-      if (m[2]) parts.push({ key: "t-hand", code: "N" });
+      if (m[2]) parts.push({ key: "t-hand", code: m[2] });
       pentaSize = true;
     } else if (pentaSize && /^\d$/.test(token)) {
       // e.g. PCHR 16-24-5: a variant of the tool (see the catalog).

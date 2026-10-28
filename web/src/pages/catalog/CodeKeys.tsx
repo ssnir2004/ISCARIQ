@@ -43,7 +43,7 @@ const PARTING_BRANDS: KeyType[] = [
   { id: "heliface", label: "HELIFACE", settingKey: "codekey.heliface", defaultTitle: "HELIFACE code key", decoder: "heliface" },
   { id: "self-grip", label: "SELF-GRIP", settingKey: "codekey.selfgrip", defaultTitle: "SELF-GRIP code key", decoder: "self-grip" },
   { id: "groove4cut", label: "GROOVE4CUT", settingKey: "codekey.groove4cut", defaultTitle: "GROOVE4CUT code key", decoder: "groove4cut" },
-  { id: "penta", label: "PENTA", settingKey: "codekey.penta", defaultTitle: "PENTA code key", decoder: "penta" },
+  { id: "penta", label: "PENTACUT", settingKey: "codekey.penta", defaultTitle: "PENTACUT code key", decoder: "penta" },
   { id: "cut-grip", label: "CUT-GRIP", settingKey: "codekey.cutgrip", defaultTitle: "CUT-GRIP code key", decoder: "cut-grip" },
   { id: "bgm", label: "ISCAR-PARTING", settingKey: "codekey.bgm", defaultTitle: "ISCAR-PARTING code key", decoder: "bgm" },
   { id: "gft", label: "SLIM-GRIP", settingKey: "codekey.gft", defaultTitle: "SLIM-GRIP code key", decoder: "gft" },

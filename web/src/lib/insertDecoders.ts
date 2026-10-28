@@ -146,7 +146,7 @@ export const DECODERS: Record<DecoderName, { decode: (text: string) => Decoded |
   pcd: { decode: decodePcd, examples: "CNGA 120408F (N) L MD ID5" },
   "do-grip": { decode: decodeDoGrip, examples: "DGR 3100JS-15D, DGN 3102J or DGFH 32C-3" },
   "tang-grip": { decode: decodeTag, examples: "TAG N3C, TAG R3C-15D or TGFH 26K-3" },
-  penta: { decode: decodePenta, examples: "PENTA 24R150J15D, PENTA 24N200J020 or PCHR 12-D22-2-IQ" },
+  penta: { decode: decodePenta, examples: "PENTA 24N200J020, PENTA 24N080NF01RS-SL, PMN D32-2C02 or PCHR 16-24-5" },
   gim: { decode: decodeGim, examples: "GIM 3J or GIM 2.2JS-15RA" },
   bgm: { decode: decodeBgm, examples: "BGM N1001J or BGTR 16B-D20-JHP" },
   gft: { decode: decodeGft, examples: "GFT 1.2J-0.14" },
