@@ -45,8 +45,8 @@ const PARTING_BRANDS: KeyType[] = [
   { id: "groove4cut", label: "GROOVE4CUT", settingKey: "codekey.groove4cut", defaultTitle: "GROOVE4CUT code key", decoder: "groove4cut" },
   { id: "penta", label: "PENTA", settingKey: "codekey.penta", defaultTitle: "PENTA code key", decoder: "penta" },
   { id: "cut-grip", label: "CUT-GRIP", settingKey: "codekey.cutgrip", defaultTitle: "CUT-GRIP code key", decoder: "cut-grip" },
-  { id: "bgm", label: "BGM (narrow)", settingKey: "codekey.bgm", defaultTitle: "BGM code key", decoder: "bgm" },
-  { id: "gft", label: "GFT (thin)", settingKey: "codekey.gft", defaultTitle: "GFT code key", decoder: "gft" },
+  { id: "bgm", label: "ISCAR-PARTING", settingKey: "codekey.bgm", defaultTitle: "ISCAR-PARTING code key", decoder: "bgm" },
+  { id: "gft", label: "SLIM-GRIP", settingKey: "codekey.gft", defaultTitle: "SLIM-GRIP code key", decoder: "gft" },
 ];
 
 const MORE_TYPES: Record<string, KeyType[]> = { [DEFAULT_TAB.toLowerCase()]: TURNING_INSERTS, parting: PARTING_BRANDS };
