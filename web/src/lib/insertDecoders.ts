@@ -1,5 +1,5 @@
 import { decodeIsoTurning } from "./isoTurning";
-import { DO_GRIP_TOOLS, decodeBgm, decodeCutGrip, decodeGft, decodeGim, decodeGroove4Cut, decodeHeliGrip, decodePenta, decodeSelfGrip, decodeTag, decodeTool } from "./partingDecoders";
+import { DO_GRIP_TOOLS, decodeBgm, decodeCutGrip, decodeGft, decodeGim, decodeGroove4Cut, decodeHeliGrip, decodePenta, decodeSelfGrip, decodeTag, decodeTopGrip, decodeTool } from "./partingDecoders";
 
 // Designation decoders for the code keys: each splits a designation into
 // parts, each naming the key's section (by its key or title) and the code;
@@ -20,7 +20,7 @@ export interface Decoded {
   parts: DecodedPart[];
 }
 
-export type DecoderName = "iso-turning" | "iso-insert" | "cbn" | "ceramic" | "pcd" | "do-grip" | "tang-grip" | "penta" | "gim" | "bgm" | "gft" | "self-grip" | "cut-grip" | "groove4cut" | "heli-grip";
+export type DecoderName = "iso-turning" | "iso-insert" | "cbn" | "ceramic" | "pcd" | "do-grip" | "tang-grip" | "penta" | "gim" | "bgm" | "gft" | "self-grip" | "cut-grip" | "groove4cut" | "heli-grip" | "top-grip";
 
 const mm = (digits: string, scale = 1) => `${Number((Number(digits) * scale).toFixed(3))} mm`;
 const squash = (s: string) => s.toUpperCase().replace(/\s+/g, "");
@@ -153,6 +153,7 @@ export const DECODERS: Record<DecoderName, { decode: (text: string) => Decoded |
   "self-grip": { decode: decodeSelfGrip, examples: "GFN 3J, GFR 3JS-8D or SGFH 26K-3" },
   "cut-grip": { decode: decodeCutGrip, examples: "GIP 3.00E-0.40, GIMY 808 or GHDR 16-3" },
   groove4cut: { decode: decodeGroove4Cut, examples: "QGI 30N200PF020 or QTHR 16-30-JHP-MC" },
+  "top-grip": { decode: decodeTopGrip, examples: "TGMF 302, TGMA 404K or TGDR 2020-3M" },
   "heli-grip": { decode: decodeHeliGrip, examples: "GRIP 3002Y, GRIPA 3.00-0.40 or HELIR 2525-3T20" },
 };
 
