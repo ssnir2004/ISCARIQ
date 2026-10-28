@@ -194,12 +194,42 @@ export function decodeGroove4Cut(text: string): Decoded | null {
   };
 }
 
+// HELI-GRIP insert: GRIP 3002Y (width and corner radius x10 mm), GRIP
+// 318-040Y (x100), HGPL 3015Y (face machining), GRIPA 3.00-0.40 (ground).
+export function decodeHeliGrip(text: string): Decoded | null {
+  const s = squash(text);
+  const ground = s.match(/^GRIPA(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)$/);
+  if (ground) {
+    const [w, re] = [Number(ground[1]), Number(ground[2])];
+    return {
+      kind: "HELI-GRIP ground insert",
+      parts: [
+        { key: "i-family", code: "GRIPA" },
+        { key: "i-width", code: ground[1], text: `Cutting width ${mm(w)}` },
+        { key: "i-radius", code: ground[2], text: `Corner radius ${mm(re)}${Math.abs(re * 2 - w) < 0.02 ? " (full radius)" : ""}` },
+      ],
+    };
+  }
+  const m = s.match(/^(GRIP|HGPL)(\d{3,4})(?:-(\d{3}))?([A-Z])$/);
+  if (!m) return decodeTool(text, HELI_GRIP_TOOLS);
+  const [w, re] = m[3] ? [Number(m[2]) / 100, Number(m[3]) / 100] : [Number(m[2].slice(0, 2)) / 10, Number(m[2].slice(2)) / 10];
+  return {
+    kind: "HELI-GRIP insert",
+    parts: [
+      { key: "i-family", code: m[1] },
+      { key: "i-width", code: m[3] ? `${m[2]}-${m[3]}` : m[2], text: `Cutting width ${mm(w)}, corner radius ${mm(re)}${Math.abs(re * 2 - w) < 0.02 ? " (full radius)" : ""}` },
+      { key: "i-chip", code: m[4] },
+    ],
+  };
+}
+
 // Tool families per brand (longest first), and whether a hand letter follows.
 export const TANG_GRIP_TOOLS = ["TAGPAD", "TGFH", "TGFS", "TGSU", "TGAD", "TGAQ", "TGT", "ADMP", "THMP"];
 export const DO_GRIP_TOOLS = ["DGPAD", "DGFH", "DGFS", "DGAD", "HGAD", "DGAQ", "DGT"];
 export const PENTA_TOOLS = ["PCHB", "PCAD", "PCH"];
 export const BGM_TOOLS = ["BGT"];
 export const GROOVE4CUT_TOOLS = ["QTH"];
+export const HELI_GRIP_TOOLS = ["HELII", "HELI", "HGFH"];
 export const CUT_GRIP_TOOLS = ["CGFG", "CGH", "GHFG", "GHMP", "GHM", "GHD", "GHG", "GHS", "GEHS", "PHG", "PHS", "GAFG", "GAD", "PAD", "THD"];
 export const SELF_GRIP_TOOLS = ["SGFFA", "SGFFH", "SGFF", "SGFH", "SGFS", "SGTF", "SGAF", "SGB", "SGF"];
 
@@ -278,6 +308,8 @@ export function decodeTool(text: string, families: string[]): Decoded | null {
       parts.push({ key: "t-height", code: m[1], text: `Blade height / shank ${Number(m[1])} mm` });
       if (m[2]) parts.push({ key: "t-suffix", code: m[2] });
       sized = true;
+    } else if (family === "HELII" && sized && (m = token.match(/^(\d)(\d{2})$/))) {
+      parts.push({ key: "t-width", code: m[1], text: `Insert width ${mm(Number(m[1]))}` }, { key: "t-depth", code: m[2], text: `Max. grooving depth ${Number(m[2])} mm` });
     } else if (quad && token === "30") {
       parts.push({ key: "t-seat", code: token, text: "For QGI 30 inserts" });
     } else if (penta && (m = token.match(/^(17|24|34)(N)?$/))) {
@@ -295,7 +327,7 @@ export function decodeTool(text: string, families: string[]): Decoded | null {
       if (m[2]) parts.push({ key: m[2] === "B" ? "t-suffix" : "t-hand", code: m[2] });
       if (m[3]) parts.push({ key: "t-dia", code: m[3], text: `${m[3]}: ${Number(m[3].slice(1))} mm` });
       if (m[4]) parts.push({ key: "t-suffix", code: "SH" });
-    } else if (sized && (m = token.match(/^(\d+(?:\.\d+)?)T(\d+(?:\.\d+)?)(PR)?$/))) {
+    } else if ((sized || /^\d(\.\d+)?T/.test(token)) && (m = token.match(/^(\d+(?:\.\d+)?)T(\d+(?:\.\d+)?)(PR)?$/))) {
       // e.g. GHDL 2525-14T12: insert width 14, T12.
       parts.push({ key: "t-width", code: m[1], text: `Insert width ${mm(Number(m[1]))}` }, { key: "t-suffix", code: `T${m[2]}`, lookup: "T##" });
     } else if (sized && (m = token.match(/^(\d+(?:\.\d+)?)(DG|D|S)$/))) {
