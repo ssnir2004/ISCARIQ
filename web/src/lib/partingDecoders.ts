@@ -223,6 +223,22 @@ export function decodeHeliGrip(text: string): Decoded | null {
   };
 }
 
+// TOP-GRIP insert: TGMF 302 (width 3, corner radius x10: 0.2 mm), TGMF 315
+// (full radius), TGMF 635-080 (x100), TGMA 304K (cast iron).
+export function decodeTopGrip(text: string): Decoded | null {
+  const m = squash(text).match(/^(TGMF|TGMP|TGMA)(\d{3})(?:-(\d{3}))?([A-Z])?$/);
+  if (!m) return decodeTool(text, TOP_GRIP_TOOLS);
+  const [w, re] = m[3] ? [Number(m[2]) / 100, Number(m[3]) / 100] : [Number(m[2][0]), Number(m[2].slice(1)) / 10];
+  return {
+    kind: "TOP-GRIP insert",
+    parts: [
+      { key: "i-family", code: m[1] },
+      { key: "i-width", code: m[3] ? `${m[2]}-${m[3]}` : m[2], text: `Cutting width ${mm(w)}, corner radius ${mm(re)}${Math.abs(re * 2 - w) < 0.02 ? " (full radius)" : ""}` },
+      ...(m[4] ? [{ key: "i-variant", code: m[4] }] : []),
+    ],
+  };
+}
+
 // Tool families per brand (longest first), and whether a hand letter follows.
 export const TANG_GRIP_TOOLS = ["TAGPAD", "TGFH", "TGFS", "TGSU", "TGAD", "TGAQ", "TGT", "ADMP", "THMP"];
 export const DO_GRIP_TOOLS = ["DGPAD", "DGFH", "DGFS", "DGAD", "HGAD", "DGAQ", "DGT"];
@@ -230,6 +246,7 @@ export const PENTA_TOOLS = ["PCHB", "PCAD", "PCH"];
 export const BGM_TOOLS = ["BGT"];
 export const GROOVE4CUT_TOOLS = ["QTH"];
 export const HELI_GRIP_TOOLS = ["HELII", "HELI", "HGFH"];
+export const TOP_GRIP_TOOLS = ["TGD", "TGH", "TGI"];
 export const CUT_GRIP_TOOLS = ["CGFG", "CGH", "GHFG", "GHMP", "GHM", "GHD", "GHG", "GHS", "GEHS", "PHG", "PHS", "GAFG", "GAD", "PAD", "THD"];
 export const SELF_GRIP_TOOLS = ["SGFFA", "SGFFH", "SGFF", "SGFH", "SGFS", "SGTF", "SGAF", "SGB", "SGF"];
 
@@ -330,7 +347,7 @@ export function decodeTool(text: string, families: string[]): Decoded | null {
     } else if ((sized || /^\d(\.\d+)?T/.test(token)) && (m = token.match(/^(\d+(?:\.\d+)?)T(\d+(?:\.\d+)?)(PR)?$/))) {
       // e.g. GHDL 2525-14T12: insert width 14, T12.
       parts.push({ key: "t-width", code: m[1], text: `Insert width ${mm(Number(m[1]))}` }, { key: "t-suffix", code: `T${m[2]}`, lookup: "T##" });
-    } else if (sized && (m = token.match(/^(\d+(?:\.\d+)?)(DG|D|S)$/))) {
+    } else if (sized && (m = token.match(/^(\d+(?:\.\d+)?)(DG|D|S|M)$/))) {
       // e.g. CGHN 32-3D (double-ended), 32-3S (single-ended), 32-3DG.
       parts.push({ key: "t-width", code: m[1], text: `Insert width ${mm(Number(m[1]))}` }, { key: "t-suffix", code: m[2] });
     } else if ((m = token.match(/^D(\d{2,3})$/))) {
