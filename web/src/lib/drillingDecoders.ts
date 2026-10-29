@@ -423,3 +423,32 @@ export function decodeSolidDrill(text: string): Decoded | null {
   }
   return null;
 }
+
+// CHAMRING: chamfering drill holders CHAMRING 080-WN20-06 (drill size x10,
+// WN shank, XCGT insert size) carrying XCGT 060300-45DT inserts (size, chamfer
+// angle, chipformer), for drilling and chamfering in one operation.
+export function decodeChamring(text: string): Decoded | null {
+  const s = squash(text);
+  let m = s.match(/^CHAMRING(\d{3})-WN(\d{2})-(\d{2})$/);
+  if (m) {
+    return {
+      kind: "CHAMRING chamfering holder",
+      parts: [
+        { key: "t-family", code: "CHAMRING" },
+        { key: "t-dia", code: m[1], text: `For drills from ${mm(dia(m[1]))}` },
+        { key: "t-height", code: `WN${m[2]}`, text: `WN shank ${mm(Number(m[2]))}` },
+        { key: "t-insert", code: m[3], text: `For XCGT ${m[3]}... inserts` },
+      ],
+    };
+  }
+  if (!(m = s.match(/^XCGT(\d{2})(\d{2})(\d{2})-(\d{2})([A-Z]+)$/))) return null;
+  return {
+    kind: "CHAMRING insert",
+    parts: [
+      { key: "i-family", code: "XCGT" },
+      { key: "i-size", code: `${m[1]}${m[2]}${m[3]}`, text: `Insert size ${m[1]}` },
+      { key: "i-angle", code: m[4], text: `Chamfer angle ${Number(m[4])}°` },
+      { key: "i-chip", code: m[5] },
+    ],
+  };
+}
