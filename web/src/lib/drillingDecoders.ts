@@ -339,3 +339,54 @@ export function decodeModuDrill(text: string): Decoded | null {
   }
   return null;
 }
+
+// MULTI-FUNCTION TOOLS: DRG-MF-10R-2.25D-12A-05 (diameter, hand, depth ratio,
+// shank, XCMT insert size) for drilling, boring, turning, facing and grooving,
+// their XCMT 050204-MF / 040104L-MF inserts, and PICCO R-MF 6-3 L06 / PICCO
+// R-MFT60 6-4 L08 solid carbide tools (hand, shank, diameter, length; MFT60:
+// with 60° threading).
+export function decodeMultiFunction(text: string): Decoded | null {
+  const s = squash(text);
+  let m = s.match(/^(DRG|DR)-MF-(\d{2})([RL])-(\d+(?:\.\d+)?)D-(\d{2})([A-Z])-(\d{2})$/);
+  if (m) {
+    return {
+      kind: "MULTI-FUNCTION tool",
+      parts: [
+        { key: "t-family", code: `${m[1]}-MF` },
+        { key: "t-dia", code: m[2], text: `Drilling diameter ${mm(Number(m[2]))}` },
+        { key: "t-hand", code: m[3] },
+        { key: "t-depth", code: `${m[4]}D`, text: `Drilling depth ${m[4]}xD` },
+        { key: "t-height", code: m[5], text: `Shank diameter ${mm(Number(m[5]))}` },
+        { key: "t-shank", code: m[6] },
+        { key: "t-insert", code: m[7], text: `For XCMT ${m[7]}... inserts` },
+      ],
+    };
+  }
+  if ((m = s.match(/^XCMT(\d{2})([\dT]\d)(\d{2})([RL])?-MF$/))) {
+    return {
+      kind: "MULTI-FUNCTION insert",
+      parts: [
+        { key: "i-family", code: "XCMT" },
+        { key: "i-size", code: m[1], text: `Insert size ${m[1]}` },
+        { key: "i-thick", code: m[2], lookup: m[2].includes("T") ? "#T#" : "##" },
+        { key: "i-radius", code: m[3], text: `Corner radius ${mm(Number(m[3]) / 10)}` },
+        ...(m[4] ? [{ key: "i-hand", code: m[4] }] : []),
+        { key: "i-chip", code: "MF" },
+      ],
+    };
+  }
+  if ((m = s.match(/^PICCO([RL])-(MFT60|MF)(\d)-(\d)L(\d{2})$/))) {
+    return {
+      kind: "PICCO multifunction tool",
+      parts: [
+        { key: "p-family", code: "PICCO" },
+        { key: "p-hand", code: m[1] },
+        { key: "p-type", code: m[2] },
+        { key: "p-shank", code: m[3], text: `Shank diameter ${mm(Number(m[3]))}` },
+        { key: "p-dia", code: m[4], text: `Diameter ${mm(Number(m[4]))}` },
+        { key: "p-length", code: `L${m[5]}`, text: `Usable length ${Number(m[5])} mm` },
+      ],
+    };
+  }
+  return null;
+}
