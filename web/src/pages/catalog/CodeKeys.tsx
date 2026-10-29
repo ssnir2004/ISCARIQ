@@ -80,6 +80,14 @@ const DRILLING_BRANDS: KeyType[] = [
 // Milling brands, from the ISCAR milling catalog.
 const MILLING_BRANDS: KeyType[] = [
   { id: "multi-master-mill", label: "MULTI-MASTER", settingKey: "codekey.multimastermill", defaultTitle: "MULTI-MASTER code key", decoder: "multi-master-mill" },
+  { id: "multi-feed-master", label: "MULTI-FEED-MASTER", settingKey: "codekey.multifeedmaster", defaultTitle: "MULTI-FEED-MASTER code key", decoder: "multi-feed-master" },
+  { id: "solidmill", label: "SOLIDMILL", settingKey: "codekey.solidmill", defaultTitle: "SOLIDMILL code key", decoder: "solidmill" },
+  { id: "chatter-free", label: "CHATTER-FREE", settingKey: "codekey.chatterfree", defaultTitle: "CHATTER-FREE code key", decoder: "chatter-free" },
+  { id: "solidshred", label: "SOLIDSHRED", settingKey: "codekey.solidshred", defaultTitle: "SOLIDSHRED code key", decoder: "solidshred" },
+  { id: "finishred", label: "FINISHRED", settingKey: "codekey.finishred", defaultTitle: "FINISHRED code key", decoder: "finishred" },
+  { id: "solid-feed-mill", label: "SOLID-FEED-MILL", settingKey: "codekey.solidfeedmill", defaultTitle: "SOLID-FEED-MILL code key", decoder: "solid-feed-mill" },
+  { id: "ti-turbo", label: "Ti-TURBO", settingKey: "codekey.titurbo", defaultTitle: "Ti-TURBO code key", decoder: "ti-turbo" },
+  { id: "neobarrel", label: "NEOBARREL", settingKey: "codekey.neobarrel", defaultTitle: "NEOBARREL code key", decoder: "neobarrel" },
 ];
 
 const MORE_TYPES: Record<string, KeyType[]> = { [DEFAULT_TAB.toLowerCase()]: TURNING_INSERTS, parting: PARTING_BRANDS, drilling: DRILLING_BRANDS, milling: MILLING_BRANDS };

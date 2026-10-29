@@ -326,3 +326,232 @@ function decodeMultiMasterShank(b: string): Decoded | null {
   if (m) return { kind: "MULTI-MASTER accessory", parts: [{ key: "s-family", code: m[1] }, { key: "s-size", code: m[2], text: `Size ${m[2]}` }] };
   return null;
 }
+
+// MULTI-FEED-MASTER: FEED-MILL heads on the MULTI-MASTER connection, MM
+// FF100R1.5-L12-2T06 (diameter, corner radius, head length) and MM
+// EFF080T3R1.62-4T05 (diameter, geometry, programmed radius for CAM).
+export function decodeMultiFeedMaster(text: string): Decoded | null {
+  const b = squash(text).replace(/^MM/, "");
+  let m = b.match(/^FF(\d{3})R([\d.]+)(?:-L(\d{2}))?-(\d)T(\d{2})$/);
+  if (m) {
+    const inchHead = Number(m[1]) > 320;
+    return {
+      kind: "MULTI-FEED-MASTER head",
+      parts: [
+        { key: "t-family", code: "FF" },
+        { key: "t-dia", code: m[1], text: inchHead ? `Diameter .${m[1]}"` : diaText(m[1]) },
+        { key: "t-corner", code: `R${m[2]}`, text: inchHead ? `Corner radius .${m[2]}"` : `Corner radius ${mm(Number(m[2]))}` },
+        ...(m[3] ? [{ key: "t-length", code: `L${m[3]}`, text: inchHead ? `Head length .${m[3]}"` : `Head length about ${Number(m[3])} mm` }] : []),
+        flutes(m[4]),
+        conn(m[5]),
+      ],
+    };
+  }
+  m = b.match(/^EFF(\d{3}|\.\d{2,3})([A-Z])(\d{1,2})R([\d.]+)-(\d)T(\d{2})(H)?$/);
+  if (!m) return null;
+  const inchHead = m[1].startsWith(".");
+  return {
+    kind: "MULTI-FEED-MASTER head",
+    parts: [
+      { key: "t-family", code: "EFF" },
+      { key: "t-dia", code: m[1], text: diaText(m[1]) },
+      { key: "t-geometry", code: m[2] },
+      dims(m[3]),
+      { key: "t-corner", code: `R${m[4]}`, text: inchHead ? `Programmed radius (Rg) for CAM .${m[4]}"` : `Programmed radius (Rg) for CAM ${mm(Number(m[4]))}` },
+      flutes(m[5]),
+      conn(m[6]),
+      ...(m[7] ? [{ key: "t-suffix", code: "H" }] : []),
+    ],
+  };
+}
+
+// Solid carbide endmills. Two designation styles: the compact one,
+// EC020A10-4C05R0.4 (family, diameter x10, helix, cutting length, flutes,
+// shank type and diameter, corner) and the line one, EC-H4M 06-12C06CFR0.2-57
+// (family, helix, flutes, length, diameter, cutting length / neck, shank,
+// CHATTER-FREE, corner, overall length). The brand follows the family: ECK
+// Ti-TURBO, EFS FINISHRED, EFF / EFP SOLID-FEED-MILL, ERF / ERC / ECR / EBRF /
+// ECP-E SOLIDSHRED, ELB / EOB / ETB NEOBARREL, other CF tools CHATTER-FREE,
+// the rest SOLIDMILL.
+export type SolidBrand = "SOLIDMILL" | "CHATTER-FREE" | "SOLIDSHRED" | "FINISHRED" | "SOLID-FEED-MILL" | "Ti-TURBO" | "NEOBARREL";
+
+// Dimension codes in mm: the first two digits are whole millimeters, the rest
+// decimals (06 = 6, 015 = 1.5, 0675 = 6.75, 100 = 10); one digit is mm.
+const num = (code: string) => (code.includes(".") || code.length < 3 ? Number(code) : Number(`${code.slice(0, 2)}.${code.slice(2)}`));
+const len = (key: string, label: string, code: string, v: number): DecodedPart => ({ key, code, text: `${label} ${mm(v)}` });
+// A cutting length short of half the diameter is in mm (EC-B6 060-026 = 26
+// mm); on a micro tool 04 is 0.4 mm.
+const apmx = (code: string, d: number) => {
+  const v = num(code);
+  if (d && d < 1 && /^0\d$/.test(code)) return Number(code) / 10;
+  return code.length === 3 && code.startsWith("0") && d && v < d / 2 ? Number(code) : v;
+};
+// Corner radius: R0.2 / R1. / R2 in mm, R02 x10, R005 x100; a radius beyond
+// the tool's half diameter is a tenth of it (EC-A2 005-007 R05 = 0.05 mm).
+function solidCorner(code: string, d: number, programmed: boolean): DecodedPart {
+  const n = code.replace(/^RP?/, "");
+  let r = n.includes(".") || n.length === 1 ? Number(n.endsWith(".") ? n.slice(0, -1) : n) : Number(n) / (n.length === 2 ? 10 : 100);
+  if (d && r > d / 2 && !n.includes(".")) r /= 10;
+  return { key: "t-corner", code, text: programmed ? `Programmed radius (Rg) for CAM ${mm(r)}` : r ? `Corner radius ${mm(r)}` : "Sharp corner" };
+}
+
+const OLD_FAMILIES = "ECCS|ECXL|ECC|ECL|ECH|ECA|ECS|ECU|EBM|EBL|ERF|ERC|EC|EB";
+
+// The rest after the shank: CF, corner, chamfer, line letter and overall
+// length (H57, -57, L38), suffixes.
+function solidTail(tail: string, d: number, parts: DecodedPart[]): boolean {
+  let t = tail;
+  let m: RegExpMatchArray | null;
+  while (t) {
+    if ((m = t.match(/^[- ]+/)) && t.length > m[0].length && !/^ \d{1,2}$/.test(t)) t = t.slice(m[0].length);
+    if ((m = t.match(/^CF/))) parts.push({ key: "t-cf", code: "CF" });
+    else if ((m = t.match(/^CH(\d{2})/))) parts.push({ key: "t-chamfer", code: m[0], text: `Corner chamfer ${mm(Number(m[1]) / 10)}` });
+    else if ((m = t.match(/^RP?(?=[\d.]*\d)\d*\.?\d*/))) parts.push(solidCorner(m[0], d, m[0].startsWith("RP")));
+    else if ((m = t.match(/^(\d{2})UF$/))) parts.push({ key: "t-suffix", code: m[0], text: `Grade code ${m[0]} (see the catalog)` });
+    else if ((m = t.match(/^(DA|[MHESTNFA])?(\d{2,3})(?=$|[A-Z -])/))) {
+      if (m[1]) parts.push({ key: "t-line", code: m[1] });
+      parts.push({ key: "t-oal", code: m[2], text: `Overall length ${Number(m[2])} mm` });
+    } else if ((m = t.match(/^L(\d{2,3})/))) parts.push({ key: "t-oal", code: m[0], text: `Overall length ${Number(m[1])} mm` });
+    else if ((m = t.match(/^ (\d{1,2})$/))) parts.push({ key: "t-suffix", code: m[1], text: `Additional code ${m[1]} (see the catalog)` });
+    else if ((m = t.match(/^(CE|[CDTMHE])/))) parts.push({ key: "t-suffix", code: m[1] });
+    else return false;
+    t = t.slice(m[0].length);
+  }
+  return true;
+}
+
+function solidBrand(base: string, helix: string, cf: boolean): SolidBrand {
+  if (base === "ECK") return "Ti-TURBO";
+  if (base === "EFS") return "FINISHRED";
+  if (base === "EFF" || base === "EFP") return "SOLID-FEED-MILL";
+  if (["ERF", "ERC", "ECR", "EBRF"].includes(base) || (base === "ECP" && helix === "E")) return "SOLIDSHRED";
+  return cf ? "CHATTER-FREE" : "SOLIDMILL";
+}
+
+function parseSolid(text: string): { brand: SolidBrand; decoded: Decoded } | null {
+  const s = text.toUpperCase().trim().replace(/\s+/g, " ");
+  const tool = (brand: SolidBrand, parts: DecodedPart[], kind = `${brand} solid carbide endmill`) => ({ brand, decoded: { kind, parts } });
+  const shank = (type: string, d: string): DecodedPart[] => [{ key: "s-shank", code: type }, len("s-dia", "Shank diameter", d, num(d))];
+  const oal = (code: string): DecodedPart => ({ key: "t-oal", code, text: `Overall length ${Number(code)} mm` });
+  let m: RegExpMatchArray | null;
+
+  // Kits: KIT EFS-B44 C6-8-10-12 90, KIT EC-E4L 6-8-10-12C CF9.
+  if ((m = s.match(/^KIT (EFS-B44|EC-E4L) C?([\d-]+)C? (?:CF)?(\d{1,2})$/))) {
+    const brand: SolidBrand = m[1].startsWith("EFS") ? "FINISHRED" : "CHATTER-FREE";
+    return tool(brand, [{ key: "t-family", code: "KIT" }, { key: "t-dims", code: m[2], text: `${m[1]} endmills of ${m[2].split("-").join(", ")} mm` }], `${brand} endmill kit`);
+  }
+  // Barrel endmills: ELB-R0.75R16A5-6C8-63, EOB-AL-R2R85A20/9-4C10-72, ETB-R1R250A10/20-4C08-63.
+  if ((m = s.match(/^(ELB|EOB|ETB)(-AL)?-R([\d.]+)R(\d{2,4})A(\d{1,2})(?:\/(\d{1,2}))?-(\d)C(\d{1,2})-(\d{2,3})$/))) {
+    const a = `A${m[5]}${m[6] ? `/${m[6]}` : ""}`;
+    return tool("NEOBARREL", [
+      { key: "t-family", code: m[1] },
+      ...(m[2] ? [{ key: "t-suffix", code: "AL", text: "For aluminum" }] : []),
+      len("t-corner", "Tip radius", `R${m[3]}`, Number(m[3])),
+      len("t-profile", "Profile radius", `R${m[4]}`, Number(m[4])),
+      { key: "t-dims", code: a, text: `Profile code ${a} (see the catalog)` },
+      flutes(m[7]),
+      ...shank("C", m[8]),
+      oal(m[9]),
+    ], "NEOBARREL barrel endmill");
+  }
+  if ((m = s.match(/^(HCT|HLB) D(\d{3})-QF$/))) {
+    return tool("NEOBARREL", [{ key: "t-family", code: m[1] }, len("t-dia", "Diameter", `D${m[2]}`, Number(m[2]) / 10), { key: "t-suffix", code: "QF" }], "NEOBARREL barrel insert");
+  }
+  // Chamfering endmills: ECF D-1.0/60-4C04 (tip diameter, angle).
+  if ((m = s.match(/^ECF D-([\d.]+)\/(\d{2})-(\d)([CW])(\d{2})$/))) {
+    return tool("SOLIDMILL", [
+      { key: "t-family", code: "ECF" },
+      len("t-dia", "Tip diameter", m[1], Number(m[1])),
+      { key: "t-angle", code: m[2], text: `${Number(m[2])}° chamfer` },
+      flutes(m[3]),
+      ...shank(m[4], m[5]),
+    ]);
+  }
+  // Corner rounding endmills: ER-S4 R0.5D5.0C06-50.
+  if ((m = s.match(/^ER-S(\d) R([\d.]+)D([\d.]+)([CW])(\d{2})-(\d{2,3})$/))) {
+    return tool("SOLIDMILL", [
+      { key: "t-family", code: "ER" },
+      { key: "t-helix", code: "S" },
+      flutes(m[1]),
+      len("t-corner", "Corner rounding radius", `R${m[2]}`, Number(m[2])),
+      len("t-dia", "Tip diameter", `D${m[3]}`, Number(m[3])),
+      ...shank(m[4], m[5]),
+      oal(m[6]),
+    ]);
+  }
+  // Composite endmills: EPNF060S15-3L/9C06F57.
+  if ((m = s.match(/^EPNF(\d{3})S(\d{2})-(\d)L\/(\d{1,2})C(\d{1,2})F(\d{2})$/))) {
+    return tool("SOLIDMILL", [
+      { key: "t-family", code: "EPNF" },
+      len("t-dia", "Diameter", m[1], Number(m[1]) / 10),
+      len("t-apmx", "Cutting length", `S${m[2]}`, Number(m[2])),
+      flutes(m[3]),
+      len("t-neck", "Neck length", `L/${m[4]}`, Number(m[4])),
+      ...shank("C", m[5]),
+      { key: "t-line", code: "F" },
+      oal(m[6]),
+    ]);
+  }
+
+  // Compact style: EC020B07-4C03R0.25-38, EB020A03/06-4C03L38, ERC060E13-3C06CH05DA57.
+  m = s.match(new RegExp(`^(${OLD_FAMILIES})(\\d{3})([ABEF])(\\d{2,3})(?:\\/(\\d{2}))?[- ](\\d)([CW])(\\d{2})(.*)$`));
+  if (m) {
+    const d = Number(m[2]) / 10;
+    const parts: DecodedPart[] = [
+      { key: "t-family", code: m[1] },
+      len("t-dia", "Diameter", m[2], d),
+      { key: "t-helix", code: m[3] },
+      len("t-apmx", "Cutting length", m[4], m[4].length === 3 ? Number(m[4]) / 10 : Number(m[4])),
+    ];
+    if (m[5]) parts.push(len("t-neck", "Neck length", `/${m[5]}`, Number(m[5])));
+    parts.push(flutes(m[6]), ...shank(m[7], m[8]));
+    if (!solidTail(m[9], d, parts)) return null;
+    return tool(solidBrand(m[1], m[3], false), parts);
+  }
+
+  // Line style: EC-H4M 06-12C06CFR0.2-57, ECA-B-3 04-12C06-57, ESB-A2 03 02/30C06M80,
+  // EFF-S2-04 2/14C06R0.57M58, ECR-T4M 06-10-C06-57, ECA-H320-40/100C20CF-R02C.
+  m = s.match(/^([A-Z]{2,5})-([A-Z])(\d(?:\d(?=[A-Z -]))?)?(XL|MF|CF|[SMLX])?(?:-(\d)(?!\d))?(?:-(\d{2}))? ?(.+)$/);
+  if (!m) return null;
+  const [, base, helix, nof, length, nof2, efDia, rest] = m;
+  let d = efDia ? Number(efDia) : 0;
+  let r: RegExpMatchArray | null;
+  const parts: DecodedPart[] = [{ key: "t-family", code: base }, { key: "t-helix", code: helix }];
+  // EFS-B44: a geometry code, not 44 flutes.
+  if (nof && Number(nof) > 20) parts.push({ key: "t-dims", code: nof, text: `Geometry code ${nof} (see the catalog)` });
+  else if (nof || nof2) parts.push(flutes(nof ?? nof2));
+  if (length === "CF") parts.push({ key: "t-cf", code: "CF" });
+  else if (length) parts.push({ key: "t-length", code: length });
+  if (efDia) {
+    // EFF-S2-04 2/14..., EFF-S4-04 020/14...
+    r = rest.match(/^(\d{1,3})\/(\d{2})(.*)$/);
+    if (!r) return null;
+    parts.push(len("t-dia", "Diameter", efDia, d), len("t-apmx", "Cutting length", r[1], num(r[1])), len("t-neck", "Neck length", `/${r[2]}`, Number(r[2])));
+  } else if ((r = rest.match(/^(\d{2}) (\d{1,2})\/(\d{2})(.*)$/))) {
+    // Spherical ball nose: ESB-A2 03 02/30C06M80.
+    d = Number(r[1]);
+    parts.push(len("t-dia", "Diameter", r[1], d), { key: "t-dims", code: r[2], text: `Spherical code ${r[2]} (see the catalog)` }, len("t-neck", "Neck length", `/${r[3]}`, Number(r[3])));
+  } else if ((r = rest.match(/^(\d{1,4})-(\d{1,4}(?:\.\d)?)(?:\/([\d.]+))?(?:\/([\d.]+))?-?(.*)$/))) {
+    d = num(r[1]);
+    parts.push(len("t-dia", "Diameter", r[1], d), len("t-apmx", "Cutting length", r[2], apmx(r[2], d)));
+    if (r[3]) parts.push(d >= 1 && /^\d{2,3}$/.test(r[3]) ? len("t-neck", "Neck length", `/${r[3]}`, Number(r[3])) : { key: "t-neck", code: `/${r[3]}`, text: `Neck length code ${r[3]} (see the catalog)` });
+    if (r[4]) parts.push({ key: "t-taper", code: `/${r[4]}`, text: `Taper ${r[4]}° per side` });
+  } else return null;
+  const sh = r[r.length - 1].match(/^(SL|[CW])(\d{1,3})(.*)$/);
+  if (!sh) return null;
+  parts.push(...shank(sh[1], sh[2]));
+  if (!solidTail(sh[3], d, parts)) return null;
+  return tool(solidBrand(base, helix, parts.some((p) => p.key === "t-cf")), parts);
+}
+
+const solidDecoder = (brand: SolidBrand) => (text: string): Decoded | null => {
+  const p = parseSolid(text);
+  return p && p.brand === brand ? p.decoded : null;
+};
+export const decodeSolidmill = solidDecoder("SOLIDMILL");
+export const decodeChatterFree = solidDecoder("CHATTER-FREE");
+export const decodeSolidshred = solidDecoder("SOLIDSHRED");
+export const decodeFinishred = solidDecoder("FINISHRED");
+export const decodeSolidFeedMill = solidDecoder("SOLID-FEED-MILL");
+export const decodeTiTurbo = solidDecoder("Ti-TURBO");
+export const decodeNeobarrel = solidDecoder("NEOBARREL");
