@@ -460,7 +460,7 @@ export function decodeChamring(text: string): Decoded | null {
 // number of flutes and the T thread size of the MULTI-MASTER connection.
 export function decodeMultiMasterDrill(text: string): Decoded | null {
   const s = squash(text);
-  const m = s.match(/^MM(HCD|ECF|ECS|EDF|ECDF|ECD|EFCB|SPD)-?(.+?)-(\d)T(\d{2})(-M)?$/);
+  const m = s.match(/^MM(HCD|ECF|ECS|EDF|ECDF|ECD|EFCB|SPD)-?(.+?)-(\d)T(\d{2})(?:-([MN]))?$/);
   if (!m) return null;
   const [, fam, dims] = m;
   const parts: DecodedPart[] = [{ key: "t-family", code: fam }];
@@ -485,7 +485,7 @@ export function decodeMultiMasterDrill(text: string): Decoded | null {
     parts.push({ key: "t-dims", code: dims, text: `Dimension code ${dims} (see the catalog)` });
   }
   parts.push({ key: "t-flutes", code: m[3], text: `${m[3]} flutes` }, { key: "t-connection", code: `T${m[4]}`, text: `MULTI-MASTER T${m[4]} connection` });
-  if (m[5]) parts.push({ key: "t-suffix", code: "M" });
+  if (m[5]) parts.push(m[5] === "M" ? { key: "t-suffix", code: "M" } : { key: "t-suffix", code: "N", text: "N version (see the catalog)" });
   return { kind: "MULTI-MASTER head", parts };
 }
 
