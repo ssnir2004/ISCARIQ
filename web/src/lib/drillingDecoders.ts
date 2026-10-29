@@ -589,3 +589,22 @@ export function decodeIscarDeepDrill(text: string): Decoded | null {
   const tube = decodeDeepTube(s);
   return tube && !tube.line?.startsWith("FT") && tube.line !== "FB" ? { kind: "ISCAR-DEEP-DRILL tool", parts: tube.parts } : null;
 }
+
+// ISCAR-GUNDRILLS (from the Drilling Handbook): solid carbide STCGD / CGD /
+// SPCGD and brazed tip STGD / GD / SPGD gundrills, e.g. STCGD-05500-0200-05-IC908
+// (diameter x1000, drill length, driver code, grade), CGD-05520-0200-05-C P-IC908
+// (plus head profile and P polished / R rough) and SPCGD-05520-0500-02051-01-IC908
+// (drawing number instead of the driver).
+export function decodeIscarGundrills(text: string): Decoded | null {
+  const m = squash(text).match(/^(STCGD|CGD|SPCGD|STGD|GD|SPGD)-(\d{5})-(\d{4})-(?:(\d{5}-\d{2})|(\d{2,3}))(?:-([A-Z])([PR]))?-(IC\d{2,3})$/);
+  if (!m) return null;
+  const parts: DecodedPart[] = [
+    { key: "t-family", code: m[1] },
+    { key: "t-dia", code: m[2], text: `Cutting diameter ${mm(Number(m[2]) / 1000)}` },
+    { key: "t-length", code: m[3], text: `Drill length ${Number(m[3])} mm` },
+    m[4] ? { key: "t-drawing", code: m[4], text: `Drawing number ${m[4]}` } : { key: "t-driver", code: m[5] },
+  ];
+  if (m[6]) parts.push({ key: "t-profile", code: m[6] }, { key: "t-finish", code: m[7] });
+  parts.push({ key: "t-grade", code: m[8] });
+  return { kind: m[1].includes("C") ? "ISCAR-GUNDRILLS solid carbide gundrill" : "ISCAR-GUNDRILLS brazed tip gundrill", parts };
+}

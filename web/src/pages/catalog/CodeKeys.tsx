@@ -74,6 +74,7 @@ const DRILLING_BRANDS: KeyType[] = [
   { id: "tri-deep", label: "TRI-DEEP", settingKey: "codekey.trideep", defaultTitle: "TRI-DEEP code key", decoder: "tri-deep" },
   { id: "fine-beam", label: "FINE-BEAM", settingKey: "codekey.finebeam", defaultTitle: "FINE-BEAM code key", decoder: "fine-beam" },
   { id: "iscar-deep-drill", label: "ISCAR-DEEP-DRILL", settingKey: "codekey.iscardeepdrill", defaultTitle: "ISCAR-DEEP-DRILL code key", decoder: "iscar-deep-drill" },
+  { id: "iscar-gundrills", label: "ISCAR-GUNDRILLS", settingKey: "codekey.iscargundrills", defaultTitle: "ISCAR-GUNDRILLS code key", decoder: "iscar-gundrills" },
 ];
 
 const MORE_TYPES: Record<string, KeyType[]> = { [DEFAULT_TAB.toLowerCase()]: TURNING_INSERTS, parting: PARTING_BRANDS, drilling: DRILLING_BRANDS };
