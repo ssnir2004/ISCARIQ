@@ -77,9 +77,14 @@ const DRILLING_BRANDS: KeyType[] = [
   { id: "iscar-gundrills", label: "ISCAR-GUNDRILLS", settingKey: "codekey.iscargundrills", defaultTitle: "ISCAR-GUNDRILLS code key", decoder: "iscar-gundrills" },
 ];
 
-const MORE_TYPES: Record<string, KeyType[]> = { [DEFAULT_TAB.toLowerCase()]: TURNING_INSERTS, parting: PARTING_BRANDS, drilling: DRILLING_BRANDS };
+// Milling brands, from the ISCAR milling catalog.
+const MILLING_BRANDS: KeyType[] = [
+  { id: "multi-master-mill", label: "MULTI-MASTER", settingKey: "codekey.multimastermill", defaultTitle: "MULTI-MASTER code key", decoder: "multi-master-mill" },
+];
+
+const MORE_TYPES: Record<string, KeyType[]> = { [DEFAULT_TAB.toLowerCase()]: TURNING_INSERTS, parting: PARTING_BRANDS, drilling: DRILLING_BRANDS, milling: MILLING_BRANDS };
 // Applications whose brand keys already cover their tools, so no Tools key.
-const NO_TOOLS_KEY = new Set(["parting", "drilling"]);
+const NO_TOOLS_KEY = new Set(["parting", "drilling", "milling"]);
 
 function keyTypes(app: Application): KeyType[] {
   // The tools key keeps its decoder in its own data (e.g. "iso-turning").
