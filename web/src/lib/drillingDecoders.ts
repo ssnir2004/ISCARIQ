@@ -560,3 +560,13 @@ export function decodeTriDeep(text: string): Decoded | null {
   }
   return { kind: "TRI-DEEP gundrill", parts };
 }
+
+// FINE-BEAM: high feed tube drills DSD-EF / DSD-IF / DDD-EF ...-FB and their
+// NPHT peripheral (-P) and NPMT internal (-I) / central (-C) inserts.
+export function decodeFineBeam(text: string): Decoded | null {
+  const s = squash(text);
+  const insert = decodeDeepInsert(s, ["NPHT", "NPMT"], "FINE-BEAM");
+  if (insert) return insert;
+  const tube = decodeDeepTube(s);
+  return tube?.line === "FB" ? { kind: "FINE-BEAM deep drill", parts: tube.parts } : null;
+}
