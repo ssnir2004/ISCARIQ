@@ -165,3 +165,19 @@ export function decodeChamDrill(text: string): Decoded | null {
   }
   return decodeHeadBody(text, { brand: "CHAM-DRILL", heads: ["IDI"], bodies: ["DCM", "DCT"] });
 }
+
+// SUMO-GUN: modular shank gundrills carrying SUMO-CHAM heads, MNSNT
+// 100-200-MF16X1 (smallest head x10, usable length, MF16x1 connection thread).
+export function decodeSumoGun(text: string): Decoded | null {
+  const m = squash(text).match(/^MNSNT(\d{3})-(\d{3})-MF(\d{2})X(\d)$/);
+  if (!m) return null;
+  return {
+    kind: "SUMO-GUN gundrill",
+    parts: [
+      { key: "t-family", code: "MNSNT" },
+      { key: "t-dia", code: m[1], text: `For SUMO-CHAM heads from ${mm(dia(m[1]))}` },
+      { key: "t-length", code: m[2], text: `Usable length ${Number(m[2])} mm` },
+      { key: "t-connection", code: `MF${m[3]}X${m[4]}`, text: `Modular shank thread M${m[3]} x ${m[4]}` },
+    ],
+  };
+}
