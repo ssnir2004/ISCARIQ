@@ -153,7 +153,7 @@ export function decodeQuickPenta(text: string): Decoded | null {
 
 // CUT-GRIP utility insert: GIM 3J, GIM 2.2JS-15RA, GIM 3-4LA, GIM 4.6UT.
 export function decodeGim(text: string): Decoded | null {
-  const m = squash(text).match(/^GIM(\d+(?:\.\d+)?)([A-Z]*?)(S)?(?:-(\d{1,2})([RL])A)?$/);
+  const m = squash(text).match(/^GIM(\d+(?:\.\d+)?)([A-Z]*?)(S)?(?:-(\d+(?:\.\d+)?)([RL])A)?$/);
   if (!m) return null;
   return {
     kind: "GIM insert",
@@ -228,17 +228,124 @@ export function decodeSelfGrip(text: string): Decoded | null {
   };
 }
 
+// CUT-GRIP special inserts and tools the generic rules don't read: seal fin
+// GIFA 1.50-0.75-L, piston GDP 1.55-0.30-1404Q / GDK 1.5-MS, pulleys GPV
+// 3-2.34-1, V-shape GIPA 8YZ-35V-1.20-D, back turning GIPM 2.35-A46L / GIP
+// 3.00-1250L, inverted T LPGIB 12-6-5 / LPGIR 12-8-2T4PR; internal bars GHIR
+// 20-20-3, GHIR 40-815, GEHIR 10-11.5-2-T3, E12 GEHIR 16-1, GEHIMR 10SC-13;
+// blades CGIN 26K-3, adapters AVC-D32-GAIL-2 / AVC-D32-GAIC-50, C4 HFIR-MC.
+function decodeCutGripSpecial(text: string, s: string): Decoded | null {
+  const width = (code: string) => ({ key: "i-width", code, text: `Cutting width ${mm(Number(code))}` });
+  const radius = (code: string, w?: number) => {
+    const re = Number(code);
+    return { key: "i-radius", code, text: re ? `Corner radius ${mm(re)}${w && Math.abs(re * 2 - w) < 0.02 ? " (full radius)" : ""}` : "Sharp corners (no radius)" };
+  };
+  const insert = (parts: DecodedPart[]): Decoded => ({ kind: "CUT-GRIP precision insert", parts });
+  let m: RegExpMatchArray | null;
+  if ((m = s.match(/^GIFA(\d+\.\d+)-(\d+\.\d+)-([LNR])$/))) {
+    return insert([{ key: "i-family", code: "GIFA" }, width(m[1]), radius(m[2], Number(m[1])), { key: "i-hand", code: m[3] }]);
+  }
+  if ((m = s.match(/^GDP(\d+\.\d+)-(\d+\.\d+)-(\d{4}[A-Z])$/))) {
+    return insert([{ key: "i-family", code: "GDP" }, width(m[1]), radius(m[2]), { key: "i-variant", code: m[3], lookup: "####X" }]);
+  }
+  if ((m = s.match(/^GDK(\d+(?:\.\d+)?)-([A-Z]+)$/))) {
+    return insert([{ key: "i-family", code: "GDK" }, width(m[1]), { key: "i-variant", code: m[2] }]);
+  }
+  if ((m = s.match(/^GPV(\d{1,2})-(\d+\.\d+)-(\d)$/))) {
+    return insert([
+      { key: "i-family", code: "GPV" },
+      { key: "i-ribs", code: m[1], text: `${Number(m[1])} V-ribs` },
+      { key: "i-pitch", code: m[2], text: `Rib pitch ${mm(Number(m[2]))}` },
+      { key: "i-variant", code: m[3], lookup: "#" },
+    ]);
+  }
+  if ((m = s.match(/^GIPA(\d+(?:\.\d+)?)(YZ)?-(\d{2})V-(\d+(?:\.\d+)?)(-D)?$/))) {
+    return insert([
+      { key: "i-family", code: "GIPA" },
+      width(m[1]),
+      ...(m[2] ? [{ key: "i-variant", code: "YZ" }] : []),
+      { key: "i-angle", code: `${m[3]}V`, text: `V-shape, ${Number(m[3])}°` },
+      radius(m[4]),
+      ...(m[5] ? [{ key: "i-variant", code: "D" }] : []),
+    ]);
+  }
+  if ((m = s.match(/^(GIPM|GIP)(\d+\.\d+)-(A\d{2}|\d{4})([RL])$/))) {
+    return insert([{ key: "i-family", code: m[1] }, width(m[2]), { key: "i-profile", code: m[3], text: `Back turning profile ${m[3]} (see the catalog)` }, { key: "i-hand", code: m[4] }]);
+  }
+  if ((m = s.match(/^LPGIB(\d{2})-(\d+)-(\d+)$/))) {
+    return insert([{ key: "i-family", code: "LPGIB" }, { key: "i-size", code: m[1], text: `Size ${m[1]}` }, { key: "i-w1", code: m[2], text: `W1 ${mm(Number(m[2]))}` }, width(m[3])]);
+  }
+  if ((m = s.match(/^LPGI([RL])(\d{2})-(\d+(?:\.\d+)?)-(\d)(\d{2})?T(\d+)(PR)?$/))) {
+    return insert([
+      { key: "i-family", code: "LPGI" },
+      { key: "i-hand", code: m[1] },
+      { key: "i-size", code: m[2], text: `Size ${m[2]}` },
+      { key: "i-w1", code: m[3], text: `W1 ${mm(Number(m[3]))}` },
+      width(m[4]),
+      ...(m[5] ? [{ key: "i-radius", code: m[5], text: `Corner radius ${mm(Number(m[5]) / 100)}` }] : []),
+      { key: "i-depth", code: `T${m[6]}`, text: `Maximum cutting depth ${mm(Number(m[6]))}` },
+      ...(m[7] ? [{ key: "i-variant", code: "PR" }] : []),
+    ]);
+  }
+  // Internal bars: shank (SC solid carbide, C coolant), then Dmin and insert
+  // width, or width and depth together (815 = 8 mm, 15 deep); E## heads start
+  // with the Dmin.
+  if ((m = s.match(/^(E\d{2})?(GEHIM|GEHI|GHI)([RL])(\d{2})(SC|C)?-(\d+(?:\.\d+)?)(?:-(\d+(?:\.\d+)?))?(?:-T(\d+(?:\.\d+)?))?$/))) {
+    const parts: DecodedPart[] = [];
+    if (m[1]) parts.push({ key: "t-prefix", code: m[1], text: `Interchangeable head for a ${Number(m[1].slice(1))} mm shank` });
+    parts.push({ key: "t-family", code: m[2] }, { key: "t-hand", code: m[3] });
+    const nums = [m[4], m[6], m[7]].filter(Boolean) as string[];
+    let [shank, dmin, w] = m[1] ? [undefined, nums[0], nums[1]] : nums.length === 3 ? nums : m[2] === "GEHIM" ? [nums[0], nums[1], undefined] : [nums[0], undefined, nums[1]];
+    if (shank) parts.push({ key: "t-height", code: shank, text: `Shank diameter ${mm(Number(shank))}` });
+    if (m[5]) parts.push({ key: "t-suffix", code: m[5] });
+    if (dmin) parts.push({ key: "t-dmin", code: dmin, text: `Minimum bore diameter ${mm(Number(dmin))}` });
+    if (w && /^\d{3}$/.test(w)) parts.push({ key: "t-width", code: w[0], text: `Insert width ${mm(Number(w[0]))}` }, { key: "t-suffix", code: `T${w.slice(1)}`, lookup: "T##", text: `Maximum cutting depth ${mm(Number(w.slice(1)))}` });
+    else if (w) parts.push({ key: "t-width", code: w, text: `Insert width ${mm(Number(w))}` });
+    if (m[8]) parts.push({ key: "t-suffix", code: `T${m[8]}`, lookup: "T##", text: `Maximum cutting depth ${mm(Number(m[8]))}` });
+    return { kind: "CUT-GRIP internal bar", parts };
+  }
+  if ((m = s.match(/^CGIN(\d{2})([KA])-(\d)$/))) {
+    return {
+      kind: "CUT-GRIP internal blade",
+      parts: [
+        { key: "t-family", code: "CGIN" },
+        { key: "t-height", code: m[1], text: `Blade height ${mm(Number(m[1]))}` },
+        { key: "t-suffix", code: m[2] },
+        { key: "t-width", code: m[3], text: `Insert width ${mm(Number(m[3]))}` },
+      ],
+    };
+  }
+  if ((m = s.match(/^AVC-D(\d{2})-(GAIC|GAI|GEAI)([RL])?-(\d+)$/))) {
+    return {
+      kind: "CUT-GRIP adapter",
+      parts: [
+        { key: "t-prefix", code: "AVC", text: "AVC anti-vibration adapter" },
+        { key: "t-dia", code: `D${m[1]}`, text: `Shank diameter ${mm(Number(m[1]))}` },
+        { key: "t-family", code: m[2] },
+        ...(m[3] ? [{ key: "t-hand", code: m[3] }] : []),
+        m[2] === "GAIC"
+          ? { key: "t-height", code: m[4], text: `For GHIC...-${m[4]} bars / CGIN blades` }
+          : { key: "t-width", code: m[4], text: `Insert width ${mm(Number(m[4]))}` },
+      ],
+    };
+  }
+  if (/^C\d-?HFI/.test(s)) return decodeTool(text, ["HFI"]);
+  return null;
+}
+
 // CUT-GRIP inserts. Precision (ground): GIP 3.00E-0.40 (width, type, corner
 // radius, suffix), GIPI 3.00-1.5UL, GIP 1.57-0.15 RX, GIPA 4.00-2.00YZ-D.
 // Utility: GIMY 808 (width 8, radius 0.8), GIMY 315-UN, GDMW 2.4, GEMI 2002N
 // (width and radius x10), GIMY 635-318. Parting: GIM 3J (see decodeGim).
-const PRECISION = ["GIPA", "GIPI", "GIPM", "GIPY", "GIP", "GIFG", "GIFI", "GIF", "GIG", "GEPI", "GIA", "GITM", "GINI", "GIDA"];
+const PRECISION = ["GDPY", "GIPA", "GIPI", "GIPM", "GIPY", "GIP", "GIFG", "GIFI", "GIF", "GIG", "GEPI", "GIA", "GITM", "GINI", "GIDA"];
 const UTILITY = ["GDMU", "GDMW", "GDMY", "GDMF", "GDMA", "GDMN", "GDMT", "GDMM", "GIMIY", "GIMY", "GIMF", "GIMN", "GIMT", "GIMM", "GEMI"];
 
 export function decodeCutGrip(text: string): Decoded | null {
   const s = squash(text);
   // THDR/L-IQ holders belong to DOVE IQ GRIP.
   if (isDoveIq(s)) return null;
+  const special = decodeCutGripSpecial(text, s);
+  if (special) return special;
   const fam = (list: string[]) => list.find((f) => s.startsWith(f) && /^[\d.]/.test(s.slice(f.length)));
   const p = fam(PRECISION);
   if (p) {
@@ -625,7 +732,7 @@ export const HELI_GRIP_TOOLS = ["HELII", "HELI", "HGFH"];
 export const TOP_GRIP_TOOLS = ["TGD", "TGH", "TGI"];
 export const SWISSCUT_TOOLS = ["SCH"];
 export const SUMO_GRIP_TOOLS = ["TGBH"];
-export const CUT_GRIP_TOOLS = ["CGFG", "CGH", "GHFG", "GHMP", "GHM", "GHD", "GHG", "GHS", "GEHS", "PHG", "PHS", "GAFG", "GAD", "PAD", "THD"];
+export const CUT_GRIP_TOOLS = ["CGFG", "CGH", "GHFG", "GHMP", "GHM", "GHD", "GHG", "GHS", "GEHS", "PHG", "PHS", "GAFG", "GAD", "PAD", "THD", "CGPADFIN", "GEAI", "GAI"];
 export const SELF_GRIP_TOOLS = ["SGFFA", "SGFFH", "SGFF", "SGFH", "SGFS", "SGTF", "SGAF", "SGB", "SGF"];
 
 // Face grooving tools: which of their numbers is the minimum face diameter
