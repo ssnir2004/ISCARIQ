@@ -130,3 +130,9 @@ export function decodeQuick3Cham(text: string): Decoded | null {
 export function decodeSumoLDrill(text: string): Decoded | null {
   return decodeHeadBody(text, { brand: "SUMO-L-DRILL", heads: ["ILP"], bodies: ["DLN"] });
 }
+
+// SPADE-CHAM: large diameter indexable heads HFP 330-SPADE IQ, IFP 338-SPADE IQ,
+// IFHP 3334-SPADE-BD on DFN bodies (DFN 330-099-32A-3D-IQ, DFN 330-070-32A-5D-BD).
+export function decodeSpadeCham(text: string): Decoded | null {
+  return decodeHeadBody(text, { brand: "SPADE-CHAM", heads: ["HFP", "IFP", "IFHP"], bodies: ["DFN"] });
+}

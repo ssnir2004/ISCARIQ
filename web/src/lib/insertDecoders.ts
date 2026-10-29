@@ -1,4 +1,4 @@
-import { decodeQuick3Cham, decodeSumoCham, decodeSumoChamIq, decodeSumoLDrill } from "./drillingDecoders";
+import { decodeQuick3Cham, decodeSpadeCham, decodeSumoCham, decodeSumoChamIq, decodeSumoLDrill } from "./drillingDecoders";
 import { decodeIsoTurning } from "./isoTurning";
 import { DO_GRIP_TOOLS, decodeBgm, decodeCutGrip, decodeDoveIqGrip, decodeGft, decodeGim, decodeGroove4Cut, decodeFlashPenta, decodeHeliGrip, decodeMinCut, decodePenta, decodePentaIq, decodeQuickPenta, decodeChamGroove, decodeHeliFace, decodeQuickIGroove, decodeSelfGrip, decodeSumoGrip, decodeSwissCut, decodeTag, decodeTopGrip, decodeTool } from "./partingDecoders";
 
@@ -21,7 +21,7 @@ export interface Decoded {
   parts: DecodedPart[];
 }
 
-export type DecoderName = "iso-turning" | "iso-insert" | "cbn" | "ceramic" | "pcd" | "do-grip" | "tang-grip" | "penta" | "gim" | "bgm" | "gft" | "self-grip" | "cut-grip" | "groove4cut" | "heli-grip" | "top-grip" | "swisscut" | "cham-groove" | "quick-i-groove" | "heliface" | "quick-penta" | "penta-iq" | "flashpenta" | "sumo-grip" | "dove-iq-grip" | "mincut" | "sumo-cham" | "sumo-cham-iq" | "quick-3-cham" | "sumo-l-drill";
+export type DecoderName = "iso-turning" | "iso-insert" | "cbn" | "ceramic" | "pcd" | "do-grip" | "tang-grip" | "penta" | "gim" | "bgm" | "gft" | "self-grip" | "cut-grip" | "groove4cut" | "heli-grip" | "top-grip" | "swisscut" | "cham-groove" | "quick-i-groove" | "heliface" | "quick-penta" | "penta-iq" | "flashpenta" | "sumo-grip" | "dove-iq-grip" | "mincut" | "sumo-cham" | "sumo-cham-iq" | "quick-3-cham" | "sumo-l-drill" | "spade-cham";
 
 const mm = (digits: string, scale = 1) => `${Number((Number(digits) * scale).toFixed(3))} mm`;
 const squash = (s: string) => s.toUpperCase().replace(/\s+/g, "");
@@ -144,6 +144,7 @@ export const DECODERS: Record<DecoderName, { decode: (text: string) => Decoded |
   "quick-3-cham": { decode: decodeQuick3Cham, examples: "H3P 120-IQ, F3B 2381-IQ or D3N 120-036-16A-3D" },
   "sumo-cham-iq": { decode: decodeSumoChamIq, examples: "HCP 040-IQ, HCP 1605-IQ or HCP 329-IQ" },
   "sumo-cham": { decode: decodeSumoCham, examples: "ICP 040, ICK 0635-2M or DCN 060-018-12R-3D" },
+  "spade-cham": { decode: decodeSpadeCham, examples: "HFP 330-SPADE IQ, IFHP 3334-SPADE-BD or DFN 330-099-32A-3D-IQ" },
   "iso-turning": { decode: decodeIsoTurning, examples: "MWLNR 2525M-08W or S25S MWLNR-08W" },
   "iso-insert": { decode: decodeIsoInsert, examples: "WNMG 080408 E-GN" },
   cbn: { decode: decodeCbn, examples: "CNGA 120408S (N) 2MT MF BI15HC" },
