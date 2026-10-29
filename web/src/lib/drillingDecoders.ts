@@ -570,3 +570,22 @@ export function decodeFineBeam(text: string): Decoded | null {
   const tube = decodeDeepTube(s);
   return tube?.line === "FB" ? { kind: "FINE-BEAM deep drill", parts: tube.parts } : null;
 }
+
+// ISCAR-DEEP-DRILL: single / double tube drills, counterbores and trepanning
+// tools with brazed tips (DSD-E0 8.00-8.99 NOM 0, DSD-E3 22.91-24.10-DTG) or
+// cartridges (DSD-EC 38.00-39.60, DSTR-IC 100.00-110.99), and their NPMX /
+// TPMX / XPMT inserts.
+export function decodeIscarDeepDrill(text: string): Decoded | null {
+  const s = squash(text);
+  const insert = decodeDeepInsert(s, ["NPMX", "TPMX"], "ISCAR-DEEP-DRILL");
+  if (insert) return insert;
+  const x = s.match(/^XPMT(\d{5})-?(UB|45)$/);
+  if (x) {
+    return {
+      kind: "ISCAR-DEEP-DRILL insert",
+      parts: [{ key: "i-family", code: "XPMT" }, { key: "i-size", code: x[1], text: `Insert size code ${x[1]} (see the catalog)` }, { key: "i-chip", code: x[2] }],
+    };
+  }
+  const tube = decodeDeepTube(s);
+  return tube && !tube.line?.startsWith("FT") && tube.line !== "FB" ? { kind: "ISCAR-DEEP-DRILL tool", parts: tube.parts } : null;
+}
