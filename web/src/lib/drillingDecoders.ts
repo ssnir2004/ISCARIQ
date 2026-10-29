@@ -269,3 +269,73 @@ export function decodeCombiCham(text: string): Decoded | null {
     ],
   };
 }
+
+// MODU-DRILL: modular bodies MD-BODY-33-36-108-32A-3D (head range, length,
+// shank, depth) and extensions MD-EXTENSION-33-36-200, carrying heads MD-DFN
+// 330 HEAD, MD-DR-DH 330 070606-06 (square inserts), MD-MNC 280-119-W5 (pilot
+// ICP 119-MNC 4F, WCGX 05 inserts) or MD-MNC 280-IMH28-119-W5; WCGX
+// 05T308-W-DC peripheral inserts.
+export function decodeModuDrill(text: string): Decoded | null {
+  const s = squash(text);
+  let m = s.match(/^MD-(BODY|EXTENSION)-(\d{2})-(\d{2})-(\d{3})(?:-(\d{2})([A-Z]))?(?:-(\d+)D)?$/);
+  if (m) {
+    const parts: DecodedPart[] = [
+      { key: "t-family", code: `MD-${m[1]}` },
+      { key: "t-range", code: `${m[2]}-${m[3]}`, text: `For heads ${Number(m[2])} – ${Number(m[3])} mm` },
+      { key: "t-length", code: m[4], text: m[1] === "EXTENSION" ? `Extends the length by ${Number(m[4])} mm` : `Length about ${Number(m[4])} mm` },
+    ];
+    if (m[5]) parts.push({ key: "t-height", code: m[5], text: `Shank diameter ${mm(Number(m[5]))}` }, { key: "t-shank", code: m[6] });
+    if (m[7]) parts.push({ key: "t-depth", code: `${m[7]}D`, text: `Drilling depth ${m[7]}xD` });
+    return { kind: "MODU-DRILL body", parts };
+  }
+  if ((m = s.match(/^MD-DFN(\d{3})HEAD$/))) {
+    return { kind: "MODU-DRILL head", parts: [{ key: "h-family", code: "MD-DFN" }, { key: "h-dia", code: m[1], text: `Drilling diameter ${mm(dia(m[1]))}` }] };
+  }
+  if ((m = s.match(/^MD-DR-DH(\d{3})(\d{6})-(\d{2})$/))) {
+    return {
+      kind: "MODU-DRILL head",
+      parts: [
+        { key: "h-family", code: "MD-DR-DH" },
+        { key: "h-dia", code: m[1], text: `Drilling diameter ${mm(dia(m[1]))}` },
+        { key: "h-insert", code: m[2], text: `Square inserts ...${m[2]}` },
+        { key: "h-variant", code: m[3], lookup: "##" },
+      ],
+    };
+  }
+  if ((m = s.match(/^MD-MNC(\d{3})-(?:(IMH\d{2})-)?(\d{3})-W(\d)$/))) {
+    return {
+      kind: "MODU-DRILL head",
+      parts: [
+        { key: "h-family", code: "MD-MNC" },
+        { key: "h-dia", code: m[1], text: `Drilling diameter ${mm(dia(m[1]))}` },
+        ...(m[2] ? [{ key: "h-imh", code: m[2], text: `IMH ${m[2].slice(3)} pilot head connection` }] : []),
+        { key: "h-pilot", code: m[3], text: `Pilot SUMO-CHAM head ICP ${m[3]}-MNC (${mm(dia(m[3]))})` },
+        { key: "h-insert", code: `W${m[4]}`, text: `WCGX size 0${m[4]} peripheral inserts` },
+      ],
+    };
+  }
+  if ((m = s.match(/^ICP(\d{3})-MNC(\d)F$/))) {
+    return {
+      kind: "MODU-DRILL pilot head",
+      parts: [
+        { key: "i-family", code: "ICP", text: "SUMO-CHAM pilot head for modular combi drills" },
+        { key: "i-dia", code: m[1], text: `Drilling diameter ${mm(dia(m[1]))}` },
+        { key: "i-suffix", code: `MNC ${m[2]}F` },
+      ],
+    };
+  }
+  if ((m = s.match(/^WCGX(\d{2})([\dT]\d)(\d{2})-W-([A-Z]+)$/))) {
+    return {
+      kind: "MODU-DRILL insert",
+      parts: [
+        { key: "i-family", code: "WCGX" },
+        { key: "i-size", code: m[1], text: `Insert size ${m[1]}` },
+        { key: "i-thick", code: m[2], lookup: m[2].includes("T") ? "#T#" : "##" },
+        { key: "i-radius", code: m[3], text: `Corner radius ${mm(Number(m[3]) / 10)}` },
+        { key: "i-suffix", code: "W" },
+        { key: "i-chip", code: m[4] },
+      ],
+    };
+  }
+  return null;
+}
