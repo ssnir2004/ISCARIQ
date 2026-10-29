@@ -136,3 +136,32 @@ export function decodeSumoLDrill(text: string): Decoded | null {
 export function decodeSpadeCham(text: string): Decoded | null {
   return decodeHeadBody(text, { brand: "SPADE-CHAM", heads: ["HFP", "IFP", "IFHP"], bodies: ["DFN"] });
 }
+
+// CHAM-DRILL: heads IDI 068-SG / IDI 109-SK on DCM bodies (DCM 075-022-12A-3D,
+// DCM 075-026-8B-3.5D), pre-thread DCT 068-021-14B-M8, chamfering rings RING DCM
+// 100 (for DCM 100 drills) and their XOGX 090700-45DT inserts.
+export function decodeChamDrill(text: string): Decoded | null {
+  const s = squash(text);
+  let m = s.match(/^RINGDCM(\d{3})$/);
+  if (m) {
+    return {
+      kind: "CHAM-DRILL chamfering ring",
+      parts: [
+        { key: "t-family", code: "RING DCM", text: "Chamfering ring for CHAM-DRILL (DCM) drills" },
+        { key: "t-dia", code: m[1], text: `For DCM ${m[1]} drills (heads from ${mm(dia(m[1]))})` },
+      ],
+    };
+  }
+  if ((m = s.match(/^XOGX(\d{2})(\d{2})(\d{2})-(\d{2})([A-Z]+)$/))) {
+    return {
+      kind: "CHAM-DRILL chamfering ring insert",
+      parts: [
+        { key: "i-family", code: "XOGX" },
+        { key: "i-size", code: `${m[1]}${m[2]}${m[3]}`, text: `Size ${Number(m[1])} x ${Number(m[2])} mm` + " (inferred)" },
+        { key: "i-angle", code: m[4], text: `Chamfer angle ${Number(m[4])}°` },
+        { key: "i-chip", code: m[5] },
+      ],
+    };
+  }
+  return decodeHeadBody(text, { brand: "CHAM-DRILL", heads: ["IDI"], bodies: ["DCM", "DCT"] });
+}
