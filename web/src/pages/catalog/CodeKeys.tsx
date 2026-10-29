@@ -79,7 +79,7 @@ const DRILLING_BRANDS: KeyType[] = [
 
 const MORE_TYPES: Record<string, KeyType[]> = { [DEFAULT_TAB.toLowerCase()]: TURNING_INSERTS, parting: PARTING_BRANDS, drilling: DRILLING_BRANDS };
 // Applications whose brand keys already cover their tools, so no Tools key.
-const NO_TOOLS_KEY = new Set(["parting"]);
+const NO_TOOLS_KEY = new Set(["parting", "drilling"]);
 
 function keyTypes(app: Application): KeyType[] {
   // The tools key keeps its decoder in its own data (e.g. "iso-turning").
