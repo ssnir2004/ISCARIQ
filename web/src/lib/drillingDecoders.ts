@@ -390,3 +390,36 @@ export function decodeMultiFunction(text: string): Decoded | null {
   }
   return null;
 }
+
+// SOLID-DRILL: solid carbide drills SCD 121-043-140 AP3 / SCCD 040-017-060 ACP3
+// (diameter x10 or x100, length, shank x10, line), SCD 0330-025-040 FNPCD, SCD
+// 030-014-060 PICCO 3D, pre-thread SCDT 068-021-100-M8 and chamfering / spot
+// drilling ECD-S2 030/90C03-38 (diameter, point angle, shank, overall length).
+export function decodeSolidDrill(text: string): Decoded | null {
+  const s = squash(text);
+  let m = s.match(/^(SCCD|SCDT|SCD)(\d{3,4})-(\d{3})-(\d{3})(?:-(M\d{1,2})|([A-Z][A-Z0-9]*?)(\d+D)?)$/);
+  if (m) {
+    const parts: DecodedPart[] = [
+      { key: "t-family", code: m[1] },
+      { key: "t-dia", code: m[2], text: `Drilling diameter ${mm(dia(m[2]))}` },
+      { key: "t-length", code: m[3], text: `Flute / usable length about ${Number(m[3])} mm` },
+      { key: "t-height", code: m[4], text: `Shank diameter ${mm(Number(m[4]) / 10)}` },
+    ];
+    if (m[5]) parts.push({ key: "t-thread", code: m[5], text: `For ${m[5]} threads` });
+    else parts.push({ key: "t-line", code: m[6] + (m[7] ?? "") });
+    return { kind: "SOLID-DRILL drill", parts };
+  }
+  if ((m = s.match(/^ECD-S2(\d{2,3})\/(\d{2,3})C(\d{2})-(\d{2})$/))) {
+    return {
+      kind: "SOLID-DRILL chamfering and spot drill",
+      parts: [
+        { key: "t-family", code: "ECD-S2" },
+        { key: "t-dia", code: m[1], text: `Diameter ${mm(m[1].length === 3 ? dia(m[1]) : Number(m[1]))}` },
+        { key: "t-angle", code: m[2], text: `Point angle ${Number(m[2])}°` },
+        { key: "t-height", code: `C${m[3]}`, text: `Cylindrical shank ${mm(Number(m[3]))}` },
+        { key: "t-length", code: m[4], text: `Overall length ${Number(m[4])} mm` },
+      ],
+    };
+  }
+  return null;
+}
