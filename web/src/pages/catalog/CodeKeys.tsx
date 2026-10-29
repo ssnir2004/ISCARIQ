@@ -62,6 +62,7 @@ const DRILLING_BRANDS: KeyType[] = [
   { id: "quick-3-cham", label: "QUICK-3-CHAM", settingKey: "codekey.quick3cham", defaultTitle: "QUICK-3-CHAM code key", decoder: "quick-3-cham" },
   { id: "sumo-l-drill", label: "SUMO-L-DRILL", settingKey: "codekey.sumoldrill", defaultTitle: "SUMO-L-DRILL code key", decoder: "sumo-l-drill" },
   { id: "spade-cham", label: "SPADE-CHAM", settingKey: "codekey.spadecham", defaultTitle: "SPADE-CHAM code key", decoder: "spade-cham" },
+  { id: "cham-drill", label: "CHAM-DRILL", settingKey: "codekey.chamdrill", defaultTitle: "CHAM-DRILL code key", decoder: "cham-drill" },
 ];
 
 const MORE_TYPES: Record<string, KeyType[]> = { [DEFAULT_TAB.toLowerCase()]: TURNING_INSERTS, parting: PARTING_BRANDS, drilling: DRILLING_BRANDS };
