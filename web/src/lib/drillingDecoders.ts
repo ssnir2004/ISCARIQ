@@ -10,14 +10,14 @@ const mm = (n: number) => `${Number(n.toFixed(2))} mm`;
 // Three digits are x10 (ICP 040 = 4.0 mm), four x100 (ICK 0635 = 6.35 mm).
 const dia = (code: string) => Number(code) / (code.length === 4 ? 100 : 10);
 
-// SUMO-CHAM: heads ICP 040, ICK 0635, ICP 060-2M, IHP 138-BD, HCP 040-IQ; drill
+// SUMO-CHAM: heads ICP 040, ICK 0635, ICP 060-2M, IHP 138-BD; drill
 // bodies DCN 060-018-12R-3D (smallest head, length, shank and its type, depth
 // ratio), DCNS 075-022-080B-3D, DCNM 060-018-M12-3D (FLEX-FIT), DCN
 // 040-008-MMT05-2D (MULTI-MASTER), DCN 040-012-06-3D-PICCO, DCNT 068-021-12A-M8
 // (pre-thread hole for M8) and DCN 135-050-16N-5D-BD.
 export function decodeSumoCham(text: string): Decoded | null {
   const s = squash(text);
-  let m = s.match(/^(ICP|ICM|ICK|ICN|ICG|IHP|QCP|HCP)(\d{3,4})(?:-(2M|BD|IQ))?$/);
+  let m = s.match(/^(ICP|ICM|ICK|ICN|ICG|IHP|QCP)(\d{3,4})(?:-(2M|BD))?$/);
   if (m) {
     return {
       kind: "SUMO-CHAM drilling head",
@@ -59,4 +59,19 @@ export function decodeSumoCham(text: string): Decoded | null {
     parts.push({ key: "t-height", code: r[1], text: `Shank diameter ${mm(Number(r[1]))}` }, { key: "t-shank", code: r[2] }, { key: "t-thread", code: r[3], text: `For ${r[3]} threads` });
   } else return null;
   return { kind: "SUMO-CHAM drill body", parts };
+}
+
+// SUMO-CHAM IQ: self-centering heads HCP 040-IQ, HCP 1605-IQ (on DCN drill
+// bodies, see SUMO-CHAM).
+export function decodeSumoChamIq(text: string): Decoded | null {
+  const m = squash(text).match(/^HCP(\d{3,4})-IQ$/);
+  if (!m) return null;
+  return {
+    kind: "SUMO-CHAM IQ drilling head",
+    parts: [
+      { key: "i-family", code: "HCP" },
+      { key: "i-dia", code: m[1], text: `Drilling diameter ${mm(dia(m[1]))}` },
+      { key: "i-suffix", code: "IQ" },
+    ],
+  };
 }

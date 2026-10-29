@@ -58,6 +58,7 @@ const PARTING_BRANDS: KeyType[] = [
 // The Drilling families' keys (heads and drill bodies).
 const DRILLING_BRANDS: KeyType[] = [
   { id: "sumo-cham", label: "SUMO-CHAM", settingKey: "codekey.sumocham", defaultTitle: "SUMO-CHAM code key", decoder: "sumo-cham" },
+  { id: "sumo-cham-iq", label: "SUMO-CHAM IQ", settingKey: "codekey.sumochamiq", defaultTitle: "SUMO-CHAM IQ code key", decoder: "sumo-cham-iq" },
 ];
 
 const MORE_TYPES: Record<string, KeyType[]> = { [DEFAULT_TAB.toLowerCase()]: TURNING_INSERTS, parting: PARTING_BRANDS, drilling: DRILLING_BRANDS };
