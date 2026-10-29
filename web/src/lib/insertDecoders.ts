@@ -1,5 +1,5 @@
 import { decodeChamDrill, decodeChamring, decodeCombiCham, decodeDrTwist, decodeFineBeam, decodeIscarDeepDrill, decodeIscarGundrills, decodeModuDrill, decodeMultiFunction, decodeMultiMasterDrill, decodeQuick3Cham, decodeSolidDrill, decodeSpadeCham, decodeSumoCham, decodeSumoChamIq, decodeSumoGun, decodeSumoLDrill, decodeTriDeep } from "./drillingDecoders";
-import { decodeMultiMasterMill } from "./millingDecoders";
+import { decodeChatterFree, decodeFinishred, decodeMultiFeedMaster, decodeMultiMasterMill, decodeNeobarrel, decodeSolidFeedMill, decodeSolidmill, decodeSolidshred, decodeTiTurbo } from "./millingDecoders";
 import { decodeIsoTurning } from "./isoTurning";
 import { DO_GRIP_TOOLS, decodeBgm, decodeCutGrip, decodeDoveIqGrip, decodeGft, decodeGim, decodeGroove4Cut, decodeFlashPenta, decodeHeliGrip, decodeMinCut, decodePenta, decodePentaIq, decodeQuickPenta, decodeChamGroove, decodeHeliFace, decodeQuickIGroove, decodeSelfGrip, decodeSumoGrip, decodeSwissCut, decodeTag, decodeTopGrip, decodeTool } from "./partingDecoders";
 
@@ -22,7 +22,7 @@ export interface Decoded {
   parts: DecodedPart[];
 }
 
-export type DecoderName = "iso-turning" | "iso-insert" | "cbn" | "ceramic" | "pcd" | "do-grip" | "tang-grip" | "penta" | "gim" | "bgm" | "gft" | "self-grip" | "cut-grip" | "groove4cut" | "heli-grip" | "top-grip" | "swisscut" | "cham-groove" | "quick-i-groove" | "heliface" | "quick-penta" | "penta-iq" | "flashpenta" | "sumo-grip" | "dove-iq-grip" | "mincut" | "sumo-cham" | "sumo-cham-iq" | "quick-3-cham" | "sumo-l-drill" | "spade-cham" | "cham-drill" | "sumo-gun" | "dr-twist" | "combi-cham" | "modu-drill" | "multi-function" | "solid-drill" | "chamring" | "multi-master-drill" | "tri-deep" | "fine-beam" | "iscar-deep-drill" | "iscar-gundrills" | "multi-master-mill";
+export type DecoderName = "iso-turning" | "iso-insert" | "cbn" | "ceramic" | "pcd" | "do-grip" | "tang-grip" | "penta" | "gim" | "bgm" | "gft" | "self-grip" | "cut-grip" | "groove4cut" | "heli-grip" | "top-grip" | "swisscut" | "cham-groove" | "quick-i-groove" | "heliface" | "quick-penta" | "penta-iq" | "flashpenta" | "sumo-grip" | "dove-iq-grip" | "mincut" | "sumo-cham" | "sumo-cham-iq" | "quick-3-cham" | "sumo-l-drill" | "spade-cham" | "cham-drill" | "sumo-gun" | "dr-twist" | "combi-cham" | "modu-drill" | "multi-function" | "solid-drill" | "chamring" | "multi-master-drill" | "tri-deep" | "fine-beam" | "iscar-deep-drill" | "iscar-gundrills" | "multi-master-mill" | "multi-feed-master" | "solidmill" | "chatter-free" | "solidshred" | "finishred" | "solid-feed-mill" | "ti-turbo" | "neobarrel";
 
 const mm = (digits: string, scale = 1) => `${Number((Number(digits) * scale).toFixed(3))} mm`;
 const squash = (s: string) => s.toUpperCase().replace(/\s+/g, "");
@@ -160,6 +160,14 @@ export const DECODERS: Record<DecoderName, { decode: (text: string) => Decoded |
   "iscar-deep-drill": { decode: decodeIscarDeepDrill, examples: "DSD-E3 22.91-24.10-DTG, DSD-EC 38.00-39.60 or TPMX 140304R-B" },
   "iscar-gundrills": { decode: decodeIscarGundrills, examples: "STCGD-05500-0200-05-IC908, GD-05520-0500-57-E R-IC908 or SPGD-05520-0500-02051-01-IC908" },
   "multi-master-mill": { decode: decodeMultiMasterMill, examples: "MM EC100A07R1.0-4T06, MM TS135-H30D-06T05 or MM S-A-L090-C12-T08" },
+  "multi-feed-master": { decode: decodeMultiFeedMaster, examples: "MM EFF080T3R1.62-4T05 or MM FF100R1.5-L12-2T06" },
+  "solidmill": { decode: decodeSolidmill, examples: "EC100B22-4C10, EC-A4 08-20C08R.5E63 or EB-A2 03-08C06M70" },
+  "chatter-free": { decode: decodeChatterFree, examples: "EC-H4M 06-12C06CFR0.2-57, EC-E4L 06-14/20C06CF57 or ECA-H3 06-09/18C06CF-R02" },
+  "solidshred": { decode: decodeSolidshred, examples: "ECR-B4M 10-20C10-72, ECP-E4L 06-14/20C06S57 or ERF100A22-4C10" },
+  "finishred": { decode: decodeFinishred, examples: "EFS-B44 10-22C10-72 or EFS-E44 10-22C10CF72" },
+  "solid-feed-mill": { decode: decodeSolidFeedMill, examples: "EFF-S4-10 040/30C10R1.6M or EFP-E4CF 10-20C10R1.7M72" },
+  "ti-turbo": { decode: decodeTiTurbo, examples: "ECK-H4M 10-20C10CFR0.5-72 or ECK-H7 10-22C10CFR0.5T72" },
+  "neobarrel": { decode: decodeNeobarrel, examples: "EOB-R2R85A24/8-4C10-72, ELB-R1R20A7-6C10-72 or HCT D120-QF" },
   "iso-turning": { decode: decodeIsoTurning, examples: "MWLNR 2525M-08W or S25S MWLNR-08W" },
   "iso-insert": { decode: decodeIsoInsert, examples: "WNMG 080408 E-GN" },
   cbn: { decode: decodeCbn, examples: "CNGA 120408S (N) 2MT MF BI15HC" },
