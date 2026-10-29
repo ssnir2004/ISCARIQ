@@ -452,3 +452,39 @@ export function decodeChamring(text: string): Decoded | null {
     ],
   };
 }
+
+// MULTI-MASTER drilling heads: MM HCD100-120-2T06 (diameter x10 or inch, point
+// angle), MM ECD-10X90-2T06 (spot drill: diameter, angle), MM ECS-A3.15X08-2T05
+// (DIN 332 form, pilot and body diameters), MM ECF45-080-4T05, MM EDF, MM
+// EFCB110A08-4T06, MM ECDF080A100-2T05, MM SPD080-08-3T06; each ends with the
+// number of flutes and the T thread size of the MULTI-MASTER connection.
+export function decodeMultiMasterDrill(text: string): Decoded | null {
+  const s = squash(text);
+  const m = s.match(/^MM(HCD|ECF|ECS|EDF|ECDF|ECD|EFCB|SPD)-?(.+?)-(\d)T(\d{2})(-M)?$/);
+  if (!m) return null;
+  const [, fam, dims] = m;
+  const parts: DecodedPart[] = [{ key: "t-family", code: fam }];
+  let d: RegExpMatchArray | null;
+  if (fam === "ECS" && (d = dims.match(/^([AB])(\d+\.\d+)X(\d+)$/))) {
+    parts.push(
+      { key: "t-form", code: d[1] },
+      { key: "t-dia", code: d[2], text: `Pilot diameter ${mm(Number(d[2]))}` },
+      { key: "t-dims", code: d[3], text: `Body diameter code ${d[3]} (see the catalog)` },
+    );
+  } else if (fam === "ECD" && (d = dims.match(/^(\d{2})X(\d{2,3})$/))) {
+    parts.push({ key: "t-dia", code: d[1], text: `Diameter ${mm(Number(d[1]))}` }, { key: "t-angle", code: d[2], text: `Point angle ${Number(d[2])}°` });
+  } else if (fam === "HCD" && (d = dims.match(/^(\d{3}|\.\d{3})-(\d{3})$/))) {
+    parts.push(
+      { key: "t-dia", code: d[1], text: d[1].startsWith(".") ? `Diameter ${d[1]} inch` : `Diameter ${mm(dia(d[1]))}` },
+      { key: "t-angle", code: d[2], text: `Point angle ${Number(d[2])}°` },
+    );
+  } else if ((d = dims.match(/^(\d{3,4})(?:[A-]|$)(.*)$/)) && fam !== "ECF") {
+    parts.push({ key: "t-dia", code: d[1], text: `Diameter ${mm(dia(d[1]))}` });
+    if (d[2]) parts.push({ key: "t-dims", code: d[2], text: `Dimension code ${d[2]} (see the catalog)` });
+  } else {
+    parts.push({ key: "t-dims", code: dims, text: `Dimension code ${dims} (see the catalog)` });
+  }
+  parts.push({ key: "t-flutes", code: m[3], text: `${m[3]} flutes` }, { key: "t-connection", code: `T${m[4]}`, text: `MULTI-MASTER T${m[4]} connection` });
+  if (m[5]) parts.push({ key: "t-suffix", code: "M" });
+  return { kind: "MULTI-MASTER head", parts };
+}

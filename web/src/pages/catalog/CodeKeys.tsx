@@ -70,6 +70,7 @@ const DRILLING_BRANDS: KeyType[] = [
   { id: "multi-function", label: "MULTI-FUNCTION TOOLS", settingKey: "codekey.multifunction", defaultTitle: "MULTI-FUNCTION TOOLS code key", decoder: "multi-function" },
   { id: "solid-drill", label: "SOLID-DRILL", settingKey: "codekey.soliddrill", defaultTitle: "SOLID-DRILL code key", decoder: "solid-drill" },
   { id: "chamring", label: "CHAMRING", settingKey: "codekey.chamring", defaultTitle: "CHAMRING code key", decoder: "chamring" },
+  { id: "multi-master-drill", label: "MULTI-MASTER", settingKey: "codekey.multimasterdrill", defaultTitle: "MULTI-MASTER code key", decoder: "multi-master-drill" },
 ];
 
 const MORE_TYPES: Record<string, KeyType[]> = { [DEFAULT_TAB.toLowerCase()]: TURNING_INSERTS, parting: PARTING_BRANDS, drilling: DRILLING_BRANDS };
