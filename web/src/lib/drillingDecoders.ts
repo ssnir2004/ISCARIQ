@@ -232,3 +232,40 @@ export function decodeDrTwist(text: string): Decoded | null {
   }
   return null;
 }
+
+// COMBI-CHAM: large diameter drills with a pilot SUMO-CHAM head and peripheral
+// inserts, MNC 260-130 A32-150-06-5D (diameter x10, usable length, shank,
+// pilot ICP head x10, insert size, depth ratio) or ...-169-W5-8D (WCGX size 05
+// peripheral inserts), and their wiper inserts SOGX 050204-W, SOGT 09T306-W.
+export function decodeCombiCham(text: string): Decoded | null {
+  const s = squash(text);
+  let m = s.match(/^(SOGX|SOGT)(\d{2})([\dT]\d)(\d{2})-W$/);
+  if (m) {
+    return {
+      kind: "COMBI-CHAM insert",
+      parts: [
+        { key: "i-family", code: m[1] },
+        { key: "i-size", code: m[2], text: `Insert size ${m[2]}` },
+        { key: "i-thick", code: m[3], lookup: m[3].includes("T") ? "#T#" : "##" },
+        { key: "i-radius", code: m[4], text: `Corner radius ${mm(Number(m[4]) / 10)}` },
+        { key: "i-chip", code: "W" },
+      ],
+    };
+  }
+  if (!(m = s.match(/^MNC(\d{3})-(\d{3})([A-Z])(\d{2})-(\d{3})-(W?\d{1,2})-(\d+)D$/))) return null;
+  return {
+    kind: "COMBI-CHAM drill",
+    parts: [
+      { key: "t-family", code: "MNC" },
+      { key: "t-dia", code: m[1], text: `Drilling diameter ${mm(dia(m[1]))}` },
+      { key: "t-length", code: m[2], text: `Usable length about ${Number(m[2])} mm` },
+      { key: "t-shank", code: m[3] },
+      { key: "t-height", code: m[4], text: `Shank diameter ${mm(Number(m[4]))}` },
+      { key: "t-pilot", code: m[5], text: `Pilot SUMO-CHAM head ICP ${m[5]} (${mm(dia(m[5]))})` },
+      m[6].startsWith("W")
+        ? { key: "t-insert", code: m[6], text: `Peripheral WCGX size ${m[6].slice(1).padStart(2, "0")} inserts` }
+        : { key: "t-insert", code: m[6], text: `Peripheral size ${m[6]} inserts (SOGX / SOGT)` },
+      { key: "t-depth", code: `${m[7]}D`, text: `Drilling depth ${m[7]}xD` },
+    ],
+  };
+}
