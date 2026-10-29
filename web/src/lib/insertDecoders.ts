@@ -1,3 +1,4 @@
+import { decodeSumoCham } from "./drillingDecoders";
 import { decodeIsoTurning } from "./isoTurning";
 import { DO_GRIP_TOOLS, decodeBgm, decodeCutGrip, decodeDoveIqGrip, decodeGft, decodeGim, decodeGroove4Cut, decodeFlashPenta, decodeHeliGrip, decodeMinCut, decodePenta, decodePentaIq, decodeQuickPenta, decodeChamGroove, decodeHeliFace, decodeQuickIGroove, decodeSelfGrip, decodeSumoGrip, decodeSwissCut, decodeTag, decodeTopGrip, decodeTool } from "./partingDecoders";
 
@@ -20,7 +21,7 @@ export interface Decoded {
   parts: DecodedPart[];
 }
 
-export type DecoderName = "iso-turning" | "iso-insert" | "cbn" | "ceramic" | "pcd" | "do-grip" | "tang-grip" | "penta" | "gim" | "bgm" | "gft" | "self-grip" | "cut-grip" | "groove4cut" | "heli-grip" | "top-grip" | "swisscut" | "cham-groove" | "quick-i-groove" | "heliface" | "quick-penta" | "penta-iq" | "flashpenta" | "sumo-grip" | "dove-iq-grip" | "mincut";
+export type DecoderName = "iso-turning" | "iso-insert" | "cbn" | "ceramic" | "pcd" | "do-grip" | "tang-grip" | "penta" | "gim" | "bgm" | "gft" | "self-grip" | "cut-grip" | "groove4cut" | "heli-grip" | "top-grip" | "swisscut" | "cham-groove" | "quick-i-groove" | "heliface" | "quick-penta" | "penta-iq" | "flashpenta" | "sumo-grip" | "dove-iq-grip" | "mincut" | "sumo-cham";
 
 const mm = (digits: string, scale = 1) => `${Number((Number(digits) * scale).toFixed(3))} mm`;
 const squash = (s: string) => s.toUpperCase().replace(/\s+/g, "");
@@ -139,6 +140,7 @@ function decodeDoGrip(text: string): Decoded | null {
 }
 
 export const DECODERS: Record<DecoderName, { decode: (text: string) => Decoded | null; examples: string }> = {
+  "sumo-cham": { decode: decodeSumoCham, examples: "ICP 040, ICK 0635-2M or DCN 060-018-12R-3D" },
   "iso-turning": { decode: decodeIsoTurning, examples: "MWLNR 2525M-08W or S25S MWLNR-08W" },
   "iso-insert": { decode: decodeIsoInsert, examples: "WNMG 080408 E-GN" },
   cbn: { decode: decodeCbn, examples: "CNGA 120408S (N) 2MT MF BI15HC" },
