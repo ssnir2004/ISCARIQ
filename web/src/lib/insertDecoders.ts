@@ -1,4 +1,4 @@
-import { decodeChamDrill, decodeChamring, decodeCombiCham, decodeDrTwist, decodeModuDrill, decodeMultiFunction, decodeQuick3Cham, decodeSolidDrill, decodeSpadeCham, decodeSumoCham, decodeSumoChamIq, decodeSumoGun, decodeSumoLDrill } from "./drillingDecoders";
+import { decodeChamDrill, decodeChamring, decodeCombiCham, decodeDrTwist, decodeModuDrill, decodeMultiFunction, decodeMultiMasterDrill, decodeQuick3Cham, decodeSolidDrill, decodeSpadeCham, decodeSumoCham, decodeSumoChamIq, decodeSumoGun, decodeSumoLDrill } from "./drillingDecoders";
 import { decodeIsoTurning } from "./isoTurning";
 import { DO_GRIP_TOOLS, decodeBgm, decodeCutGrip, decodeDoveIqGrip, decodeGft, decodeGim, decodeGroove4Cut, decodeFlashPenta, decodeHeliGrip, decodeMinCut, decodePenta, decodePentaIq, decodeQuickPenta, decodeChamGroove, decodeHeliFace, decodeQuickIGroove, decodeSelfGrip, decodeSumoGrip, decodeSwissCut, decodeTag, decodeTopGrip, decodeTool } from "./partingDecoders";
 
@@ -21,7 +21,7 @@ export interface Decoded {
   parts: DecodedPart[];
 }
 
-export type DecoderName = "iso-turning" | "iso-insert" | "cbn" | "ceramic" | "pcd" | "do-grip" | "tang-grip" | "penta" | "gim" | "bgm" | "gft" | "self-grip" | "cut-grip" | "groove4cut" | "heli-grip" | "top-grip" | "swisscut" | "cham-groove" | "quick-i-groove" | "heliface" | "quick-penta" | "penta-iq" | "flashpenta" | "sumo-grip" | "dove-iq-grip" | "mincut" | "sumo-cham" | "sumo-cham-iq" | "quick-3-cham" | "sumo-l-drill" | "spade-cham" | "cham-drill" | "sumo-gun" | "dr-twist" | "combi-cham" | "modu-drill" | "multi-function" | "solid-drill" | "chamring";
+export type DecoderName = "iso-turning" | "iso-insert" | "cbn" | "ceramic" | "pcd" | "do-grip" | "tang-grip" | "penta" | "gim" | "bgm" | "gft" | "self-grip" | "cut-grip" | "groove4cut" | "heli-grip" | "top-grip" | "swisscut" | "cham-groove" | "quick-i-groove" | "heliface" | "quick-penta" | "penta-iq" | "flashpenta" | "sumo-grip" | "dove-iq-grip" | "mincut" | "sumo-cham" | "sumo-cham-iq" | "quick-3-cham" | "sumo-l-drill" | "spade-cham" | "cham-drill" | "sumo-gun" | "dr-twist" | "combi-cham" | "modu-drill" | "multi-function" | "solid-drill" | "chamring" | "multi-master-drill";
 
 const mm = (digits: string, scale = 1) => `${Number((Number(digits) * scale).toFixed(3))} mm`;
 const squash = (s: string) => s.toUpperCase().replace(/\s+/g, "");
@@ -153,6 +153,7 @@ export const DECODERS: Record<DecoderName, { decode: (text: string) => Decoded |
   "multi-function": { decode: decodeMultiFunction, examples: "DRG-MF-10R-2.25D-12A-05, XCMT 050204-MF or PICCO R-MFT60 6-4 L08" },
   "solid-drill": { decode: decodeSolidDrill, examples: "SCD 060-020-060 AP3N, SCD 030-097-060 SXC30 or SCCD 040-017-060 ACP3" },
   "chamring": { decode: decodeChamring, examples: "CHAMRING 080-WN20-06 or XCGT 060300-45DT" },
+  "multi-master-drill": { decode: decodeMultiMasterDrill, examples: "MM HCD100-120-2T06, MM ECD-10X90-2T06 or MM SPD080-08-3T06" },
   "iso-turning": { decode: decodeIsoTurning, examples: "MWLNR 2525M-08W or S25S MWLNR-08W" },
   "iso-insert": { decode: decodeIsoInsert, examples: "WNMG 080408 E-GN" },
   cbn: { decode: decodeCbn, examples: "CNGA 120408S (N) 2MT MF BI15HC" },
