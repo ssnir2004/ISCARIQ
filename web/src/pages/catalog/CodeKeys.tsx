@@ -64,6 +64,7 @@ const DRILLING_BRANDS: KeyType[] = [
   { id: "spade-cham", label: "SPADE-CHAM", settingKey: "codekey.spadecham", defaultTitle: "SPADE-CHAM code key", decoder: "spade-cham" },
   { id: "cham-drill", label: "CHAM-DRILL", settingKey: "codekey.chamdrill", defaultTitle: "CHAM-DRILL code key", decoder: "cham-drill" },
   { id: "sumo-gun", label: "SUMO-GUN", settingKey: "codekey.sumogun", defaultTitle: "SUMO-GUN code key", decoder: "sumo-gun" },
+  { id: "dr-twist", label: "DR-TWIST", settingKey: "codekey.drtwist", defaultTitle: "DR-TWIST code key", decoder: "dr-twist" },
 ];
 
 const MORE_TYPES: Record<string, KeyType[]> = { [DEFAULT_TAB.toLowerCase()]: TURNING_INSERTS, parting: PARTING_BRANDS, drilling: DRILLING_BRANDS };
