@@ -1,5 +1,6 @@
 import { decodeChamDrill, decodeChamring, decodeCombiCham, decodeDrTwist, decodeFineBeam, decodeIscarDeepDrill, decodeIscarGundrills, decodeModuDrill, decodeMultiFunction, decodeMultiMasterDrill, decodeQuick3Cham, decodeSolidDrill, decodeSpadeCham, decodeSumoCham, decodeSumoChamIq, decodeSumoGun, decodeSumoLDrill, decodeTriDeep } from "./drillingDecoders";
 import { decodeChatterFree, decodeFinishred, decodeMultiFeedMaster, decodeMultiMasterMill, decodeNeobarrel, decodeSolidFeedMill, decodeSolidmill, decodeSolidshred, decodeTiTurbo } from "./millingDecoders";
+import { indexableDecoder } from "./indexableMillingDecoders";
 import { decodeIsoTurning } from "./isoTurning";
 import { DO_GRIP_TOOLS, decodeBgm, decodeCutGrip, decodeDoveIqGrip, decodeGft, decodeGim, decodeGroove4Cut, decodeFlashPenta, decodeHeliGrip, decodeMinCut, decodePenta, decodePentaIq, decodeQuickPenta, decodeChamGroove, decodeHeliFace, decodeQuickIGroove, decodeSelfGrip, decodeSumoGrip, decodeSwissCut, decodeTag, decodeTopGrip, decodeTool } from "./partingDecoders";
 
@@ -22,7 +23,7 @@ export interface Decoded {
   parts: DecodedPart[];
 }
 
-export type DecoderName = "iso-turning" | "iso-insert" | "cbn" | "ceramic" | "pcd" | "do-grip" | "tang-grip" | "penta" | "gim" | "bgm" | "gft" | "self-grip" | "cut-grip" | "groove4cut" | "heli-grip" | "top-grip" | "swisscut" | "cham-groove" | "quick-i-groove" | "heliface" | "quick-penta" | "penta-iq" | "flashpenta" | "sumo-grip" | "dove-iq-grip" | "mincut" | "sumo-cham" | "sumo-cham-iq" | "quick-3-cham" | "sumo-l-drill" | "spade-cham" | "cham-drill" | "sumo-gun" | "dr-twist" | "combi-cham" | "modu-drill" | "multi-function" | "solid-drill" | "chamring" | "multi-master-drill" | "tri-deep" | "fine-beam" | "iscar-deep-drill" | "iscar-gundrills" | "multi-master-mill" | "multi-feed-master" | "solidmill" | "chatter-free" | "solidshred" | "finishred" | "solid-feed-mill" | "ti-turbo" | "neobarrel";
+export type DecoderName = "iso-turning" | "iso-insert" | "cbn" | "ceramic" | "pcd" | "do-grip" | "tang-grip" | "penta" | "gim" | "bgm" | "gft" | "self-grip" | "cut-grip" | "groove4cut" | "heli-grip" | "top-grip" | "swisscut" | "cham-groove" | "quick-i-groove" | "heliface" | "quick-penta" | "penta-iq" | "flashpenta" | "sumo-grip" | "dove-iq-grip" | "mincut" | "sumo-cham" | "sumo-cham-iq" | "quick-3-cham" | "sumo-l-drill" | "spade-cham" | "cham-drill" | "sumo-gun" | "dr-twist" | "combi-cham" | "modu-drill" | "multi-function" | "solid-drill" | "chamring" | "multi-master-drill" | "tri-deep" | "fine-beam" | "iscar-deep-drill" | "iscar-gundrills" | "multi-master-mill" | "multi-feed-master" | "solidmill" | "chatter-free" | "solidshred" | "finishred" | "solid-feed-mill" | "ti-turbo" | "neobarrel" | `im-${string}`;
 
 const mm = (digits: string, scale = 1) => `${Number((Number(digits) * scale).toFixed(3))} mm`;
 const squash = (s: string) => s.toUpperCase().replace(/\s+/g, "");
@@ -168,6 +169,71 @@ export const DECODERS: Record<DecoderName, { decode: (text: string) => Decoded |
   "solid-feed-mill": { decode: decodeSolidFeedMill, examples: "EFF-S4-10 040/30C10R1.6M or EFP-E4CF 10-20C10R1.7M72" },
   "ti-turbo": { decode: decodeTiTurbo, examples: "ECK-H4M 10-20C10CFR0.5-72 or ECK-H7 10-22C10CFR0.5T72" },
   "neobarrel": { decode: decodeNeobarrel, examples: "EOB-R2R85A24/8-4C10-72, ELB-R1R20A7-6C10-72 or HCT D120-QF" },
+  "im-heli2000": { decode: indexableDecoder("HELI-2000"), examples: "HM90 E90A, HM90 E90AD, HM90 ADCT …" },
+  "im-helimill": { decode: indexableDecoder("HELI-MILL"), examples: "ADCR, ADK, ADKR …" },
+  "im-helialu": { decode: indexableDecoder("HELI-ALU"), examples: "APCR, HM90 EAL, HM90 APCR …" },
+  "im-heliquad": { decode: indexableDecoder("HELI-QUAD"), examples: "E45X, E90SP, E90X …" },
+  "im-heli4mill": { decode: indexableDecoder("HELI-4-MILL"), examples: "SOMT, E90SO, SOCT …" },
+  "im-quad2000": { decode: indexableDecoder("QUAD-2000"), examples: "QPMR, QOMT, QPMT …" },
+  "im-xquad": { decode: indexableDecoder("X-QUAD"), examples: "SDMT, SDK, SDHT …" },
+  "im-heli3mill": { decode: indexableDecoder("HELI-3-MILL"), examples: "HM390 TDCT, HM390 TDKT, HM390 TDKR …" },
+  "im-nanmill": { decode: indexableDecoder("NAN-MILL"), examples: "HM390 TPKR, HM390 ETP …" },
+  "im-heliplus": { decode: indexableDecoder("HELI-PLUS"), examples: "HP F90AN, HP ADCT, HP ADKT …" },
+  "im-helitang": { decode: indexableDecoder("HELI-TANG"), examples: "FDN, SDN, T490 ELN …" },
+  "im-sumomill": { decode: indexableDecoder("SUMO-MILL"), examples: "T290 ELN, T290 LNHT, T290 LNMT …" },
+  "im-iscarmill": { decode: indexableDecoder("ISCAR-MILL"), examples: "T230, E30, T245 …" },
+  "im-helido": { decode: indexableDecoder("HELI-DO"), examples: "RXMT, ONHU, ONMU …" },
+  "im-tormill": { decode: indexableDecoder("TOR-MILL"), examples: "E93CN, CNHT, CNMT …" },
+  "im-roundmill": { decode: indexableDecoder("ROUND-MILL"), examples: "ERCM, ER, FR …" },
+  "im-chammill": { decode: indexableDecoder("CHAM-MILL"), examples: "R90MT, O45MT, ERCM …" },
+  "im-chamfmill": { decode: indexableDecoder("CHAMF-MILL"), examples: "CH45, PNMT …" },
+  "im-heliocto": { decode: indexableDecoder("HELI-OCTO"), examples: "OEKT, OEMT, REMT …" },
+  "im-tangmill": { decode: indexableDecoder("TANG-MILL"), examples: "FDN, SDN, SSB …" },
+  "im-16mill": { decode: indexableDecoder("16-MILL"), examples: "F45NM, ONHU, ONMU …" },
+  "im-neodo": { decode: indexableDecoder("NEO-DO"), examples: "S890 SZMU, S890 SZHU, S890 FSZ …" },
+  "im-doveiqmill": { decode: indexableDecoder("DOVE-IQ-MILL"), examples: "IQ845 FSY, IQ845 FSYD063, IQ845 FSYD080 …" },
+  "im-logiq8tang": { decode: indexableDecoder("LOGIQ-8-TANG"), examples: "T890HT FLN, T890HT FLND50, T890HT FLND63 …" },
+  "im-alufraise": { decode: indexableDecoder("ALU-FRAISE"), examples: "CA, SPN, CARW …" },
+  "im-alutang": { decode: indexableDecoder("ALU-TANG"), examples: "F90LN …" },
+  "im-tangfin": { decode: indexableDecoder("TANG-FIN"), examples: "HTF …" },
+  "im-mill2000": { decode: indexableDecoder("MILL-2000"), examples: "3M E90AX, 3M F90AX, 3M SM …" },
+  "im-millshred": { decode: indexableDecoder("MILL-SHRED"), examples: "RCCW, RCMW, FRW …" },
+  "im-quickxflute": { decode: indexableDecoder("QUICK-X-FLUTE"), examples: "S890 SNMU, S890 SM …" },
+  "im-isoshred": { decode: indexableDecoder("ISO-SHRED"), examples: "SEMT, SPKR …" },
+  "im-tangplunge": { decode: indexableDecoder("TANG-PLUNGE"), examples: "HTP, TS …" },
+  "im-iscarplunger": { decode: indexableDecoder("ISCAR-PLUNGER"), examples: "PLHT, PLX, XCMT …" },
+  "im-ballplus": { decode: indexableDecoder("BALL-PLUS"), examples: "HBR, HBF, HCM …" },
+  "im-heliball": { decode: indexableDecoder("HELI-BALL"), examples: "CR, CDP, CM …" },
+  "im-dropmill": { decode: indexableDecoder("DROP-MILL"), examples: "BCM, BCR, BLR …" },
+  "im-tor6mill": { decode: indexableDecoder("TOR-6-MILL"), examples: "TR6 TNCU, TR6 TNMU, TR90 TXMT …" },
+  "im-quickdmill": { decode: indexableDecoder("QUICK-D-MILL"), examples: "MDR ANMU, MDR D16/.63, MDR D20/.79 …" },
+  "im-feedmill": { decode: indexableDecoder("FEED-MILL"), examples: "FF EW, FF FW, FF WOCT …" },
+  "im-mill4feed": { decode: indexableDecoder("MILL-4-FEED"), examples: "FFQ4 SOMT, FFQ4 SOMW, FFQ4 D040 …" },
+  "im-logiq4feed": { decode: indexableDecoder("LOGIQ-4-FEED"), examples: "FFX4 ED12, FFX4 ED16, FFX4 ED20 …" },
+  "im-heli6feed": { decode: indexableDecoder("HELI-6-FEED"), examples: "FF FWX, H600 WXCU, FF EWX …" },
+  "im-heli12feed": { decode: indexableDecoder("HELI-12-FEED"), examples: "MF FHX, H1200 HXCU …" },
+  "im-neofeed": { decode: indexableDecoder("NEO-FEED"), examples: "FFQ8 D050, FFQ8 D063, FFQ8 D066 …" },
+  "im-nan3feed": { decode: indexableDecoder("NAN-3-FEED"), examples: "FFT3 EFM, FFT3 EFMD08/.31, FFT3 EFMD10/.39 …" },
+  "im-micro3feed": { decode: indexableDecoder("MICRO-3-FEED"), examples: "FFT3 EFM, FFT3 EFMD10/.39, FFT3 EFMD12/.47 …" },
+  "im-16feedmill": { decode: indexableDecoder("16-FEED-MILL"), examples: "FF NM …" },
+  "im-cermill": { decode: indexableDecoder("CER-MILL"), examples: "ERP, FFN, EFN …" },
+  "im-helislot": { decode: indexableDecoder("HELI-SLOT"), examples: "ETS, SM, FDN …" },
+  "im-tangslot": { decode: indexableDecoder("TANG-SLOT"), examples: "FDN, SDN, LNET …" },
+  "im-minitangslot": { decode: indexableDecoder("MINI-TANG-SLOT"), examples: "ETS, FDN, SDN …" },
+  "im-tangslit": { decode: indexableDecoder("TANG-SLIT"), examples: "TGSF …" },
+  "im-slimslit": { decode: indexableDecoder("SLIM-SLIT"), examples: "SGST …" },
+  "im-selfgrip": { decode: indexableDecoder("SELF-GRIP"), examples: "GSFN, GSFU, SGSF …" },
+  "im-cutgrip": { decode: indexableDecoder("CUT-GRIP"), examples: "GM …" },
+  "im-chamslit": { decode: indexableDecoder("CHAM-SLIT"), examples: "TRIB, TRI …" },
+  "im-modugear": { decode: indexableDecoder("MODU-GEAR"), examples: "ETS, LNET …" },
+  "im-millthread": { decode: indexableDecoder("MILL-THREAD"), examples: "MTSRH, MTSR, MTE …" },
+  "im-quickmthread": { decode: indexableDecoder("QUICK-M-THREAD"), examples: "MTET …" },
+  "im-solidthread": { decode: indexableDecoder("SOLID-THREAD"), examples: "MTECS, MTEC, MTECB …" },
+  "im-solidmthread": { decode: indexableDecoder("SOLID-M-THREAD"), examples: "MTECBF, MTECM, MTECK …" },
+  "im-hssmill": { decode: indexableDecoder("HSS-MILL"), examples: "EBH, EH, ERH …" },
+  "im-tslot": { decode: indexableDecoder("T-SLOT"), examples: "SD …" },
+  "im-tface": { decode: indexableDecoder("T-FACE"), examples: "SD …" },
+  "im-tgear": { decode: indexableDecoder("T-GEAR"), examples: "SD …" },
   "iso-turning": { decode: decodeIsoTurning, examples: "MWLNR 2525M-08W or S25S MWLNR-08W" },
   "iso-insert": { decode: decodeIsoInsert, examples: "WNMG 080408 E-GN" },
   cbn: { decode: decodeCbn, examples: "CNGA 120408S (N) 2MT MF BI15HC" },
