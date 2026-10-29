@@ -55,7 +55,12 @@ const PARTING_BRANDS: KeyType[] = [
   { id: "gft", label: "SLIM-GRIP", settingKey: "codekey.gft", defaultTitle: "SLIM-GRIP code key", decoder: "gft" },
 ];
 
-const MORE_TYPES: Record<string, KeyType[]> = { [DEFAULT_TAB.toLowerCase()]: TURNING_INSERTS, parting: PARTING_BRANDS };
+// The Drilling families' keys (heads and drill bodies).
+const DRILLING_BRANDS: KeyType[] = [
+  { id: "sumo-cham", label: "SUMO-CHAM", settingKey: "codekey.sumocham", defaultTitle: "SUMO-CHAM code key", decoder: "sumo-cham" },
+];
+
+const MORE_TYPES: Record<string, KeyType[]> = { [DEFAULT_TAB.toLowerCase()]: TURNING_INSERTS, parting: PARTING_BRANDS, drilling: DRILLING_BRANDS };
 // Applications whose brand keys already cover their tools, so no Tools key.
 const NO_TOOLS_KEY = new Set(["parting"]);
 
