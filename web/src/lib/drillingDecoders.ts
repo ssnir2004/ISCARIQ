@@ -488,3 +488,75 @@ export function decodeMultiMasterDrill(text: string): Decoded | null {
   if (m[5]) parts.push({ key: "t-suffix", code: "M" });
   return { kind: "MULTI-MASTER head", parts };
 }
+
+// Deep hole drilling (BTA / ejector) tube tools shared by TRI-DEEP, FINE-BEAM
+// and ISCAR-DEEP-DRILL: DSD-EF 14.00-14.60-FT (system, thread connection,
+// diameter range, line), DSD-E3 17.71-18.40-DTL, DSD-E0 8.00-8.99 NOM 0, DSD-EC
+// 38.00-39.60; and their indexable inserts (TOGT 070304-DT, NPMT 050304R-G-I).
+const DEEP_SYSTEM: Record<string, string> = {
+  DSD: "Single tube (BTA) drill",
+  DDD: "Double tube (ejector) drill",
+  DSC: "Single tube counterbore",
+  DDC: "Double tube counterboring drill",
+  DSTR: "Single tube trepanning drill",
+};
+function decodeDeepTube(s: string): { parts: DecodedPart[]; line?: string } | null {
+  const m = s.match(/^(DSTR|DSD|DDD|DSC|DDC)-(E0|E1|E2|E3|EF|IF|EC|IC|EA|IA)(\d+\.\d+)-(\d+\.\d+)(?:-([A-Z]+)|NOM(\d))?$/);
+  if (!m) return null;
+  const inch = Number(m[3]) < 2;
+  const parts: DecodedPart[] = [
+    { key: "t-family", code: m[1], text: DEEP_SYSTEM[m[1]] },
+    { key: "t-connection", code: m[2] },
+    { key: "t-dia", code: `${m[3]}-${m[4]}`, text: `Diameter range ${m[3]} – ${m[4]}${inch ? " inch" : " mm"}` },
+  ];
+  if (m[5]) parts.push({ key: "t-line", code: m[5] });
+  if (m[6] !== undefined) parts.push({ key: "t-line", code: `NOM ${m[6]}`, lookup: "NOM #" });
+  return { parts, line: m[5] };
+}
+
+function decodeDeepInsert(s: string, families: string[], brand: string): Decoded | null {
+  const m = s.match(/^([A-Z]{4})(\d{2})(\d{2})(\d{2})([RL])?-([A-Z]+)(?:-([A-Z]))?$/);
+  if (!m || !families.includes(m[1])) return null;
+  return {
+    kind: `${brand} insert`,
+    parts: [
+      { key: "i-family", code: m[1] },
+      { key: "i-size", code: m[2], text: `Insert size ${m[2]}` },
+      { key: "i-thick", code: m[3], lookup: "##" },
+      { key: "i-radius", code: m[4], text: `Corner radius ${mm(Number(m[4]) / 10)}` },
+      ...(m[5] ? [{ key: "i-hand", code: m[5] }] : []),
+      { key: "i-chip", code: m[6] },
+      ...(m[7] ? [{ key: "i-position", code: m[7] }] : []),
+    ],
+  };
+}
+
+// TRI-DEEP: gundrills GD-DH 14.00-15D-M25-07 (diameter, depth ratio, driver,
+// insert size), GD-DHL 12.00X800-34 / 14.00-800-23 (long, overall length),
+// heads GDH-08.00 MKT, tube drills DSD-EF ...-FT / FTA, and TOGT / LOGT / ZSGT
+// inserts with 3 / 2 / 1 chip splitting edges.
+export function decodeTriDeep(text: string): Decoded | null {
+  const s = squash(text);
+  const insert = decodeDeepInsert(s, ["TOGT", "LOGT", "ZSGT"], "TRI-DEEP");
+  if (insert) return insert;
+  const tube = decodeDeepTube(s);
+  if (tube) return tube.line?.startsWith("FT") ? { kind: "TRI-DEEP deep drill", parts: tube.parts } : null;
+  let m = s.match(/^GDH-(\d+\.\d+)MKT$/);
+  if (m) return { kind: "TRI-DEEP gundrill head", parts: [{ key: "t-family", code: "GDH" }, { key: "t-dia", code: m[1], text: `Diameter ${mm(Number(m[1]))}` }, { key: "t-line", code: "MKT" }] };
+  if (!(m = s.match(/^GD-(DHL|DH)(\d+\.\d+)(?:-(\d+)D-([A-Z]+\d+(?:\.\d+)?)-(\d{2})(-N)?|[-X](\d{3,4})-([A-Z]*\d+(?:\.\d+)?))$/))) return null;
+  const parts: DecodedPart[] = [
+    { key: "t-family", code: `GD-${m[1]}` },
+    { key: "t-dia", code: m[2], text: `Diameter ${mm(Number(m[2]))}` },
+  ];
+  if (m[3]) {
+    parts.push(
+      { key: "t-depth", code: `${m[3]}D`, text: `Drilling depth ${m[3]}xD` },
+      { key: "t-driver", code: m[4], text: `Driver / shank code ${m[4]} (see the catalog)` },
+      { key: "t-insert", code: m[5], text: `For size ${m[5]} inserts` },
+    );
+    if (m[6]) parts.push({ key: "t-suffix", code: "N" });
+  } else {
+    parts.push({ key: "t-length", code: m[7], text: `Overall length ${Number(m[7])} mm` }, { key: "t-driver", code: m[8], text: `Driver / insert code ${m[8]} (see the catalog)` });
+  }
+  return { kind: "TRI-DEEP gundrill", parts };
+}
