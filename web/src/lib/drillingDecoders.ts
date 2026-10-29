@@ -181,3 +181,54 @@ export function decodeSumoGun(text: string): Decoded | null {
     ],
   };
 }
+
+// DR-TWIST: indexable insert drills DR120-036-16-04-3D-N (diameter x10, or in
+// mm from 26 mm with a leading 0: DR030 = 30 mm; usable length, shank, insert
+// size, depth ratio, N rotating / T non-rotating), large diameter DR-CA drills
+// 062-155-50-10/11CA, and their inserts SOMT 120408-DT, SOMT 09T306-GF, XOMT
+// 060204-DT, AOMT 040204-90DT.
+export function decodeDrTwist(text: string): Decoded | null {
+  const s = squash(text);
+  let m = s.match(/^(SOMT|SOMX|SOGX|SOGT|XOMT|AOMT|AOGT)(\d{2})([\dT]\d)(\d{2})-(\d{2})?([A-Z]{2})$/);
+  if (m) {
+    return {
+      kind: "DR-TWIST insert",
+      parts: [
+        { key: "i-family", code: m[1] },
+        { key: "i-size", code: m[2], text: `Insert size ${m[2]}` },
+        { key: "i-thick", code: m[3], lookup: m[3].includes("T") ? "#T#" : "##" },
+        { key: "i-radius", code: m[4], text: `Corner radius ${mm(Number(m[4]) / 10)}` },
+        ...(m[5] ? [{ key: "i-angle", code: m[5], text: `${Number(m[5])}° insert (chamfering)` }] : []),
+        { key: "i-chip", code: m[6] },
+      ],
+    };
+  }
+  if ((m = s.match(/^DR(\d{3})-(\d{3})-(\d{2})-(\d{2})-(\d+)D-([NT])$/))) {
+    const d = m[1].startsWith("0") ? Number(m[1]) : Number(m[1]) / 10;
+    return {
+      kind: "DR-TWIST drill",
+      parts: [
+        { key: "t-family", code: "DR" },
+        { key: "t-dia", code: m[1], text: `Drilling diameter ${mm(d)}` },
+        { key: "t-length", code: m[2], text: `Usable length about ${Number(m[2])} mm` },
+        { key: "t-height", code: m[3], text: `Shank diameter ${mm(Number(m[3]))}` },
+        { key: "t-insert", code: m[4], text: `For size ${m[4]} inserts` },
+        { key: "t-depth", code: `${m[5]}D`, text: `Drilling depth ${m[5]}xD` },
+        { key: "t-type", code: m[6] },
+      ],
+    };
+  }
+  if ((m = s.match(/^(\d{3})-(\d{3})-(\d{2})-(\d{2})\/(\d{2})CA$/))) {
+    return {
+      kind: "DR-TWIST large diameter drill",
+      parts: [
+        { key: "t-dia", code: m[1], text: `Drilling diameter ${mm(Number(m[1]))}` },
+        { key: "t-length", code: m[2], text: `Usable length about ${Number(m[2])} mm` },
+        { key: "t-height", code: m[3], text: `Shank diameter ${mm(Number(m[3]))}` },
+        { key: "t-insert", code: `${m[4]}/${m[5]}`, text: `For size ${m[4]} / ${m[5]} inserts` },
+        { key: "t-type", code: "CA" },
+      ],
+    };
+  }
+  return null;
+}
