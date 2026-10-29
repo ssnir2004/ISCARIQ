@@ -124,3 +124,9 @@ function decodeHeadBody(text: string, line: HeadBodyLine): Decoded | null {
 export function decodeQuick3Cham(text: string): Decoded | null {
   return decodeHeadBody(text, { brand: "QUICK-3-CHAM", heads: ["H3P", "F3P", "F3B"], bodies: ["D3N"] });
 }
+
+// SUMO-L-DRILL: double margin heads ILP 120-2M on DLN side screw lock bodies
+// (DLN 120-036-16A-3D).
+export function decodeSumoLDrill(text: string): Decoded | null {
+  return decodeHeadBody(text, { brand: "SUMO-L-DRILL", heads: ["ILP"], bodies: ["DLN"] });
+}
