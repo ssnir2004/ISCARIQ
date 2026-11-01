@@ -160,7 +160,79 @@ const INDEXABLE_MILLING_BRANDS: KeyType[] = [
   { id: "im-solidmthread", label: "SOLID-M-THREAD", settingKey: "codekey.im.solidmthread", defaultTitle: "SOLID-M-THREAD code key", decoder: "im-solidmthread" },
 ];
 
+// The turning catalog's brands (turning, grooving & parting, Swiss-type and
+// threading lines), by application, in catalog order.
+const TURNING_CATALOG_BRANDS: Record<string, KeyType[]> = {
+  "parting": [
+    { id: "tl-quick2cutmini", label: "QUICK2CUT MINI", settingKey: "codekey.tl.quick2cutmini", defaultTitle: "QUICK2CUT MINI code key", decoder: "tl-quick2cutmini" },
+    { id: "tl-swissgrip", label: "SWISSGRIP", settingKey: "codekey.tl.swissgrip", defaultTitle: "SWISSGRIP code key", decoder: "tl-swissgrip" },
+    { id: "tl-tanggripiq", label: "TANG-GRIP-IQ", settingKey: "codekey.tl.tanggripiq", defaultTitle: "TANG-GRIP-IQ code key", decoder: "tl-tanggripiq" },
+    { id: "tl-modugrip", label: "MODU-GRIP", settingKey: "codekey.tl.modugrip", defaultTitle: "MODU-GRIP code key", decoder: "tl-modugrip" },
+    { id: "tl-feedgrip", label: "FEED-GRIP", settingKey: "codekey.tl.feedgrip", defaultTitle: "FEED-GRIP code key", decoder: "tl-feedgrip" },
+    { id: "tl-logiqfgrip", label: "LOGIQ-F-GRIP", settingKey: "codekey.tl.logiqfgrip", defaultTitle: "LOGIQ-F-GRIP code key", decoder: "tl-logiqfgrip" },
+    { id: "tl-tangfgrip", label: "TANG-F-GRIP", settingKey: "codekey.tl.tangfgrip", defaultTitle: "TANG-F-GRIP code key", decoder: "tl-tangfgrip" },
+    { id: "tl-dofgrip", label: "DO-F-GRIP", settingKey: "codekey.tl.dofgrip", defaultTitle: "DO-F-GRIP code key", decoder: "tl-dofgrip" },
+    { id: "tl-jetcrown", label: "JET-CROWN", settingKey: "codekey.tl.jetcrown", defaultTitle: "JET-CROWN code key", decoder: "tl-jetcrown" },
+    { id: "tl-tang5grip", label: "TANG-5-GRIP", settingKey: "codekey.tl.tang5grip", defaultTitle: "TANG-5-GRIP code key", decoder: "tl-tang5grip" },
+  ],
+  "grooving": [
+    { id: "tl-vlock", label: "V-LOCK", settingKey: "codekey.tl.vlock", defaultTitle: "V-LOCK code key", decoder: "tl-vlock" },
+    { id: "tl-formtool", label: "FORM-TOOL", settingKey: "codekey.tl.formtool", defaultTitle: "FORM-TOOL code key", decoder: "tl-formtool" },
+    { id: "tl-iscarbroach", label: "ISCAR-BROACH", settingKey: "codekey.tl.iscarbroach", defaultTitle: "ISCAR-BROACH code key", decoder: "tl-iscarbroach" },
+    { id: "tl-jetcut", label: "JET-CUT", settingKey: "codekey.tl.jetcut", defaultTitle: "JET-CUT code key", decoder: "tl-jetcut" },
+  ],
+  "groove-turn": [
+    { id: "tl-modulargrip", label: "MODULAR-GRIP", settingKey: "codekey.tl.modulargrip", defaultTitle: "MODULAR-GRIP code key", decoder: "tl-modulargrip" },
+    { id: "tl-fixgrip", label: "FIX-GRIP", settingKey: "codekey.tl.fixgrip", defaultTitle: "FIX-GRIP code key", decoder: "tl-fixgrip" },
+    { id: "tl-spinjet", label: "SPIN-JET", settingKey: "codekey.tl.spinjet", defaultTitle: "SPIN-JET code key", decoder: "tl-spinjet" },
+  ],
+  "threading": [
+    { id: "tl-iscarthread", label: "ISCAR-THREAD", settingKey: "codekey.tl.iscarthread", defaultTitle: "ISCAR-THREAD code key", decoder: "tl-iscarthread" },
+    { id: "tl-minicham", label: "MINI-CHAM", settingKey: "codekey.tl.minicham", defaultTitle: "MINI-CHAM code key", decoder: "tl-minicham" },
+    { id: "tl-quickthread", label: "QUICK-THREAD", settingKey: "codekey.tl.quickthread", defaultTitle: "QUICK-THREAD code key", decoder: "tl-quickthread" },
+    { id: "tl-notchgrip", label: "NOTCH-GRIP", settingKey: "codekey.tl.notchgrip", defaultTitle: "NOTCH-GRIP code key", decoder: "tl-notchgrip" },
+    { id: "tl-decaiqthread", label: "DECA-IQ-THREAD", settingKey: "codekey.tl.decaiqthread", defaultTitle: "DECA-IQ-THREAD code key", decoder: "tl-decaiqthread" },
+    { id: "tl-iscartaps", label: "ISCAR-TAPS", settingKey: "codekey.tl.iscartaps", defaultTitle: "ISCAR-TAPS code key", decoder: "tl-iscartaps" },
+    { id: "tl-onetap", label: "ONE-TAP", settingKey: "codekey.tl.onetap", defaultTitle: "ONE-TAP code key", decoder: "tl-onetap" },
+    { id: "tl-threadqlock", label: "THREAD-Q-LOCK", settingKey: "codekey.tl.threadqlock", defaultTitle: "THREAD-Q-LOCK code key", decoder: "tl-threadqlock" },
+  ],
+  "turning": [
+    { id: "tl-quickturn", label: "QUICK-TURN", settingKey: "codekey.tl.quickturn", defaultTitle: "QUICK-TURN code key", decoder: "tl-quickturn" },
+    { id: "tl-quicktlock", label: "QUICK-T-LOCK", settingKey: "codekey.tl.quicktlock", defaultTitle: "QUICK-T-LOCK code key", decoder: "tl-quicktlock" },
+    { id: "tl-jetrturn", label: "JET-R-TURN", settingKey: "codekey.tl.jetrturn", defaultTitle: "JET-R-TURN code key", decoder: "tl-jetrturn" },
+    { id: "tl-heliturnld", label: "HELI-TURN-LD", settingKey: "codekey.tl.heliturnld", defaultTitle: "HELI-TURN-LD code key", decoder: "tl-heliturnld" },
+    { id: "tl-multiwedge", label: "MULTI-WEDGE", settingKey: "codekey.tl.multiwedge", defaultTitle: "MULTI-WEDGE code key", decoder: "tl-multiwedge" },
+    { id: "tl-doveiqturn", label: "DOVE-IQ-TURN", settingKey: "codekey.tl.doveiqturn", defaultTitle: "DOVE-IQ-TURN code key", decoder: "tl-doveiqturn" },
+    { id: "tl-neoturn", label: "NEO-TURN", settingKey: "codekey.tl.neoturn", defaultTitle: "NEO-TURN code key", decoder: "tl-neoturn" },
+    { id: "tl-minipturn", label: "MINI-P-TURN", settingKey: "codekey.tl.minipturn", defaultTitle: "MINI-P-TURN code key", decoder: "tl-minipturn" },
+    { id: "tl-alupturn", label: "ALU-P-TURN", settingKey: "codekey.tl.alupturn", defaultTitle: "ALU-P-TURN code key", decoder: "tl-alupturn" },
+    { id: "tl-heavysuperturn", label: "HEAVY-SUPER-TURN", settingKey: "codekey.tl.heavysuperturn", defaultTitle: "HEAVY-SUPER-TURN code key", decoder: "tl-heavysuperturn" },
+    { id: "tl-heliturn", label: "HELI-TURN", settingKey: "codekey.tl.heliturn", defaultTitle: "HELI-TURN code key", decoder: "tl-heliturn" },
+    { id: "tl-logiq4turn", label: "LOGIQ-4-TURN", settingKey: "codekey.tl.logiq4turn", defaultTitle: "LOGIQ-4-TURN code key", decoder: "tl-logiq4turn" },
+    { id: "tl-safetlock", label: "SAFE-T-LOCK", settingKey: "codekey.tl.safetlock", defaultTitle: "SAFE-T-LOCK code key", decoder: "tl-safetlock" },
+    { id: "tl-isoyturn", label: "ISO-Y-TURN", settingKey: "codekey.tl.isoyturn", defaultTitle: "ISO-Y-TURN code key", decoder: "tl-isoyturn" },
+    { id: "tl-whisperline", label: "WHISPERLINE", settingKey: "codekey.tl.whisperline", defaultTitle: "WHISPERLINE code key", decoder: "tl-whisperline" },
+    { id: "tl-logiq6turn", label: "LOGIQ-6-TURN", settingKey: "codekey.tl.logiq6turn", defaultTitle: "LOGIQ-6-TURN code key", decoder: "tl-logiq6turn" },
+    { id: "tl-feedturn", label: "FEED-TURN", settingKey: "codekey.tl.feedturn", defaultTitle: "FEED-TURN code key", decoder: "tl-feedturn" },
+    { id: "tl-chamturn", label: "CHAM-TURN", settingKey: "codekey.tl.chamturn", defaultTitle: "CHAM-TURN code key", decoder: "tl-chamturn" },
+    { id: "tl-cermturn", label: "CER-M-TURN", settingKey: "codekey.tl.cermturn", defaultTitle: "CER-M-TURN code key", decoder: "tl-cermturn" },
+  ],
+  "turning for swiss-type": [
+    { id: "tl-neoswiss", label: "NEO-SWISS", settingKey: "codekey.tl.neoswiss", defaultTitle: "NEO-SWISS code key", decoder: "tl-neoswiss" },
+    { id: "tl-neoyswiss", label: "NEO-Y-SWISS", settingKey: "codekey.tl.neoyswiss", defaultTitle: "NEO-Y-SWISS code key", decoder: "tl-neoyswiss" },
+    { id: "tl-swissturn", label: "SWISS-TURN", settingKey: "codekey.tl.swissturn", defaultTitle: "SWISS-TURN code key", decoder: "tl-swissturn" },
+    { id: "tl-quickswiss", label: "QUICK-SWISS", settingKey: "codekey.tl.quickswiss", defaultTitle: "QUICK-SWISS code key", decoder: "tl-quickswiss" },
+    { id: "tl-piccojet", label: "PICCO-JET", settingKey: "codekey.tl.piccojet", defaultTitle: "PICCO-JET code key", decoder: "tl-piccojet" },
+    { id: "tl-piccocut", label: "PICCO-CUT", settingKey: "codekey.tl.piccocut", defaultTitle: "PICCO-CUT code key", decoder: "tl-piccocut" },
+    { id: "tl-piccoindex", label: "PICCO-INDEX", settingKey: "codekey.tl.piccoindex", defaultTitle: "PICCO-INDEX code key", decoder: "tl-piccoindex" },
+    { id: "tl-piccomft", label: "PICCO-MFT", settingKey: "codekey.tl.piccomft", defaultTitle: "PICCO-MFT code key", decoder: "tl-piccomft" },
+    { id: "tl-picco3cut", label: "PICCO-3-CUT", settingKey: "codekey.tl.picco3cut", defaultTitle: "PICCO-3-CUT code key", decoder: "tl-picco3cut" },
+    { id: "tl-piccomf", label: "PICCO-MF", settingKey: "codekey.tl.piccomf", defaultTitle: "PICCO-MF code key", decoder: "tl-piccomf" },
+  ],
+};
+
 const MORE_TYPES: Record<string, KeyType[]> = { [DEFAULT_TAB.toLowerCase()]: TURNING_INSERTS, parting: PARTING_BRANDS, drilling: DRILLING_BRANDS, milling: MILLING_BRANDS, "endmills(sc) & mm": MILLING_BRANDS, "indexable milling": INDEXABLE_MILLING_BRANDS };
+for (const [app, types] of Object.entries(TURNING_CATALOG_BRANDS)) MORE_TYPES[app] = [...(MORE_TYPES[app] ?? []), ...types];
 // Applications whose brand keys already cover their tools, so no Tools key.
 const NO_TOOLS_KEY = new Set(["parting", "drilling", "milling", "endmills(sc) & mm", "indexable milling"]);
 
