@@ -60,6 +60,18 @@ const app = express();
 const PORT = Number(process.env.PORT ?? 4000);
 const WEB_ORIGIN = process.env.WEB_ORIGIN ?? "http://localhost:5173";
 
+// The web app is built for the /ISCARIQ base path (app.rentflows.work/ISCARIQ,
+// whose proxy strips it). Accept the same addresses straight on this service
+// too (iscariq.onrender.com/ISCARIQ/...), so it works without the proxy.
+const BASE_PATH = (process.env.VITE_BASE_PATH ?? "/ISCARIQ").replace(/\/+$/, "");
+if (BASE_PATH) {
+  app.use((req, res, next) => {
+    if (req.path === BASE_PATH) return res.redirect(301, `${BASE_PATH}/${req.url.slice(BASE_PATH.length)}`);
+    if (req.url.startsWith(`${BASE_PATH}/`)) req.url = req.url.slice(BASE_PATH.length);
+    next();
+  });
+}
+
 app.use(cors({ origin: WEB_ORIGIN, credentials: true }));
 app.use(express.json({ limit: "25mb" }));
 app.use(cookieParser());
