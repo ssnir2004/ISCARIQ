@@ -30,8 +30,8 @@ const NAV = [
 ];
 
 // The menu's order and sections, per user (setting "nav.<user id>"): screens
-// by path and sections with a title (an empty title is a plain separator).
-type Entry = { kind: "item"; to: string } | { kind: "section"; id: string; title: string };
+// by path, sections with a title and dividers (a plain line, no title).
+type Entry = { kind: "item"; to: string } | { kind: "section"; id: string; title: string; divider?: boolean };
 
 const DEFAULT_LAYOUT: Entry[] = NAV.map((n) => ({ kind: "item", to: n.to }));
 
@@ -94,7 +94,7 @@ export function Layout() {
         </div>
         {editing ? (
           <div className="flex-1 space-y-1 p-2">
-            <div className="px-1 pb-1 text-xs text-neutral-500 dark:text-neutral-400">Drag to reorder; add sections to group screens.</div>
+            <div className="px-1 pb-1 text-xs text-neutral-500 dark:text-neutral-400">Drag to reorder; add sections or dividers to group screens.</div>
             {editing.map((e, i) => (
               <div
                 key={keyOf(e)}
@@ -119,6 +119,12 @@ export function Layout() {
                 <span className="select-none text-neutral-400">⋮⋮</span>
                 {e.kind === "item" ? (
                   <span className="flex-1 truncate">{label(e.to)}</span>
+                ) : e.divider ? (
+                  <span className="flex flex-1 items-center gap-2 text-xs text-neutral-400">
+                    <span className="flex-1 border-t border-neutral-400 dark:border-neutral-500" />
+                    Divider
+                    <span className="flex-1 border-t border-neutral-400 dark:border-neutral-500" />
+                  </span>
                 ) : (
                   <input
                     value={e.title}
@@ -134,19 +140,28 @@ export function Layout() {
                   ↓
                 </button>
                 {e.kind === "section" && (
-                  <button type="button" title="Remove section" onClick={() => setEditing((cur) => cur && cur.filter((_, j) => j !== i))} className={smallButton}>
+                  <button type="button" title={e.divider ? "Remove divider" : "Remove section"} onClick={() => setEditing((cur) => cur && cur.filter((_, j) => j !== i))} className={smallButton}>
                     ✕
                   </button>
                 )}
               </div>
             ))}
-            <button
-              type="button"
-              onClick={() => setEditing((cur) => cur && [...cur, { kind: "section", id: `s${Date.now()}`, title: "New section" }])}
-              className="w-full rounded-lg border border-dashed border-neutral-300 px-3 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
-            >
-              + Add section
-            </button>
+            <div className="flex gap-1">
+              <button
+                type="button"
+                onClick={() => setEditing((cur) => cur && [...cur, { kind: "section", id: `s${Date.now()}`, title: "New section" }])}
+                className="flex-1 rounded-lg border border-dashed border-neutral-300 px-2 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
+              >
+                + Section
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditing((cur) => cur && [...cur, { kind: "section", id: `d${Date.now()}`, title: "", divider: true }])}
+                className="flex-1 rounded-lg border border-dashed border-neutral-300 px-2 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
+              >
+                + Divider
+              </button>
+            </div>
             <div className="flex gap-1 pt-2">
               <button type="button" disabled={saving} onClick={save} className="flex-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
                 {saving ? "Saving…" : "Save"}
@@ -162,7 +177,9 @@ export function Layout() {
         ) : (
           <nav className="flex-1 space-y-1 p-2">
             {layout.map((e, i) =>
-              e.kind === "section" ? (
+              e.kind === "section" && e.divider ? (
+                <div key={e.id} className="mx-3 my-2 border-t border-neutral-300 dark:border-neutral-700" />
+              ) : e.kind === "section" ? (
                 <div key={e.id} className={`px-3 pb-1 ${i > 0 ? "mt-3 border-t border-neutral-200 pt-3 dark:border-neutral-800" : "pt-1"}`}>
                   {e.title && <div className="text-xs font-semibold uppercase tracking-wide text-neutral-400 dark:text-neutral-500">{e.title}</div>}
                 </div>
