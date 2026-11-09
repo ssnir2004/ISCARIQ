@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { GlossaryPage, type GlossaryExtraSection, type GlossaryListContext, type GlossaryTagField, type GlossaryTextField } from "./catalog/GlossaryPage";
 import { Button, Label, Textarea } from "../components/ui";
@@ -12,6 +13,44 @@ import { byCategory } from "../lib/useCategories";
 
 export const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : "");
 const yearOf = (e: Record<string, unknown>) => (typeof e.year === "number" ? e.year : null);
+
+// The card's right side, cut to the picture's height (10rem) with "…" to show
+// all of it, so long uses or tool texts don't make one card taller than others.
+function Collapsible({ className, children }: { className: string; children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const [overflows, setOverflows] = useState(false);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const check = () => setOverflows(el.scrollHeight > el.clientHeight + 1);
+    check();
+    const observer = new ResizeObserver(check);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [open]);
+  return (
+    <aside className={`relative flex flex-col ${className}`} data-innovation-parts>
+      <div ref={ref} className={`flex flex-col gap-3 ${open ? "" : "max-h-40 overflow-hidden"}`}>
+        {children}
+      </div>
+      {!open && overflows && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-white sm:left-4 dark:from-neutral-900" />
+      )}
+      {(open || overflows) && (
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          title={open ? "Show less" : "Show all"}
+          className={`${open ? "relative mt-1 self-end" : "absolute right-0 bottom-0"} rounded bg-white px-2 text-lg leading-none font-bold text-blue-600 hover:bg-blue-50 dark:bg-neutral-900 dark:text-blue-400 dark:hover:bg-blue-900/30`}
+          data-innovation-more
+        >
+          {open ? "▴" : "…"}
+        </button>
+      )}
+    </aside>
+  );
+}
 
 function Timeline({ data, startEdit, remove }: GlossaryListContext) {
   // Oldest first.
@@ -108,9 +147,10 @@ function Timeline({ data, startEdit, remove }: GlossaryListContext) {
                 </div>
               </div>
               {/* Uses (with their inserts) and tool to the right of the description, over about
-                  half the card's width (uses in two columns on wide screens) to keep the card short. */}
+                  half the card's width (uses in two columns on wide screens), cut to the
+                  picture's height so every card on the timeline is the same size. */}
               {(uses.length > 0 || parts.length > 0) && (
-                <aside className="flex w-full shrink-0 flex-col gap-3 border-neutral-200 text-sm sm:w-1/2 sm:border-l sm:pl-4 xl:w-[55%] dark:border-neutral-800" data-innovation-parts>
+                <Collapsible className="w-full shrink-0 border-neutral-200 text-sm sm:w-1/2 sm:border-l sm:pl-4 xl:w-[55%] dark:border-neutral-800">
                   {uses.length > 0 && (
                     <div data-innovation-uses>
                       <p className="text-xs font-semibold tracking-wide text-neutral-500 uppercase dark:text-neutral-400">Uses</p>
@@ -153,7 +193,7 @@ function Timeline({ data, startEdit, remove }: GlossaryListContext) {
                       <p className="whitespace-pre-line text-neutral-600 dark:text-neutral-300">{str(e[part.key])}</p>
                     </div>
                   ))}
-                </aside>
+                </Collapsible>
               )}
             </article>
           </li>
