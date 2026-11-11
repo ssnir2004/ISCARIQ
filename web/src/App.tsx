@@ -7,6 +7,7 @@ import { PlantsHub } from "./pages/PlantsHub";
 import { RfqDetail } from "./pages/RfqDetail";
 import { ProjectDetail } from "./pages/ProjectDetail";
 import { Advisor } from "./pages/Advisor";
+import { Calculators } from "./pages/Calculators";
 import { ChangePassword } from "./pages/ChangePassword";
 import { CaseView } from "./pages/CaseView";
 import { Materials } from "./pages/catalog/Materials";
@@ -68,6 +69,8 @@ function AppRoutes() {
         <Route path="/rfqs/:id" element={<RfqDetail />} />
         <Route path="/projects/:id" element={<ProjectDetail />} />
         <Route path="/advisor" element={<Advisor />} />
+        <Route path="/calculators" element={<Calculators />} />
+        <Route path="/calculators/:slug" element={<Calculators />} />
         <Route path="/change-password" element={<ChangePassword />} />
         <Route path="/catalog/materials" element={<Materials />} />
         <Route path="/catalog/problem-tags" element={<ProblemTags />} />
