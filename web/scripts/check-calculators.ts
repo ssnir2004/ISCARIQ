@@ -1,5 +1,6 @@
 // Checks the calculators against worked examples and the inch formulas.
 // Run from the repo root: npx tsx web/scripts/check-calculators.ts
+import katex from "katex";
 import { CALCULATOR_TABS, fromMetric, toMetric, type Dim, type Units, type Values } from "../src/lib/calculators";
 
 let failed = 0;
@@ -18,6 +19,19 @@ const inch = (value: number, dim: Dim) => toMetric(value, dim, "inch");
 const out = (value: number, dim: Dim) => fromMetric(value, dim, "inch");
 const steel = { rake: 0, kc1: 1775, mc: 0.24 };
 const rad = (deg: number) => (deg * Math.PI) / 180;
+
+// Every formula must be valid TeX.
+for (const tab of CALCULATOR_TABS)
+  for (const calculator of tab.calculators)
+    for (const m of calculator.modes)
+      for (const line of [...m.formula.metric, ...m.formula.inch]) {
+        try {
+          katex.renderToString(line, { throwOnError: true });
+        } catch (error) {
+          failed++;
+          console.log(`FAIL TeX ${calculator.id}: ${line}: ${error}`);
+        }
+      }
 
 // Every default must produce finite results.
 for (const tab of CALCULATOR_TABS)

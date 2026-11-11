@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import katex from "katex";
+import "katex/dist/katex.min.css";
 import { Navigate, NavLink, useParams } from "react-router-dom";
 import { Card, Input, Label, PageHeader, Select } from "../components/ui";
-import { CALCULATOR_TABS, DIMS, fromMetric, toMetric, type Calculator, type Mode, type Units } from "../lib/calculators";
+import { CALCULATOR_TABS, DIMS, fromMetric, toMetric, type Calculator, type CalculatorTab, type Mode, type Units } from "../lib/calculators";
 import { DEFAULT_KC_MATERIAL, KC_MATERIALS } from "../lib/kcMaterials";
 import { iso513Label } from "../lib/npaKnowledgeConstants";
 import type { Iso513Group } from "../lib/types";
@@ -10,6 +12,7 @@ import type { Iso513Group } from "../lib/types";
 
 const LAST_TAB_KEY = "iscariq.calculators.tab";
 const UNITS_KEY = "iscariq.calculators.units";
+const FORMULAS_KEY = "iscariq.calculators.formulas";
 const GROUPS: Iso513Group[] = ["P", "M", "K", "N", "S", "H"];
 
 const readStorage = (key: string) => {
@@ -145,13 +148,71 @@ function ModeForm({ mode, units }: { mode: Mode; units: Units }) {
           )}
         </div>
       )}
-      <div className="font-mono text-xs text-neutral-500 dark:text-neutral-400">
-        {mode.formula[units].map((line) => (
-          <div key={line}>{line}</div>
-        ))}
-      </div>
       {mode.note && <p className="text-xs text-neutral-500 dark:text-neutral-400">{mode.note}</p>}
     </div>
+  );
+}
+
+function Tex({ source }: { source: string }) {
+  const html = useMemo(() => katex.renderToString(`\\displaystyle ${source}`, { throwOnError: false }), [source]);
+  return <span dangerouslySetInnerHTML={{ __html: html }} />;
+}
+
+// The tab's formulas by calculator; a line already shown by an earlier
+// calculator (the kc formula, say) isn't repeated.
+function formulasOf(tab: CalculatorTab, units: Units) {
+  const seen = new Set<string>();
+  return tab.calculators.flatMap((c) => {
+    const groups = c.modes
+      .map((m) => {
+        const label = m.label?.includes("→") ? undefined : m.label;
+        const lines = m.formula[units].filter((line) => !seen.has(line));
+        // Modes shown without a label read as one list, so they don't repeat either.
+        if (!label) lines.forEach((line) => seen.add(line));
+        return { label, lines };
+      })
+      .filter((g) => g.lines.length > 0);
+    c.modes.forEach((m) => m.formula[units].forEach((line) => seen.add(line)));
+    return groups.length > 0 ? [{ id: c.id, title: c.title, groups }] : [];
+  });
+}
+
+function FormulaPanel({ tab, units }: { tab: CalculatorTab; units: Units }) {
+  const [open, setOpen] = useState(() => readStorage(FORMULAS_KEY) !== "hidden");
+  const toggle = () => {
+    setOpen(!open);
+    writeStorage(FORMULAS_KEY, open ? "hidden" : "shown");
+  };
+  return (
+    <Card className="mb-4 p-4" data-calculator-formulas>
+      <div className="flex items-center justify-between">
+        <h2 className="font-semibold text-neutral-900 dark:text-neutral-100">Formulas</h2>
+        <button type="button" onClick={toggle} className="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400">
+          {open ? "Hide" : "Show"}
+        </button>
+      </div>
+      {open && (
+        <div className="mt-3 gap-8 md:columns-2 xl:columns-3">
+          {formulasOf(tab, units).map((f) => (
+            <section key={f.id} className="mb-5 min-w-0 break-inside-avoid border-l-2 border-blue-200 pl-3 dark:border-blue-900">
+              <h3 className="mb-2 text-xs font-semibold tracking-wide text-blue-700 uppercase dark:text-blue-300">{f.title}</h3>
+              <div className="space-y-3">
+                {f.groups.map((g, i) => (
+                  <div key={i} className="space-y-2">
+                    {g.label && <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">{g.label}</p>}
+                    {g.lines.map((line) => (
+                      <div key={line} className="overflow-x-auto overflow-y-hidden py-0.5 text-neutral-800 dark:text-neutral-100">
+                        <Tex source={line} />
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
+    </Card>
   );
 }
 
@@ -243,6 +304,7 @@ export function Calculators() {
           </NavLink>
         ))}
       </div>
+      <FormulaPanel tab={tab} units={units} />
       <div className="grid items-stretch gap-4 md:grid-cols-2 xl:grid-cols-3">
         {tab.calculators.map((c) => (
           <CalculatorCard key={c.id} calculator={c} units={units} />
