@@ -11,6 +11,7 @@ const NAV = [
   { to: "/solutions", label: "Solutions" },
   { to: "/branches", label: "ISCAR Branches" },
   { to: "/advisor", label: "Insert Advisor" },
+  { to: "/calculators", label: "Calculators" },
   { to: "/catalog/npas", label: "NPA Catalog" },
   { to: "/catalog/npa-knowledge", label: "NPA Knowledge Base" },
   { to: "/catalog/inserts", label: "Inserts" },
