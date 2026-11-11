@@ -39,6 +39,7 @@ export type Mode = {
   results: Result[];
   // A result with one row per step, under the single results.
   table?: { columns: Omit<Result, "symbol">[]; rows: (v: Values) => Values[] };
+  // TeX lines, per unit system.
   formula: Record<Units, string[]>;
   // Shows a material picker that fills kc1 and mc.
   usesMaterial?: boolean;
@@ -66,7 +67,10 @@ const spindleSpeed = (vc: number, D: number) => (vc * 1000) / (Math.PI * D);
 export const specificCuttingForce = (kc1: number, mc: number, hm: number, rake: number) => kc1 * hm ** -mc * (1 - rake / 100);
 
 const same = (lines: string[]) => ({ metric: lines, inch: lines });
-const KC_LINE = "kc = kc1.1 · hm^-mc · (1 − γ/100)";
+// Formulas are TeX, shown at the top of each tab.
+const tex = String.raw;
+const KC_LINE = tex`k_c = k_{c1.1} \cdot h_m^{-m_c} \cdot \left(1 - \frac{\gamma}{100}\right)`;
+const DIAMETER_TEX: Record<string, string> = { Dm: "D_m", Dc: "D_c", Dcap: tex`D_{\mathrm{cap}}` };
 
 const field = (key: string, symbol: string, label: string, dim: Dim, value: number, signed?: boolean): Field => ({ key, symbol, label, dim, value, signed });
 const result = (key: string, symbol: string, label: string, dim: Dim): Result => ({ key, symbol, label, dim });
@@ -102,7 +106,7 @@ const tcResult = result("Tc", "Tc", "Machining time", "min");
 const fzResult = result("fz", "fz", "Feed per tooth", "length");
 const dcapResult = result("Dcap", "Dcap", "Cutting diameter at depth ap", "length");
 
-const speedCalculator = (id: string, title: string, D: Field): Calculator => ({
+const speedCalculator = (id: string, title: string, D: Field, d = DIAMETER_TEX[D.key]): Calculator => ({
   id,
   title,
   modes: [
@@ -110,14 +114,14 @@ const speedCalculator = (id: string, title: string, D: Field): Calculator => ({
       label: "n → vc",
       inputs: [D, n],
       results: [vcResult],
-      formula: { metric: [`vc = π · ${D.symbol} · n / 1000`], inch: [`vc = π · ${D.symbol} · n / 12`] },
+      formula: { metric: [tex`v_c = \frac{\pi \cdot ${d} \cdot n}{1000}`], inch: [tex`v_c = \frac{\pi \cdot ${d} \cdot n}{12}`] },
       compute: (v) => ({ vc: (Math.PI * v[D.key] * v.n) / 1000 }),
     },
     {
       label: "vc → n",
       inputs: [D, vc],
       results: [nResult],
-      formula: { metric: [`n = vc · 1000 / (π · ${D.symbol})`], inch: [`n = vc · 12 / (π · ${D.symbol})`] },
+      formula: { metric: [tex`n = \frac{v_c \cdot 1000}{\pi \cdot ${d}}`], inch: [tex`n = \frac{v_c \cdot 12}{\pi \cdot ${d}}`] },
       compute: (v) => ({ n: spindleSpeed(v.vc, v[D.key]) }),
     },
   ],
@@ -126,7 +130,7 @@ const speedCalculator = (id: string, title: string, D: Field): Calculator => ({
 const turningTime = (id: string): Calculator => ({
   id,
   title: "Machining time",
-  modes: [{ inputs: [lm, fn, n], results: [tcResult], formula: same(["Tc = lm / (fn · n)"]), compute: (v) => ({ Tc: v.lm / (v.fn * v.n) }) }],
+  modes: [{ inputs: [lm, fn, n], results: [tcResult], formula: same([tex`T_c = \frac{l_m}{f_n \cdot n}`]), compute: (v) => ({ Tc: v.lm / (v.fn * v.n) }) }],
 });
 
 const turning: CalculatorTab = {
@@ -137,7 +141,7 @@ const turning: CalculatorTab = {
     {
       id: "turning-mrr",
       title: "Metal removal rate",
-      modes: [{ inputs: [vc, ap, fn], results: [qResult], formula: { metric: ["Q = vc · ap · fn"], inch: ["Q = vc · ap · fn · 12"] }, compute: (v) => ({ Q: v.vc * v.ap * v.fn }) }],
+      modes: [{ inputs: [vc, ap, fn], results: [qResult], formula: { metric: [tex`Q = v_c \cdot a_p \cdot f_n`], inch: [tex`Q = v_c \cdot a_p \cdot f_n \cdot 12`] }, compute: (v) => ({ Q: v.vc * v.ap * v.fn }) }],
     },
     {
       id: "turning-power",
@@ -148,8 +152,8 @@ const turning: CalculatorTab = {
           inputs: [vc, ap, fn, kapr, rake, kc1, mc],
           results: [kcResult, pcResult],
           formula: {
-            metric: ["Pc = vc · ap · fn · kc / (60 · 10³)", KC_LINE, "hm = fn · sin(KAPR)"],
-            inch: ["Pc = vc · ap · fn · kc / (33 · 10³)", KC_LINE, "hm = fn · sin(KAPR)"],
+            metric: [tex`P_c = \frac{v_c \cdot a_p \cdot f_n \cdot k_c}{60 \cdot 10^3}`, KC_LINE, tex`h_m = f_n \cdot \sin(\mathrm{KAPR})`],
+            inch: [tex`P_c = \frac{v_c \cdot a_p \cdot f_n \cdot k_c}{33 \cdot 10^3}`, KC_LINE, tex`h_m = f_n \cdot \sin(\mathrm{KAPR})`],
           },
           compute: (v) => {
             const kc = specificCuttingForce(v.kc1, v.mc, v.fn * sinDeg(v.kapr), v.rake);
@@ -167,7 +171,7 @@ const turning: CalculatorTab = {
           usesMaterial: true,
           inputs: [ap, fn, kapr, rake, kc1, mc],
           results: [kcResult, result("Ft", "Ft", "Tangential force", "force")],
-          formula: same(["Ft = kc · ap · fn", KC_LINE, "hm = fn · sin(KAPR)"]),
+          formula: same([tex`F_t = k_c \cdot a_p \cdot f_n`, KC_LINE, tex`h_m = f_n \cdot \sin(\mathrm{KAPR})`]),
           note: "With a boring bar, keep Ft below about 90% of the bar's maximum load.",
           compute: (v) => {
             const kc = specificCuttingForce(v.kc1, v.mc, v.fn * sinDeg(v.kapr), v.rake);
@@ -197,7 +201,7 @@ const parting: CalculatorTab = {
             field("E", "E", "Modulus of elasticity", "stress", 210000),
           ],
           results: [result("delta", "δ", "Deflection", "length")],
-          formula: same(["δ = 4 · F · OH³ / (E · t · H³)"]),
+          formula: same([tex`\delta = \frac{4 \cdot F \cdot \mathrm{OH}^3}{E \cdot t \cdot H^3}`]),
           note: "F can be taken from Tangential force on the General turning tab. E is about 210,000 N/mm² for a steel blade.",
           compute: (v) => ({ delta: (4 * v.F * v.OH ** 3) / (v.E * v.t * v.H ** 3) }),
         },
@@ -218,13 +222,13 @@ const circularModes: Mode[] = (() => {
   const aeResult = result("aeEff", "ae,eff", "Effective radial depth of cut", "length");
   const vfmResult = result("vfm", "vfm", "Peripheral feed", "feedMin");
   const vfCentre = result("vf", "vf", "Tool centre feed", "feedMin");
-  const betaLines = ["β = arccos(1 − 2 · ae,eff / Dcap)", "fz = hex / sin β", "vfm = n · fz · zc"];
+  const betaLines = [tex`\beta = \arccos\left(1 - \frac{2 \cdot a_{e,\mathrm{eff}}}{D_{\mathrm{cap}}}\right)`, tex`f_z = \frac{h_{ex}}{\sin\beta}`, tex`v_{fm} = n \cdot f_z \cdot z_c`];
   return [
     {
       label: "Internal",
       inputs: [DmHole, field("Dw", "Dw", "Existing hole (0 = solid)", "length", 30, true), Dcap, n, hex, zcTool],
       results: [aeResult, fzResult, vfmResult, vfCentre, result("Dvf", "Dvf", "Tool path diameter", "length"), result("Dvf1", "Dvf1", "Roll-in path diameter", "length")],
-      formula: same(["ae,eff = (Dm² − Dw²) / (4 · (Dm − Dcap))", ...betaLines, "vf = vfm · (Dm − Dcap) / Dm", "Dvf = Dm − Dcap, Dvf1 = Dvf / 2", "Solid workpiece: ae,eff = Dm / 2, fz = hex"]),
+      formula: same([tex`a_{e,\mathrm{eff}} = \frac{D_m^2 - D_w^2}{4 \cdot (D_m - D_{\mathrm{cap}})}`, ...betaLines, tex`v_f = \frac{v_{fm} \cdot (D_m - D_{\mathrm{cap}})}{D_m}`, tex`D_{vf} = D_m - D_{\mathrm{cap}}, \quad D_{vf1} = \frac{D_{vf}}{2}`, tex`\text{Solid workpiece: } a_{e,\mathrm{eff}} = \frac{D_m}{2}, \quad f_z = h_{ex}`]),
       compute: (v) => {
         if (v.Dw < 0 || v.Dw >= v.Dm || v.Dcap >= v.Dm) return {};
         const aeEff = v.Dw === 0 ? v.Dm / 2 : (v.Dm ** 2 - v.Dw ** 2) / (4 * (v.Dm - v.Dcap));
@@ -237,7 +241,7 @@ const circularModes: Mode[] = (() => {
       label: "External",
       inputs: [DmHole, field("Dw", "Dw", "Workpiece diameter", "length", 60), Dcap, n, hex, zcTool],
       results: [aeResult, fzResult, vfmResult, vfCentre],
-      formula: same(["ae,eff = (Dw² − Dm²) / (4 · (Dm + Dcap))", ...betaLines, "vf = vfm · (Dm + Dcap) / Dm"]),
+      formula: same([tex`a_{e,\mathrm{eff}} = \frac{D_w^2 - D_m^2}{4 \cdot (D_m + D_{\mathrm{cap}})}`, ...betaLines, tex`v_f = \frac{v_{fm} \cdot (D_m + D_{\mathrm{cap}})}{D_m}`]),
       compute: (v) => {
         if (v.Dw <= v.Dm) return {};
         const aeEff = (v.Dw ** 2 - v.Dm ** 2) / (4 * (v.Dm + v.Dcap));
@@ -275,7 +279,7 @@ const threading: CalculatorTab = {
               return Array.from({ length: v.nap }, (_, i) => ({ pass: i + 1, depth: depthAt(i + 1), infeed: depthAt(i + 1) - depthAt(i) }));
             },
           },
-          formula: same(["Depth at pass x = ap / √(nap − 1) · √Y", "Y = 0.3 at pass 1, otherwise x − 1"]),
+          formula: same([tex`\text{Depth}_x = \frac{a_p}{\sqrt{n_{ap} - 1}} \cdot \sqrt{Y}`, tex`Y_1 = 0.3, \quad Y_x = x - 1 \;\; (x \ge 2)`]),
           compute: () => ({}),
         },
       ],
@@ -287,7 +291,7 @@ const threading: CalculatorTab = {
         {
           inputs: [field("starts", "N", "Number of starts", "none", 1), pitch, field("d2", "d2", "Pitch diameter", "length", 15)],
           results: [result("phi", "φ", "Lead angle", "deg")],
-          formula: same(["φ = arctan(N · P / (d2 · π))"]),
+          formula: same([tex`\varphi = \arctan\left(\frac{N \cdot P}{d_2 \cdot \pi}\right)`]),
           compute: (v) => ({ phi: (Math.atan((v.starts * v.P) / (v.d2 * Math.PI)) * 180) / Math.PI }),
         },
       ],
@@ -299,7 +303,7 @@ const threading: CalculatorTab = {
         {
           inputs: [tapD, field("vc", "vc", "Cutting speed", "cutSpeed", 20), pitch],
           results: [nResult, vfResult],
-          formula: { metric: ["n = vc · 1000 / (π · D)", "vf = P · n"], inch: ["n = vc · 12 / (π · D)", "vf = n / TPI"] },
+          formula: { metric: [tex`n = \frac{v_c \cdot 1000}{\pi \cdot D}`, tex`v_f = P \cdot n`], inch: [tex`n = \frac{v_c \cdot 12}{\pi \cdot D}`, tex`v_f = \frac{n}{\mathrm{TPI}}`] },
           compute: (v) => {
             const speed = spindleSpeed(v.vc, v.D);
             return { n: speed, vf: v.P * speed };
@@ -315,7 +319,7 @@ const threading: CalculatorTab = {
           usesMaterial: true,
           inputs: [pitch, tapD, field("kc1", "kc", "Specific cutting force", "stress", DEFAULT_KC_MATERIAL.kc1), field("n", "n", "Spindle speed", "rpm", 640)],
           results: [result("Md", "Md", "Torque", "tapTorque"), result("Pw", "P", "Power", "power")],
-          formula: same(["Md [Nm] = P² · D · kc / 8000", "P [kW] = Md · 2π · n / (60 · 1000)"]),
+          formula: same([tex`M_d \,[\mathrm{Nm}] = \frac{P^2 \cdot D \cdot k_c}{8000}`, tex`P \,[\mathrm{kW}] = \frac{M_d \cdot 2\pi \cdot n}{60 \cdot 1000}`]),
           note: "The material fills kc with its kc1.1. Taps cut thin chips, so the real kc is higher; raise it if you know it.",
           compute: (v) => {
             const Md = (v.P ** 2 * v.D * v.kc1) / 8000;
@@ -332,14 +336,14 @@ const threading: CalculatorTab = {
           label: "Cutting tap",
           inputs: [TD, pitch],
           results: [holeResult],
-          formula: { metric: ["D = TD − TP"], inch: ["D = TD − 0.975 / TPI"] },
+          formula: { metric: [tex`D = \mathrm{TD} - \mathrm{TP}`], inch: [tex`D = \mathrm{TD} - \frac{0.975}{\mathrm{TPI}}`] },
           compute: (v, units) => ({ D: v.TD - (units === "inch" ? 0.975 : 1) * v.P }),
         },
         {
           label: "Forming tap",
           inputs: [TD, pitch],
           results: [holeResult],
-          formula: { metric: ["D = TD − TP / 2"], inch: ["D = TD − 0.51 / TPI"] },
+          formula: { metric: [tex`D = \mathrm{TD} - \frac{\mathrm{TP}}{2}`], inch: [tex`D = \mathrm{TD} - \frac{0.51}{\mathrm{TPI}}`] },
           compute: (v, units) => ({ D: v.TD - (units === "inch" ? 0.51 : 0.5) * v.P }),
         },
       ],
@@ -356,14 +360,14 @@ const threading: CalculatorTab = {
             label: "Cutting tap",
             inputs: [TDm, P125, TH],
             results: [holeResult],
-            formula: { metric: ["D = TD − TH · TP / 76.98"], inch: ["D = TD − 0.0130 · TH / TPI"] },
+            formula: { metric: [tex`D = \mathrm{TD} - \frac{\mathrm{TH} \cdot \mathrm{TP}}{76.98}`], inch: [tex`D = \mathrm{TD} - \frac{0.0130 \cdot \mathrm{TH}}{\mathrm{TPI}}`] },
             compute: (v: Values) => ({ D: v.TD - (v.TH * v.P) / 76.98 }),
           },
           {
             label: "Forming tap",
             inputs: [TDm, P125, TH],
             results: [holeResult],
-            formula: { metric: ["D = TD − TH · TP / 147.06"], inch: ["D = TD − 0.0068 · TH / TPI"] },
+            formula: { metric: [tex`D = \mathrm{TD} - \frac{\mathrm{TH} \cdot \mathrm{TP}}{147.06}`], inch: [tex`D = \mathrm{TD} - \frac{0.0068 \cdot \mathrm{TH}}{\mathrm{TPI}}`] },
             compute: (v: Values) => ({ D: v.TD - (v.TH * v.P) / 147.06 }),
           },
         ];
@@ -376,7 +380,7 @@ const threading: CalculatorTab = {
         {
           inputs: [field("TD", "TD", "Nominal thread diameter", "length", 8), field("P", "P", "Thread pitch", "pitch", 1.25), field("core", "D", "Core hole diameter", "length", 6.9)],
           results: [result("TH", "TH", "Thread height", "percent")],
-          formula: same(["Maximum height = 6/8 · 0.866 · P", "Actual height = (TD − D) / 2", "TH = actual / maximum · 100"]),
+          formula: same([tex`\text{Maximum height} = \frac{6}{8} \cdot 0.866 \cdot P`, tex`\text{Actual height} = \frac{\mathrm{TD} - D}{2}`, tex`\mathrm{TH} = \frac{\text{Actual height}}{\text{Maximum height}} \cdot 100`]),
           note: "For 60° threads (ISO and UTS).",
           compute: (v) => ({ TH: ((v.TD - v.core) / 2 / ((6 / 8) * 0.866 * v.P)) * 100 }),
         },
@@ -400,14 +404,14 @@ const milling: CalculatorTab = {
           label: "fz → vf",
           inputs: [fz, n, zc],
           results: [vfResult, fnResult],
-          formula: same(["vf = fz · n · zc", "fn = vf / n"]),
+          formula: same([tex`v_f = f_z \cdot n \cdot z_c`, tex`f_n = \frac{v_f}{n}`]),
           compute: (v) => ({ vf: v.fz * v.n * v.zc, fn: v.fz * v.zc }),
         },
         {
           label: "vf → fz",
           inputs: [vf, n, zc],
           results: [fzResult, fnResult],
-          formula: same(["fz = vf / (n · zc)", "fn = vf / n"]),
+          formula: same([tex`f_z = \frac{v_f}{n \cdot z_c}`, tex`f_n = \frac{v_f}{n}`]),
           compute: (v) => ({ fz: v.vf / (v.n * v.zc), fn: v.vf / v.n }),
         },
       ],
@@ -415,7 +419,7 @@ const milling: CalculatorTab = {
     {
       id: "milling-mrr",
       title: "Metal removal rate",
-      modes: [{ inputs: [ap, ae, vf], results: [qResult], formula: { metric: ["Q = ap · ae · vf / 1000"], inch: ["Q = ap · ae · vf"] }, compute: (v) => ({ Q: (v.ap * v.ae * v.vf) / 1000 }) }],
+      modes: [{ inputs: [ap, ae, vf], results: [qResult], formula: { metric: [tex`Q = \frac{a_p \cdot a_e \cdot v_f}{1000}`], inch: [tex`Q = a_p \cdot a_e \cdot v_f`] }, compute: (v) => ({ Q: (v.ap * v.ae * v.vf) / 1000 }) }],
     },
     {
       id: "milling-power",
@@ -426,8 +430,8 @@ const milling: CalculatorTab = {
           inputs: [ae, ap, fz, n, zc, Dcap, field("kapr", "KAPR", "Entering angle", "deg", 90), rake, kc1, mc],
           results: [kcResult, pcResult, mcResult],
           formula: {
-            metric: ["Pc = ae · ap · vf · kc / (60 · 10⁶)", "Mc = Pc · 30 · 10³ / (π · n)", "vf = fz · n · zc", KC_LINE, "hm = fz · sin(KAPR) · 2 · ae / (Dcap · φ)", "φ = arccos(1 − 2 · ae / Dcap)"],
-            inch: ["Pc = ae · ap · vf · kc / (396 · 10³)", "Mc = Pc · 16501 / (π · n)", "vf = fz · n · zc", KC_LINE, "hm = fz · sin(KAPR) · 2 · ae / (Dcap · φ)", "φ = arccos(1 − 2 · ae / Dcap)"],
+            metric: [tex`P_c = \frac{a_e \cdot a_p \cdot v_f \cdot k_c}{60 \cdot 10^6}`, tex`M_c = \frac{P_c \cdot 30 \cdot 10^3}{\pi \cdot n}`, tex`v_f = f_z \cdot n \cdot z_c`, KC_LINE, tex`h_m = \frac{f_z \cdot \sin(\mathrm{KAPR}) \cdot 2 \cdot a_e}{D_{\mathrm{cap}} \cdot \varphi}`, tex`\varphi = \arccos\left(1 - \frac{2 \cdot a_e}{D_{\mathrm{cap}}}\right)`],
+            inch: [tex`P_c = \frac{a_e \cdot a_p \cdot v_f \cdot k_c}{396 \cdot 10^3}`, tex`M_c = \frac{P_c \cdot 16501}{\pi \cdot n}`, tex`v_f = f_z \cdot n \cdot z_c`, KC_LINE, tex`h_m = \frac{f_z \cdot \sin(\mathrm{KAPR}) \cdot 2 \cdot a_e}{D_{\mathrm{cap}} \cdot \varphi}`, tex`\varphi = \arccos\left(1 - \frac{2 \cdot a_e}{D_{\mathrm{cap}}}\right)`],
           },
           compute: (v): Values => {
             if (v.ae > v.Dcap) return {};
@@ -442,7 +446,7 @@ const milling: CalculatorTab = {
     {
       id: "milling-time",
       title: "Machining time",
-      modes: [{ inputs: [lm, vf], results: [tcResult], formula: same(["Tc = lm / vf"]), compute: (v) => ({ Tc: v.lm / v.vf }) }],
+      modes: [{ inputs: [lm, vf], results: [tcResult], formula: same([tex`T_c = \frac{l_m}{v_f}`]), compute: (v) => ({ Tc: v.lm / v.vf }) }],
     },
     {
       id: "milling-cutter",
@@ -452,7 +456,7 @@ const milling: CalculatorTab = {
           label: "Straight edge",
           inputs: [Dc, ap, field("kapr", "κr", "Entering angle", "deg", 45), ae, hex],
           results: [dcapResult, fzResult],
-          formula: same(["Dcap = Dc + 2 · ap / tan κr", "ae > Dcap/2: fz = hex / sin κr", "ae < Dcap/2: fz = hex · Dcap / (2 · sin κr · √(Dcap · ae − ae²))"]),
+          formula: same([tex`D_{\mathrm{cap}} = D_c + \frac{2 \cdot a_p}{\tan\kappa_r}`, tex`a_e > \frac{D_{\mathrm{cap}}}{2}: \quad f_z = \frac{h_{ex}}{\sin\kappa_r}`, tex`a_e < \frac{D_{\mathrm{cap}}}{2}: \quad f_z = \frac{h_{ex} \cdot D_{\mathrm{cap}}}{2 \cdot \sin\kappa_r \cdot \sqrt{D_{\mathrm{cap}} \cdot a_e - a_e^2}}`]),
           compute: (v) => {
             const D = v.kapr >= 90 ? v.Dc : v.Dc + (2 * v.ap) / Math.tan(rad(v.kapr));
             const sin = sinDeg(v.kapr);
@@ -463,7 +467,7 @@ const milling: CalculatorTab = {
           label: "Round insert",
           inputs: [Dc, field("iC", "iC", "Insert diameter", "length", 12), field("ap", "ap", "Cutting depth", "length", 1), ae, hex],
           results: [dcapResult, fzResult],
-          formula: same(["Dcap = Dc + √(iC² − (iC − 2 · ap)²)", "ae > Dcap/2: fz = hex · iC / (2 · √(ap · iC − ap²))", "ae < Dcap/2: fz = hex · iC · Dcap / (4 · √(ap · iC − ap²) · √(Dcap · ae − ae²))"]),
+          formula: same([tex`D_{\mathrm{cap}} = D_c + \sqrt{i_C^2 - (i_C - 2 \cdot a_p)^2}`, tex`a_e > \frac{D_{\mathrm{cap}}}{2}: \quad f_z = \frac{h_{ex} \cdot i_C}{2 \cdot \sqrt{a_p \cdot i_C - a_p^2}}`, tex`a_e < \frac{D_{\mathrm{cap}}}{2}: \quad f_z = \frac{h_{ex} \cdot i_C \cdot D_{\mathrm{cap}}}{4 \cdot \sqrt{a_p \cdot i_C - a_p^2} \cdot \sqrt{D_{\mathrm{cap}} \cdot a_e - a_e^2}}`]),
           compute: (v) => {
             const depth = Math.min(v.ap, v.iC / 2);
             const D = v.Dc + Math.sqrt(v.iC ** 2 - (v.iC - 2 * depth) ** 2);
@@ -475,7 +479,7 @@ const milling: CalculatorTab = {
           label: "Ball nose",
           inputs: [field("D3", "D3", "Ball diameter", "length", 12), field("ap", "ap", "Cutting depth", "length", 1), field("ae", "ae", "Radial depth of cut", "length", 1), hex],
           results: [dcapResult, fzResult],
-          formula: same(["Dcap = √(D3² − (D3 − 2 · ap)²)", "Centred: fz = D3 · hex / Dcap", "Side: fz = D3 · hex / √(Dcap² − (Dcap − 2 · ae)²)"]),
+          formula: same([tex`D_{\mathrm{cap}} = \sqrt{D_3^2 - (D_3 - 2 \cdot a_p)^2}`, tex`\text{Centred: } f_z = \frac{D_3 \cdot h_{ex}}{D_{\mathrm{cap}}}`, tex`\text{Side: } f_z = \frac{D_3 \cdot h_{ex}}{\sqrt{D_{\mathrm{cap}}^2 - (D_{\mathrm{cap}} - 2 \cdot a_e)^2}}`]),
           compute: (v) => {
             const depth = Math.min(v.ap, v.D3 / 2);
             const D = Math.sqrt(v.D3 ** 2 - (v.D3 - 2 * depth) ** 2);
@@ -499,14 +503,14 @@ const drilling: CalculatorTab = {
       id: "drilling-feed",
       title: "Penetration rate and feed",
       modes: [
-        { label: "fn → vf", inputs: [drillFn, n], results: [vfResult], formula: same(["vf = fn · n"]), compute: (v) => ({ vf: v.fn * v.n }) },
-        { label: "vf → fn", inputs: [vf, n], results: [fnResult], formula: same(["fn = vf / n"]), compute: (v) => ({ fn: v.vf / v.n }) },
+        { label: "fn → vf", inputs: [drillFn, n], results: [vfResult], formula: same([tex`v_f = f_n \cdot n`]), compute: (v) => ({ vf: v.fn * v.n }) },
+        { label: "vf → fn", inputs: [vf, n], results: [fnResult], formula: same([tex`f_n = \frac{v_f}{n}`]), compute: (v) => ({ fn: v.vf / v.n }) },
       ],
     },
     {
       id: "drilling-mrr",
       title: "Metal removal rate",
-      modes: [{ inputs: [Dc, drillFn, vc], results: [qResult], formula: { metric: ["Q = Dc · fn · vc / 4"], inch: ["Q = Dc · fn · vc · 3"] }, compute: (v) => ({ Q: (v.Dc * v.fn * v.vc) / 4 }) }],
+      modes: [{ inputs: [Dc, drillFn, vc], results: [qResult], formula: { metric: [tex`Q = \frac{D_c \cdot f_n \cdot v_c}{4}`], inch: [tex`Q = D_c \cdot f_n \cdot v_c \cdot 3`] }, compute: (v) => ({ Q: (v.Dc * v.fn * v.vc) / 4 }) }],
     },
     {
       id: "drilling-power",
@@ -517,8 +521,8 @@ const drilling: CalculatorTab = {
           inputs: [Dc, drillFn, vc, field("zc", "zc", "Effective cutting edges", "none", 2), field("kapr", "κr", "Entering angle", "deg", 70), rake, kc1, mc],
           results: [kcResult, pcResult, mcResult, result("Ff", "Ff", "Feed force", "force")],
           formula: {
-            metric: ["Pc = fn · vc · Dc · kc / (240 · 10³)", "Mc = Pc · 30 · 10³ / (π · n)", "Ff ≈ 0.5 · kc · Dc/2 · fn · sin κr", "kc = kc1.1 · (fz · sin κr)^-mc · (1 − γ/100)", "fz = fn / zc"],
-            inch: ["Pc = fn · vc · Dc · kc / (132 · 10³)", "Mc = Pc · 16501 / (π · n)", "Ff ≈ 0.5 · kc · Dc/2 · fn · sin κr", "kc = kc1.1 · (fz · sin κr)^-mc · (1 − γ/100)", "fz = fn / zc"],
+            metric: [tex`P_c = \frac{f_n \cdot v_c \cdot D_c \cdot k_c}{240 \cdot 10^3}`, tex`M_c = \frac{P_c \cdot 30 \cdot 10^3}{\pi \cdot n}`, tex`F_f \approx 0.5 \cdot k_c \cdot \frac{D_c}{2} \cdot f_n \cdot \sin\kappa_r`, tex`k_c = k_{c1.1} \cdot (f_z \cdot \sin\kappa_r)^{-m_c} \cdot \left(1 - \frac{\gamma}{100}\right)`, tex`f_z = \frac{f_n}{z_c}`],
+            inch: [tex`P_c = \frac{f_n \cdot v_c \cdot D_c \cdot k_c}{132 \cdot 10^3}`, tex`M_c = \frac{P_c \cdot 16501}{\pi \cdot n}`, tex`F_f \approx 0.5 \cdot k_c \cdot \frac{D_c}{2} \cdot f_n \cdot \sin\kappa_r`, tex`k_c = k_{c1.1} \cdot (f_z \cdot \sin\kappa_r)^{-m_c} \cdot \left(1 - \frac{\gamma}{100}\right)`, tex`f_z = \frac{f_n}{z_c}`],
           },
           compute: (v) => {
             const sin = sinDeg(v.kapr);
@@ -532,7 +536,7 @@ const drilling: CalculatorTab = {
     {
       id: "drilling-time",
       title: "Machining time",
-      modes: [{ inputs: [lm, drillFn, n], results: [tcResult], formula: same(["Tc = lm / vf", "vf = fn · n"]), compute: (v) => ({ Tc: v.lm / (v.fn * v.n) }) }],
+      modes: [{ inputs: [lm, drillFn, n], results: [tcResult], formula: same([tex`T_c = \frac{l_m}{v_f}`, tex`v_f = f_n \cdot n`]), compute: (v) => ({ Tc: v.lm / (v.fn * v.n) }) }],
     },
     {
       id: "drilling-tool-life",
@@ -541,7 +545,7 @@ const drilling: CalculatorTab = {
         {
           inputs: [field("TL", "TL", "Tool life", "meters", 15), field("depth", "lm", "Hole depth", "length", 50), drillFn, field("n", "n", "Spindle speed", "rpm", 3184)],
           results: [result("holes", "", "Number of holes", "none"), result("minutes", "", "Time in cut", "min")],
-          formula: same(["Holes = TL / hole depth", "Time = TL / (fn · n)"]),
+          formula: same([tex`\text{Holes} = \frac{\mathrm{TL}}{\text{Hole depth}}`, tex`\text{Time} = \frac{\mathrm{TL}}{f_n \cdot n}`]),
           compute: (v) => ({ holes: (v.TL * 1000) / v.depth, minutes: (v.TL * 1000) / (v.fn * v.n) }),
         },
       ],
@@ -549,7 +553,7 @@ const drilling: CalculatorTab = {
   ],
 };
 
-const boringPowerLines = [KC_LINE, "hm = fn / zc · sin(KAPR)"];
+const boringPowerLines = [KC_LINE, tex`h_m = \frac{f_n}{z_c} \cdot \sin(\mathrm{KAPR})`];
 
 const boring: CalculatorTab = {
   slug: "boring",
@@ -563,7 +567,7 @@ const boring: CalculatorTab = {
         {
           inputs: [field("zc", "zc", "Effective teeth", "none", 1), field("fz", "fz", "Feed per tooth", "length", 0.15), n],
           results: [fnResult, vfResult],
-          formula: same(["fn = zc · fz", "vf = fn · n"]),
+          formula: same([tex`f_n = z_c \cdot f_z`, tex`v_f = f_n \cdot n`]),
           compute: (v) => ({ fn: v.zc * v.fz, vf: v.zc * v.fz * v.n }),
         },
       ],
@@ -571,7 +575,7 @@ const boring: CalculatorTab = {
     {
       id: "boring-mrr",
       title: "Metal removal rate",
-      modes: [{ inputs: [vc, ap, fn], results: [qResult], formula: { metric: ["Q = vc · ap · fn"], inch: ["Q = vc · ap · fn · 12"] }, compute: (v) => ({ Q: v.vc * v.ap * v.fn }) }],
+      modes: [{ inputs: [vc, ap, fn], results: [qResult], formula: { metric: [tex`Q = v_c \cdot a_p \cdot f_n`], inch: [tex`Q = v_c \cdot a_p \cdot f_n \cdot 12`] }, compute: (v) => ({ Q: v.vc * v.ap * v.fn }) }],
     },
     {
       id: "boring-power",
@@ -582,8 +586,8 @@ const boring: CalculatorTab = {
           inputs: [vc, ap, fn, field("Dc", "Dc", "Cutting diameter", "length", 60), field("zc", "zc", "Effective teeth", "none", 1), kapr, rake, kc1, mc],
           results: [kcResult, pcResult, mcResult],
           formula: {
-            metric: ["Pc = vc · ap · fn · kc / (60 · 10³) · (1 − ap/Dc)", "Mc = Pc · 30 · 10³ / (π · n)", ...boringPowerLines],
-            inch: ["Pc = vc · ap · fn · kc / (33 · 10³) · (1 − ap/Dc)", "Mc = Pc · 16501 / (π · n)", ...boringPowerLines],
+            metric: [tex`P_c = \frac{v_c \cdot a_p \cdot f_n \cdot k_c}{60 \cdot 10^3} \cdot \left(1 - \frac{a_p}{D_c}\right)`, tex`M_c = \frac{P_c \cdot 30 \cdot 10^3}{\pi \cdot n}`, ...boringPowerLines],
+            inch: [tex`P_c = \frac{v_c \cdot a_p \cdot f_n \cdot k_c}{33 \cdot 10^3} \cdot \left(1 - \frac{a_p}{D_c}\right)`, tex`M_c = \frac{P_c \cdot 16501}{\pi \cdot n}`, ...boringPowerLines],
           },
           compute: (v) => {
             const kc = specificCuttingForce(v.kc1, v.mc, (v.fn / v.zc) * sinDeg(v.kapr), v.rake);
