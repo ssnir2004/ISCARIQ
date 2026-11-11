@@ -178,7 +178,7 @@ function formulasOf(tab: CalculatorTab, units: Units) {
 }
 
 function FormulaPanel({ tab, units }: { tab: CalculatorTab; units: Units }) {
-  const [open, setOpen] = useState(() => readStorage(FORMULAS_KEY) !== "hidden");
+  const [open, setOpen] = useState(() => readStorage(FORMULAS_KEY) === "shown");
   const toggle = () => {
     setOpen(!open);
     writeStorage(FORMULAS_KEY, open ? "hidden" : "shown");
