@@ -201,7 +201,7 @@ function FormulaPanel({ tab, units }: { tab: CalculatorTab; units: Units }) {
                   <div key={i} className="space-y-2">
                     {g.label && <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">{g.label}</p>}
                     {g.lines.map((line) => (
-                      <div key={line} className="overflow-x-auto overflow-y-hidden py-0.5 text-neutral-800 dark:text-neutral-100">
+                      <div key={line} className="overflow-x-auto overflow-y-hidden py-0.5 whitespace-nowrap text-neutral-800 dark:text-neutral-100">
                         <Tex source={line} />
                       </div>
                     ))}
@@ -213,6 +213,23 @@ function FormulaPanel({ tab, units }: { tab: CalculatorTab; units: Units }) {
         </div>
       )}
     </Card>
+  );
+}
+
+// The card's own formula. Modes that only change the formula's subject
+// (n → vc, vc → n) share the first mode's formula.
+function CardFormula({ calculator, index, units }: { calculator: Calculator; index: number; units: Units }) {
+  const mode = calculator.modes[index];
+  const lines = (mode.label?.includes("→") ? calculator.modes[0] : mode).formula[units];
+  if (lines.length === 0) return null;
+  return (
+    <div className="space-y-1.5 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-neutral-800 dark:border-neutral-700 dark:bg-neutral-800/50 dark:text-neutral-100" data-calculator-card-formula>
+      {lines.map((line) => (
+        <div key={line} className="overflow-x-auto overflow-y-hidden py-0.5 whitespace-nowrap">
+          <Tex source={line} />
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -239,6 +256,7 @@ function CalculatorCard({ calculator, units }: { calculator: Calculator; units: 
           </div>
         )}
       </div>
+      <CardFormula calculator={calculator} index={index} units={units} />
       <ModeForm key={index} mode={calculator.modes[index]} units={units} />
     </Card>
   );
