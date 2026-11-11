@@ -65,7 +65,8 @@ function ModeForm({ mode, units }: { mode: Mode; units: Units }) {
     metric[f.key] = toMetric(typed, f.dim, units);
     return values[f.key].trim() !== "" && Number.isFinite(typed) && (f.signed || typed > 0);
   });
-  const results = valid ? mode.compute(metric) : null;
+  const results = valid ? mode.compute(metric, units) : null;
+  const rows = valid && mode.table ? mode.table.rows(metric) : [];
 
   return (
     <div className="flex flex-1 flex-col gap-3">
@@ -96,21 +97,54 @@ function ModeForm({ mode, units }: { mode: Mode; units: Units }) {
           </div>
         ))}
       </div>
-      <div className="mt-auto space-y-1 rounded-lg bg-blue-50 px-3 py-2 dark:bg-blue-900/20">
-        {mode.results.map((r) => {
-          const value = results?.[r.key];
-          return (
-            <div key={r.key} className="flex items-baseline justify-between gap-3" data-calculator-result={r.key}>
-              <span className="text-xs text-neutral-600 dark:text-neutral-300">
-                <span className="font-semibold">{r.symbol}</span> {r.label}
-              </span>
-              <span className="text-lg font-bold whitespace-nowrap text-blue-700 dark:text-blue-300">
-                {value !== undefined && Number.isFinite(value) ? `${formatted(fromMetric(value, r.dim, units))} ${DIMS[r.dim][units]}` : "—"}
-              </span>
-            </div>
-          );
-        })}
-      </div>
+      {mode.results.length > 0 && (
+        <div className="mt-auto space-y-1 rounded-lg bg-blue-50 px-3 py-2 dark:bg-blue-900/20">
+          {mode.results.map((r) => {
+            const value = results?.[r.key];
+            return (
+              <div key={r.key} className="flex items-baseline justify-between gap-3" data-calculator-result={r.key}>
+                <span className="text-xs text-neutral-600 dark:text-neutral-300">
+                  <span className="font-semibold">{r.symbol}</span> {r.label}
+                </span>
+                <span className="text-lg font-bold whitespace-nowrap text-blue-700 dark:text-blue-300">
+                  {value !== undefined && Number.isFinite(value) ? `${formatted(fromMetric(value, r.dim, units))} ${DIMS[r.dim][units]}` : "—"}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {mode.table && (
+        <div className="mt-auto overflow-x-auto rounded-lg bg-blue-50 px-3 py-2 dark:bg-blue-900/20" data-calculator-table>
+          {rows.length === 0 ? (
+            <p className="text-center text-lg font-bold text-blue-700 dark:text-blue-300">—</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-xs text-neutral-600 dark:text-neutral-300">
+                  {mode.table.columns.map((c) => (
+                    <th key={c.key} className="py-1 text-right font-semibold first:text-left">
+                      {c.label}
+                      {DIMS[c.dim][units] && ` (${DIMS[c.dim][units]})`}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row, i) => (
+                  <tr key={i} className="font-semibold text-blue-700 dark:text-blue-300">
+                    {mode.table!.columns.map((c) => (
+                      <td key={c.key} className="py-0.5 text-right first:text-left">
+                        {formatted(fromMetric(row[c.key], c.dim, units))}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
       <div className="font-mono text-xs text-neutral-500 dark:text-neutral-400">
         {mode.formula[units].map((line) => (
           <div key={line}>{line}</div>
