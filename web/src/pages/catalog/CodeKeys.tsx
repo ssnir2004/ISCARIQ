@@ -501,9 +501,14 @@ function Tabs({ label, items, active, onChoose, small }: { label: string; items:
           aria-selected={t.id === active}
           onClick={() => onChoose(t.id)}
           className={`rounded-lg border font-medium ${small ? "px-3 py-1 text-xs" : "px-4 py-2 text-sm"} ${
+            // Applications are blue; families (code key types) are emerald.
             t.id === active
-              ? "border-blue-600 bg-blue-600 text-white"
-              : "border-neutral-300 text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
+              ? small
+                ? "border-emerald-600 bg-emerald-600 text-white"
+                : "border-blue-600 bg-blue-600 text-white"
+              : small
+                ? "border-emerald-300 text-emerald-800 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950/40"
+                : "border-neutral-300 text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
           }`}
         >
           {t.label}
@@ -578,14 +583,14 @@ function GeneralKey({ app, applications, brands, onOpen }: { app: Application; a
 function GeneralMatch({ family, solution, appName, settingKey, result, onOpen }: { family: string; solution?: Brand; appName: string; settingKey: string; result: Decoded; onOpen?: () => void }) {
   const data = useCodeKeyData(settingKey);
   return (
-    <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-3 dark:border-blue-900 dark:bg-blue-950/20" data-general-match={family}>
+    <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 dark:border-emerald-900 dark:bg-emerald-950/20" data-general-match={family}>
       <div className="mb-2 flex flex-wrap items-center gap-2">
         {solution ? (
-          <Link to={`/solutions/brand/${solution.id}`} title={`Open the ${solution.name} Solution`} className="rounded-md bg-blue-600 px-2.5 py-0.5 text-sm font-bold text-white hover:bg-blue-700" data-family-solution={solution.name}>
+          <Link to={`/solutions/brand/${solution.id}`} title={`Open the ${solution.name} Solution`} className="rounded-md bg-emerald-600 px-2.5 py-0.5 text-sm font-bold text-white hover:bg-emerald-700" data-family-solution={solution.name}>
             {family} ↗
           </Link>
         ) : (
-          <span className="rounded-md bg-blue-600 px-2.5 py-0.5 text-sm font-bold text-white">{family}</span>
+          <span className="rounded-md bg-emerald-600 px-2.5 py-0.5 text-sm font-bold text-white">{family}</span>
         )}
         <span className="text-sm text-neutral-700 dark:text-neutral-200">{result.kind === "Tool" ? `${family} tool` : result.kind}</span>
         <span className="text-xs text-neutral-500 dark:text-neutral-400">· {appName}</span>
