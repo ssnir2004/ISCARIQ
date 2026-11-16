@@ -236,27 +236,47 @@ for (const [app, types] of Object.entries(TURNING_CATALOG_BRANDS)) MORE_TYPES[ap
 // Applications whose brand keys already cover their tools, so no Tools key.
 const NO_TOOLS_KEY = new Set(["parting", "drilling", "milling", "endmills(sc) & mm", "indexable milling"]);
 
-// Parting's general key reads a designation of any parting, grooving or
-// groove-turn family and names its family.
+// Each application's general key reads a designation of any of its families
+// and names the family. Parting, grooving and groove-turn read each other's
+// families, since their tools and inserts overlap.
 const GENERAL: KeyType = { id: "general", label: "General", settingKey: "", defaultTitle: "" };
-const GENERAL_APPS = ["parting", "grooving", "groove-turn"];
+const PARTING_GROUP = ["parting", "grooving", "groove-turn"];
+const generalGroup = (name: string) => (PARTING_GROUP.includes(name) ? PARTING_GROUP : [name]);
+// Decoders reading any ISO code: they count only when no family reads it.
+const GENERIC = new Set<DecoderName>(["iso-turning", "iso-insert"]);
 
-function keyTypes(app: Application): KeyType[] {
+function ownKeyTypes(app: { id: string; name: string }): KeyType[] {
   // The tools key keeps its decoder in its own data (e.g. "iso-turning").
   const name = app.name.trim().toLowerCase();
   const tools: KeyType = { id: "tools", label: "Tools", settingKey: `codekey.app.${app.id}`, defaultTitle: `${app.name} code key` };
-  return [...(name === "parting" ? [GENERAL] : []), ...(NO_TOOLS_KEY.has(name) ? [] : [tools]), ...(MORE_TYPES[name] ?? [])];
+  return [...(NO_TOOLS_KEY.has(name) ? [] : [tools]), ...(MORE_TYPES[name] ?? [])];
+}
+
+// The key types with a decoder (the Turning tools key: ISO toolholders).
+function decoding(app: { id: string; name: string }) {
+  const turning = app.name.trim().toLowerCase() === DEFAULT_TAB.toLowerCase();
+  return ownKeyTypes(app)
+    .map((t) => (t.id === "tools" && turning ? { ...t, label: "ISO toolholders", decoder: "iso-turning" as DecoderName } : t))
+    .filter((t) => t.decoder);
+}
+
+// The families a general key reads, with the application each belongs to.
+function generalFamilies(applications: Application[], name: string) {
+  return generalGroup(name).flatMap((n) => {
+    const app = applications.find((a) => a.name.trim().toLowerCase() === n);
+    return decoding(app ?? { id: "", name: n }).map((type) => ({ app, appName: app?.name ?? n, type }));
+  });
+}
+
+function keyTypes(app: Application, applications: Application[] = []): KeyType[] {
+  const general = generalFamilies(applications.length ? applications : [app], app.name.trim().toLowerCase()).length > 1;
+  return [...(general ? [GENERAL] : []), ...ownKeyTypes(app)];
 }
 
 // Every key with a decoder, for the designation search (the Turning tools
 // key's decoder is in its data: ISO toolholders).
 function searchable(applications: Application[]) {
-  return applications.flatMap((app) =>
-    keyTypes(app)
-      .map((t) => (t.id === "tools" && app.name.trim().toLowerCase() === DEFAULT_TAB.toLowerCase() ? { ...t, decoder: "iso-turning" as DecoderName } : t))
-      .filter((t) => t.decoder)
-      .map((type) => ({ app, type }))
-  );
+  return applications.flatMap((app) => decoding(app).map((type) => ({ app, type })));
 }
 
 const norm = (s: string) => s.toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -307,7 +327,7 @@ export function CodeKeys() {
   const [chosen, setChosen] = useState<string | null>(() => read(LAST_TAB_KEY));
   const [chosenType, setChosenType] = useState<string | null>(() => read(LAST_TYPE_KEY));
   const tab = applications.find((a) => a.id === chosen) ?? applications.find((a) => a.name.toLowerCase() === DEFAULT_TAB.toLowerCase()) ?? applications[0];
-  const types = tab ? keyTypes(tab) : [];
+  const types = tab ? keyTypes(tab, applications) : [];
   const type = types.find((t) => t.id === chosenType) ?? types[0];
   // The designation search, and the designation picked from it for the open key.
   const [query, setQuery] = useState("");
@@ -439,7 +459,7 @@ export function CodeKeys() {
           }}
         />
       )}
-      {type?.id === "general" && <GeneralKey applications={applications} onOpen={(appId, typeId, text) => { open(appId, typeId); setPicked(text); }} />}
+      {type?.id === "general" && tab && <GeneralKey key={tab.id} app={tab} applications={applications} onOpen={(appId, typeId, text) => { open(appId, typeId); setPicked(text); }} />}
       {type && type.id !== "general" && (
         <CodeKey
           key={`${type.settingKey}:${picked ?? ""}`}
@@ -479,41 +499,45 @@ function Tabs({ label, items, active, onChoose, small }: { label: string; items:
 
 // Type a parting, grooving or groove-turn designation (an insert or a tool,
 // with or without its grade) to see its family and each part's meaning.
-function GeneralKey({ applications, onOpen }: { applications: Application[]; onOpen: (appId: string, typeId: string, text: string) => void }) {
+function GeneralKey({ app, applications, onOpen }: { app: Application; applications: Application[]; onOpen: (appId: string, typeId: string, text: string) => void }) {
   const [text, setText] = useState("");
-  const families = GENERAL_APPS.flatMap((name) => {
-    const app = applications.find((a) => a.name.trim().toLowerCase() === name);
-    const types = app ? keyTypes(app) : (MORE_TYPES[name] ?? []);
-    return types.filter((t) => t.decoder).map((type) => ({ app, appName: app?.name ?? name, type }));
-  });
+  const name = app.name.trim().toLowerCase();
+  const parting = PARTING_GROUP.includes(name);
+  const families = generalFamilies(applications, name);
+  const examples = families
+    .filter((f) => !GENERIC.has(f.type.decoder!))
+    .slice(0, 5)
+    .map((f) => DECODERS[f.type.decoder!].examples.split(/ or |, /)[0]);
   const q = text.trim();
   // A trailing ISCAR grade (e.g. IC908, IB85, ID5) is read apart from the designation.
   const graded = q.match(/^(.+?)\s+(I[A-Z]\d{1,4}[A-Z]?)$/i);
   const designation = graded ? graded[1] : q;
   const grade = graded?.[2].toUpperCase();
-  const matches = designation.length >= 3
+  const read = designation.length >= 3
     ? families.flatMap((f) => {
         const result = DECODERS[f.type.decoder!].decode(designation);
         if (!result) return [];
         return [{ ...f, result: grade ? { ...result, parts: [...result.parts, { title: "Grade", code: grade, text: `ISCAR grade ${grade}` }] } : result }];
       })
     : [];
+  // A generic ISO reading counts only when no family reads the designation.
+  const matches = read.some((m) => !GENERIC.has(m.type.decoder!)) ? read.filter((m) => !GENERIC.has(m.type.decoder!)) : read;
   return (
     <div className="rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900" data-general-key>
-      <h2 className="mb-1 font-semibold text-neutral-900 dark:text-neutral-100">Parting & grooving code key</h2>
+      <h2 className="mb-1 font-semibold text-neutral-900 dark:text-neutral-100">{parting ? "Parting & grooving" : app.name} code key</h2>
       <p className="mb-3 text-sm text-neutral-500 dark:text-neutral-400">Type an insert or tool designation of any family to see its family and what each part means.</p>
       <Input
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder="e.g. TAG N3C IC908, DGN 3102J, GHDR 26-4, PENTA 24N200J020, HFHR 20-25-3T12, FGHR 2525-6A"
+        placeholder={`e.g. ${examples.join(", ")}`}
         aria-label="Designation to classify"
         className="max-w-2xl font-mono"
         autoFocus
       />
       {q.length >= 3 && matches.length === 0 && (
-        <p className="mt-3 text-sm text-red-600 dark:text-red-400">No parting or grooving family reads this designation.</p>
+        <p className="mt-3 text-sm text-red-600 dark:text-red-400">No {parting ? "parting or grooving" : app.name} family reads this designation.</p>
       )}
-      {matches.length > 1 && <p className="mt-3 text-sm text-amber-700 dark:text-amber-400">More than one family reads this designation:</p>}
+      {matches.length > 1 && <p className="mt-3 text-sm text-amber-700 dark:text-amber-400">{matches.length} families read this designation: {matches.map((m) => m.type.label).join(" · ")}</p>}
       <div className="mt-3 space-y-3">
         {matches.map((m) => (
           <GeneralMatch
