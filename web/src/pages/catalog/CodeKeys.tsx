@@ -306,6 +306,21 @@ function familyChips(insert: string) {
 
 type Brand = { id: string; name: string; uses?: (InnovationUse & { category?: string | null })[] };
 
+// A family's Solution, matched by name (TANG-GRIP, TANG GRIP and TANGGRIP alike).
+function solutionOf(brands: Brand[], family: string) {
+  const key = norm(family);
+  return brands.find((b) => norm(b.name) === key);
+}
+
+function SolutionLink({ brand }: { brand?: Brand }) {
+  if (!brand) return null;
+  return (
+    <Link to={`/solutions/brand/${brand.id}`} className="text-xs font-medium whitespace-nowrap text-blue-600 hover:underline dark:text-blue-400" data-family-solution={brand.name}>
+      {brand.name} Solution →
+    </Link>
+  );
+}
+
 function read(key: string) {
   try {
     return localStorage.getItem(key);
@@ -392,11 +407,11 @@ export function CodeKeys() {
                 <p className="mb-1 text-xs font-semibold tracking-wide text-neutral-500 uppercase dark:text-neutral-400">Code keys</p>
                 <ul className="space-y-1">
                   {decoded.map(({ app, type: t, result }) => (
-                    <li key={`${app.id}:${t.id}`} data-search-key={t.id}>
+                    <li key={`${app.id}:${t.id}`} data-search-key={t.id} className="flex items-center gap-3">
                       <button
                         type="button"
                         onClick={() => open(app.id, t.id)}
-                        className="w-full rounded-lg border border-neutral-200 px-3 py-1.5 text-left hover:border-blue-400 hover:bg-blue-50 dark:border-neutral-700 dark:hover:bg-blue-950/30"
+                        className="min-w-0 flex-1 rounded-lg border border-neutral-200 px-3 py-1.5 text-left hover:border-blue-400 hover:bg-blue-50 dark:border-neutral-700 dark:hover:bg-blue-950/30"
                       >
                         <span className="font-semibold text-blue-700 dark:text-blue-300">
                           {app.name} → {t.label}
@@ -404,6 +419,7 @@ export function CodeKeys() {
                         <span className="text-neutral-500 dark:text-neutral-400">· {result.kind}</span>
                         <span className="ml-2 font-mono text-xs text-neutral-600 dark:text-neutral-300">{result.parts.map((p) => p.code).join(" · ")}</span>
                       </button>
+                      {!GENERIC.has(t.decoder!) && <SolutionLink brand={solutionOf(brands, t.label)} />}
                     </li>
                   ))}
                 </ul>
@@ -459,7 +475,7 @@ export function CodeKeys() {
           }}
         />
       )}
-      {type?.id === "general" && tab && <GeneralKey key={tab.id} app={tab} applications={applications} onOpen={(appId, typeId, text) => { open(appId, typeId); setPicked(text); }} />}
+      {type?.id === "general" && tab && <GeneralKey key={tab.id} app={tab} applications={applications} brands={brands} onOpen={(appId, typeId, text) => { open(appId, typeId); setPicked(text); }} />}
       {type && type.id !== "general" && (
         <CodeKey
           key={`${type.settingKey}:${picked ?? ""}`}
@@ -499,7 +515,7 @@ function Tabs({ label, items, active, onChoose, small }: { label: string; items:
 
 // Type a parting, grooving or groove-turn designation (an insert or a tool,
 // with or without its grade) to see its family and each part's meaning.
-function GeneralKey({ app, applications, onOpen }: { app: Application; applications: Application[]; onOpen: (appId: string, typeId: string, text: string) => void }) {
+function GeneralKey({ app, applications, brands, onOpen }: { app: Application; applications: Application[]; brands: Brand[]; onOpen: (appId: string, typeId: string, text: string) => void }) {
   const [text, setText] = useState("");
   const name = app.name.trim().toLowerCase();
   const parting = PARTING_GROUP.includes(name);
@@ -543,6 +559,7 @@ function GeneralKey({ app, applications, onOpen }: { app: Application; applicati
           <GeneralMatch
             key={m.type.id}
             family={m.type.label}
+            solution={GENERIC.has(m.type.decoder!) ? undefined : solutionOf(brands, m.type.label)}
             appName={m.appName}
             settingKey={m.type.settingKey}
             result={m.result}
@@ -558,12 +575,18 @@ function GeneralKey({ app, applications, onOpen }: { app: Application; applicati
   );
 }
 
-function GeneralMatch({ family, appName, settingKey, result, onOpen }: { family: string; appName: string; settingKey: string; result: Decoded; onOpen?: () => void }) {
+function GeneralMatch({ family, solution, appName, settingKey, result, onOpen }: { family: string; solution?: Brand; appName: string; settingKey: string; result: Decoded; onOpen?: () => void }) {
   const data = useCodeKeyData(settingKey);
   return (
     <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-3 dark:border-blue-900 dark:bg-blue-950/20" data-general-match={family}>
       <div className="mb-2 flex flex-wrap items-center gap-2">
-        <span className="rounded-md bg-blue-600 px-2.5 py-0.5 text-sm font-bold text-white">{family}</span>
+        {solution ? (
+          <Link to={`/solutions/brand/${solution.id}`} title={`Open the ${solution.name} Solution`} className="rounded-md bg-blue-600 px-2.5 py-0.5 text-sm font-bold text-white hover:bg-blue-700" data-family-solution={solution.name}>
+            {family} ↗
+          </Link>
+        ) : (
+          <span className="rounded-md bg-blue-600 px-2.5 py-0.5 text-sm font-bold text-white">{family}</span>
+        )}
         <span className="text-sm text-neutral-700 dark:text-neutral-200">{result.kind === "Tool" ? `${family} tool` : result.kind}</span>
         <span className="text-xs text-neutral-500 dark:text-neutral-400">· {appName}</span>
         {onOpen && (
