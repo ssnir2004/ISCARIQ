@@ -6,9 +6,16 @@ import { issueToken, requireAuth, SESSION_COOKIE, type AuthedRequest } from "../
 
 export const authRouter = Router();
 
+// The user name is an email or any other name, matched regardless of case.
 const loginSchema = z.object({
-  email: z.string().email(),
+  email: z.string().trim().min(1),
   password: z.string().min(1),
+});
+
+const publicUser = (user: { id: string; email: string; role: string }) => ({
+  id: user.id,
+  email: user.email,
+  role: user.role === "viewer" ? "viewer" : "admin",
 });
 
 authRouter.post("/login", async (req, res) => {
@@ -17,9 +24,9 @@ authRouter.post("/login", async (req, res) => {
     return res.status(400).json({ error: "Invalid input" });
   }
   const { email, password } = parsed.data;
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findFirst({ where: { email: { equals: email, mode: "insensitive" } } });
   if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
-    return res.status(401).json({ error: "Invalid email or password" });
+    return res.status(401).json({ error: "Invalid user name or password" });
   }
   const token = issueToken(user.id);
   res.cookie(SESSION_COOKIE, token, {
@@ -28,7 +35,7 @@ authRouter.post("/login", async (req, res) => {
     secure: process.env.NODE_ENV === "production",
     maxAge: 30 * 24 * 60 * 60 * 1000,
   });
-  res.json({ id: user.id, email: user.email });
+  res.json(publicUser(user));
 });
 
 authRouter.post("/logout", (_req, res) => {
@@ -39,7 +46,7 @@ authRouter.post("/logout", (_req, res) => {
 authRouter.get("/me", requireAuth, async (req: AuthedRequest, res) => {
   const user = await prisma.user.findUnique({ where: { id: req.userId } });
   if (!user) return res.status(401).json({ error: "Not authenticated" });
-  res.json({ id: user.id, email: user.email });
+  res.json(publicUser(user));
 });
 
 const changePasswordSchema = z.object({

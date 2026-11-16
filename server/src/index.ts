@@ -8,7 +8,8 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 
 import { authRouter } from "./routes/auth.js";
-import { requireAuth } from "./middleware/auth.js";
+import { requireAuth, viewersReadOnly } from "./middleware/auth.js";
+import { userRouter } from "./routes/users.js";
 import { apiCache, serveBlob } from "./lib/responseCache.js";
 import { rfqRouter } from "./routes/rfqs.js";
 import { projectRouter } from "./routes/projects.js";
@@ -79,8 +80,10 @@ app.use(cookieParser());
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 app.use("/api/auth", authRouter);
 
-// Everything below requires an authenticated session.
+// Everything below requires an authenticated session; viewers only read.
 app.use("/api", requireAuth);
+app.use("/api", viewersReadOnly);
+app.use("/api/users", userRouter);
 
 // Pictures / files served by address and GET responses cached (see responseCache).
 app.get("/api/blobs/:hash", serveBlob);
