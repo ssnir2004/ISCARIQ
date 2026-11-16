@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
+import { useReadOnly } from "./ReadOnly";
 
 const NAV = [
   { to: "/", label: "Pipeline", end: true },
@@ -47,7 +48,9 @@ function withAllScreens(saved: Entry[]): Entry[] {
 const keyOf = (e: Entry) => (e.kind === "item" ? e.to : e.id);
 
 export function Layout() {
-  const { user, logout } = useAuth();
+  const { user, logout, canEdit } = useAuth();
+  const main = useRef<HTMLElement>(null);
+  useReadOnly(main, !!user && !canEdit);
   const [layout, setLayout] = useState<Entry[]>(DEFAULT_LAYOUT);
   const [editing, setEditing] = useState<Entry[] | null>(null);
   const [dragged, setDragged] = useState<number | null>(null);
@@ -204,7 +207,16 @@ export function Layout() {
           </nav>
         )}
         <div className="border-t border-neutral-200 p-3 text-xs dark:border-neutral-800">
-          <div className="mb-2 truncate text-neutral-500 dark:text-neutral-400">{user?.email}</div>
+          <div className="mb-2 flex items-center gap-2 text-neutral-500 dark:text-neutral-400">
+            <span className="truncate">{user?.email}</span>
+            <span
+              className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase ${canEdit ? "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300" : "bg-neutral-200 text-neutral-700 dark:bg-neutral-700 dark:text-neutral-200"}`}
+              title={canEdit ? "Admin: may change data and manage users" : "Viewer: may only view"}
+              data-user-role={user?.role}
+            >
+              {canEdit ? "Admin" : "Viewer"}
+            </span>
+          </div>
           {!editing && (
             <button
               onClick={() => setEditing(layout)}
@@ -212,6 +224,16 @@ export function Layout() {
             >
               Customize menu
             </button>
+          )}
+          {canEdit && (
+            <NavLink
+              to="/users"
+              className={({ isActive }) =>
+                `block w-full rounded-lg px-3 py-1.5 text-left hover:bg-neutral-100 dark:hover:bg-neutral-800 ${isActive ? "text-blue-700 dark:text-blue-300" : "text-neutral-600 dark:text-neutral-300"}`
+              }
+            >
+              Users
+            </NavLink>
           )}
           <NavLink
             to="/change-password"
@@ -227,7 +249,7 @@ export function Layout() {
           </button>
         </div>
       </aside>
-      <main className="flex-1 overflow-x-auto bg-neutral-50 p-6 dark:bg-neutral-950">
+      <main ref={main} className="flex-1 overflow-x-auto bg-neutral-50 p-6 dark:bg-neutral-950">
         <Outlet />
       </main>
     </div>

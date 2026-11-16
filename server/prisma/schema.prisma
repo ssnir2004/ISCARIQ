@@ -13,10 +13,13 @@ datasource db {
 
 // ---------- Auth ----------
 
+// A person who signs in. `email` holds the user name (an email or any name).
+// `role` is "admin" (may change data and manage users) or "viewer" (read only).
 model User {
   id           String @id @default(cuid())
   email        String @unique
   passwordHash String
+  role         String @default("admin")
   createdAt    DateTime @default(now())
 }
 

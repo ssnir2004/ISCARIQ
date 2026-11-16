@@ -9,6 +9,7 @@ import { ProjectDetail } from "./pages/ProjectDetail";
 import { Advisor } from "./pages/Advisor";
 import { Calculators } from "./pages/Calculators";
 import { ChangePassword } from "./pages/ChangePassword";
+import { Users } from "./pages/Users";
 import { CaseView } from "./pages/CaseView";
 import { Materials } from "./pages/catalog/Materials";
 import { ProblemTags } from "./pages/catalog/ProblemTags";
@@ -72,6 +73,7 @@ function AppRoutes() {
         <Route path="/calculators" element={<Calculators />} />
         <Route path="/calculators/:slug" element={<Calculators />} />
         <Route path="/change-password" element={<ChangePassword />} />
+        <Route path="/users" element={<Users />} />
         <Route path="/catalog/materials" element={<Materials />} />
         <Route path="/catalog/problem-tags" element={<ProblemTags />} />
         <Route path="/catalog/teams" element={<Teams />} />

@@ -32,8 +32,8 @@ export function Login() {
         <p className="mb-6 text-sm text-neutral-500 dark:text-neutral-400">Sign in to continue</p>
         <form onSubmit={onSubmit} className="space-y-4">
           <div>
-            <Label>Email</Label>
-            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus />
+            <Label>User name</Label>
+            <Input type="text" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus />
           </div>
           <div>
             <Label>Password</Label>
