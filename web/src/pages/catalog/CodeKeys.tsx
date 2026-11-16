@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { CodeKey } from "../../components/CodeKey";
+import { CodeKey, DecodedTable, useCodeKeyData } from "../../components/CodeKey";
 import { Input, PageHeader } from "../../components/ui";
-import { DECODERS, type DecoderName } from "../../lib/insertDecoders";
+import { DECODERS, type Decoded, type DecoderName } from "../../lib/insertDecoders";
 import { useResource } from "../../lib/useResource";
 import type { Application, InnovationUse } from "../../lib/types";
 
@@ -236,11 +236,16 @@ for (const [app, types] of Object.entries(TURNING_CATALOG_BRANDS)) MORE_TYPES[ap
 // Applications whose brand keys already cover their tools, so no Tools key.
 const NO_TOOLS_KEY = new Set(["parting", "drilling", "milling", "endmills(sc) & mm", "indexable milling"]);
 
+// Parting's general key reads a designation of any parting, grooving or
+// groove-turn family and names its family.
+const GENERAL: KeyType = { id: "general", label: "General", settingKey: "", defaultTitle: "" };
+const GENERAL_APPS = ["parting", "grooving", "groove-turn"];
+
 function keyTypes(app: Application): KeyType[] {
   // The tools key keeps its decoder in its own data (e.g. "iso-turning").
   const name = app.name.trim().toLowerCase();
   const tools: KeyType = { id: "tools", label: "Tools", settingKey: `codekey.app.${app.id}`, defaultTitle: `${app.name} code key` };
-  return [...(NO_TOOLS_KEY.has(name) ? [] : [tools]), ...(MORE_TYPES[name] ?? [])];
+  return [...(name === "parting" ? [GENERAL] : []), ...(NO_TOOLS_KEY.has(name) ? [] : [tools]), ...(MORE_TYPES[name] ?? [])];
 }
 
 // Every key with a decoder, for the designation search (the Turning tools
@@ -434,7 +439,8 @@ export function CodeKeys() {
           }}
         />
       )}
-      {type && (
+      {type?.id === "general" && <GeneralKey applications={applications} onOpen={(appId, typeId, text) => { open(appId, typeId); setPicked(text); }} />}
+      {type && type.id !== "general" && (
         <CodeKey
           key={`${type.settingKey}:${picked ?? ""}`}
           settingKey={type.settingKey}
@@ -467,6 +473,82 @@ function Tabs({ label, items, active, onChoose, small }: { label: string; items:
           {t.label}
         </button>
       ))}
+    </div>
+  );
+}
+
+// Type a parting, grooving or groove-turn designation (an insert or a tool,
+// with or without its grade) to see its family and each part's meaning.
+function GeneralKey({ applications, onOpen }: { applications: Application[]; onOpen: (appId: string, typeId: string, text: string) => void }) {
+  const [text, setText] = useState("");
+  const families = GENERAL_APPS.flatMap((name) => {
+    const app = applications.find((a) => a.name.trim().toLowerCase() === name);
+    const types = app ? keyTypes(app) : (MORE_TYPES[name] ?? []);
+    return types.filter((t) => t.decoder).map((type) => ({ app, appName: app?.name ?? name, type }));
+  });
+  const q = text.trim();
+  // A trailing ISCAR grade (e.g. IC908, IB85, ID5) is read apart from the designation.
+  const graded = q.match(/^(.+?)\s+(I[A-Z]\d{1,4}[A-Z]?)$/i);
+  const designation = graded ? graded[1] : q;
+  const grade = graded?.[2].toUpperCase();
+  const matches = designation.length >= 3
+    ? families.flatMap((f) => {
+        const result = DECODERS[f.type.decoder!].decode(designation);
+        if (!result) return [];
+        return [{ ...f, result: grade ? { ...result, parts: [...result.parts, { title: "Grade", code: grade, text: `ISCAR grade ${grade}` }] } : result }];
+      })
+    : [];
+  return (
+    <div className="rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900" data-general-key>
+      <h2 className="mb-1 font-semibold text-neutral-900 dark:text-neutral-100">Parting & grooving code key</h2>
+      <p className="mb-3 text-sm text-neutral-500 dark:text-neutral-400">Type an insert or tool designation of any family to see its family and what each part means.</p>
+      <Input
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="e.g. TAG N3C IC908, DGN 3102J, GHDR 26-4, PENTA 24N200J020, HFHR 20-25-3T12, FGHR 2525-6A"
+        aria-label="Designation to classify"
+        className="max-w-2xl font-mono"
+        autoFocus
+      />
+      {q.length >= 3 && matches.length === 0 && (
+        <p className="mt-3 text-sm text-red-600 dark:text-red-400">No parting or grooving family reads this designation.</p>
+      )}
+      {matches.length > 1 && <p className="mt-3 text-sm text-amber-700 dark:text-amber-400">More than one family reads this designation:</p>}
+      <div className="mt-3 space-y-3">
+        {matches.map((m) => (
+          <GeneralMatch
+            key={m.type.id}
+            family={m.type.label}
+            appName={m.appName}
+            settingKey={m.type.settingKey}
+            result={m.result}
+            onOpen={m.app ? () => onOpen(m.app!.id, m.type.id, designation) : undefined}
+          />
+        ))}
+      </div>
+      <details className="mt-4 text-xs text-neutral-500 dark:text-neutral-400">
+        <summary className="cursor-pointer">Families read here ({families.length})</summary>
+        <p className="mt-1">{families.map((f) => f.type.label).join(" · ")}</p>
+      </details>
+    </div>
+  );
+}
+
+function GeneralMatch({ family, appName, settingKey, result, onOpen }: { family: string; appName: string; settingKey: string; result: Decoded; onOpen?: () => void }) {
+  const data = useCodeKeyData(settingKey);
+  return (
+    <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-3 dark:border-blue-900 dark:bg-blue-950/20" data-general-match={family}>
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <span className="rounded-md bg-blue-600 px-2.5 py-0.5 text-sm font-bold text-white">{family}</span>
+        <span className="text-sm text-neutral-700 dark:text-neutral-200">{result.kind === "Tool" ? `${family} tool` : result.kind}</span>
+        <span className="text-xs text-neutral-500 dark:text-neutral-400">· {appName}</span>
+        {onOpen && (
+          <button type="button" onClick={onOpen} className="ml-auto text-xs font-medium text-blue-600 hover:underline dark:text-blue-400">
+            Open the {family} key →
+          </button>
+        )}
+      </div>
+      <DecodedTable data={data} result={result} />
     </div>
   );
 }

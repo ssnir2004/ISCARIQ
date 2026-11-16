@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ClipboardEvent, type ReactNode } from "react";
 import { api, ApiError } from "../lib/api";
-import { DECODERS, findRow, type DecoderName } from "../lib/insertDecoders";
+import { DECODERS, findRow, type Decoded, type DecoderName } from "../lib/insertDecoders";
 import { Button, Card, Input, Textarea } from "./ui";
 
 // A code key for product designations (e.g. "Code key for CBN inserts"):
@@ -547,30 +547,54 @@ function Decoder({ data, name, initial = "" }: { data: CodeKeyData; name: Decode
       {result && (
         <div className="mt-2">
           <p className="mb-1 text-xs font-semibold text-neutral-600 dark:text-neutral-300">{result.kind}</p>
-          <table className="text-sm" data-decoded>
-            <tbody>
-              {result.parts.map((p, n) => {
-                const index = data.sections.findIndex((s) => (p.key && s.key === p.key) || (p.title && s.title === p.title));
-                const section = data.sections[index];
-                const row = section ? findRow(section.rows, p.lookup ?? p.code) : undefined;
-                const known = !!p.text || !!row;
-                return (
-                  <tr key={n} className="border-t border-neutral-200 first:border-t-0 dark:border-neutral-800" data-decoded-part={p.key ?? p.title ?? "base"}>
-                    <td className="py-1 pr-3 font-mono font-bold" style={{ color: index >= 0 ? COLORS[index % COLORS.length] : undefined }}>
-                      {p.code}
-                    </td>
-                    <td className="py-1 pr-3 text-neutral-500 dark:text-neutral-400">{section?.title ?? p.title ?? ""}</td>
-                    <td className={`py-1 ${known ? "text-neutral-800 dark:text-neutral-100" : "text-red-600 dark:text-red-400"}`}>
-                      {p.text ?? row?.meaning ?? "Unknown code"}
-                    </td>
-                    <td className="py-1 pl-2">{row?.image && <img src={row.image} alt="" className="h-10 max-w-16 rounded bg-white object-contain" />}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <DecodedTable data={data} result={result} />
         </div>
       )}
     </div>
   );
+}
+
+// A decoded designation, each part with its meaning from the key's tables.
+export function DecodedTable({ data, result }: { data: CodeKeyData | null; result: Decoded }) {
+  const sections = data?.sections ?? [];
+  return (
+    <table className="text-sm" data-decoded>
+      <tbody>
+        {result.parts.map((p, n) => {
+          const index = sections.findIndex((s) => (p.key && s.key === p.key) || (p.title && s.title === p.title));
+          const section = sections[index];
+          const row = section ? findRow(section.rows, p.lookup ?? p.code) : undefined;
+          const known = !!p.text || !!row;
+          return (
+            <tr key={n} className="border-t border-neutral-200 first:border-t-0 dark:border-neutral-800" data-decoded-part={p.key ?? p.title ?? "base"}>
+              <td className="py-1 pr-3 font-mono font-bold" style={{ color: index >= 0 ? COLORS[index % COLORS.length] : undefined }}>
+                {p.code}
+              </td>
+              <td className="py-1 pr-3 text-neutral-500 dark:text-neutral-400">{section?.title ?? p.title ?? ""}</td>
+              <td className={`py-1 ${known ? "text-neutral-800 dark:text-neutral-100" : "text-red-600 dark:text-red-400"}`}>
+                {p.text ?? row?.meaning ?? "Unknown code"}
+              </td>
+              <td className="py-1 pl-2">{row?.image && <img src={row.image} alt="" className="h-10 max-w-16 rounded bg-white object-contain" />}</td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
+
+// A code key's stored tables (null until loaded, or when not written yet).
+export function useCodeKeyData(settingKey: string) {
+  const [data, setData] = useState<CodeKeyData | null>(null);
+  useEffect(() => {
+    let live = true;
+    api
+      .get<{ value: string | null }>(`/settings/${settingKey}`)
+      .then((r) => live && setData(r.value ? (JSON.parse(r.value) as CodeKeyData) : null))
+      .catch(() => live && setData(null));
+    return () => {
+      live = false;
+    };
+  }, [settingKey]);
+  return data;
 }
