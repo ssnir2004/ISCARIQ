@@ -11,15 +11,9 @@ const NAV = [
   { to: "/innovations", label: "Innovations" },
   { to: "/solutions", label: "Solutions" },
   { to: "/branches", label: "ISCAR Branches" },
-  { to: "/advisor", label: "Insert Advisor" },
   { to: "/calculators", label: "Calculators" },
-  { to: "/catalog/npas", label: "NPA Catalog" },
-  { to: "/catalog/npa-knowledge", label: "NPA Knowledge Base" },
   { to: "/catalog/inserts", label: "Inserts" },
   { to: "/catalog/test-reports", label: "Test Reports" },
-  { to: "/catalog/tools", label: "Tools" },
-  { to: "/catalog/cutting-conditions", label: "Cutting Conditions" },
-  { to: "/catalog/shapes", label: "Shapes" },
   { to: "/catalog/chipbreakers", label: "Chipbreakers" },
   { to: "/catalog/grades", label: "Grades" },
   { to: "/catalog/code-keys", label: "Code keys" },
@@ -27,7 +21,6 @@ const NAV = [
   { to: "/catalog/substrates", label: "Substrates" },
   { to: "/catalog/coatings", label: "Coatings" },
   { to: "/catalog/materials", label: "Materials" },
-  { to: "/catalog/problem-tags", label: "Problem Tags" },
   { to: "/catalog/teams", label: "Teams & Departments" },
 ];
 
