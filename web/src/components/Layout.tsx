@@ -40,6 +40,8 @@ function withAllScreens(saved: Entry[]): Entry[] {
 
 const keyOf = (e: Entry) => (e.kind === "item" ? e.to : e.id);
 
+const SHARED_NAV_KEY = "nav.shared";
+
 export function Layout() {
   const { user, logout, canEdit } = useAuth();
   const main = useRef<HTMLElement>(null);
@@ -48,15 +50,24 @@ export function Layout() {
   const [editing, setEditing] = useState<Entry[] | null>(null);
   const [dragged, setDragged] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
-  const settingKey = user ? `nav.${user.id.toLowerCase()}` : null;
+  // One menu for everyone (setting "nav.shared"), arranged by admins. Until
+  // it is first saved, an admin's own earlier layout ("nav.<user id>")
+  // becomes the shared one.
+  const settingKey = user ? SHARED_NAV_KEY : null;
 
   useEffect(() => {
-    if (!settingKey) return;
-    api
-      .get<{ value: string | null }>(`/settings/${settingKey}`)
-      .then((r) => setLayout(r.value ? withAllScreens(JSON.parse(r.value)) : DEFAULT_LAYOUT))
-      .catch(() => setLayout(DEFAULT_LAYOUT));
-  }, [settingKey]);
+    if (!user) return;
+    const load = async () => {
+      const shared = await api.get<{ value: string | null }>(`/settings/${SHARED_NAV_KEY}`);
+      if (shared.value) return setLayout(withAllScreens(JSON.parse(shared.value)));
+      if (!canEdit) return setLayout(DEFAULT_LAYOUT);
+      const own = await api.get<{ value: string | null }>(`/settings/nav.${user.id.toLowerCase()}`);
+      if (!own.value) return setLayout(DEFAULT_LAYOUT);
+      setLayout(withAllScreens(JSON.parse(own.value)));
+      await api.put(`/settings/${SHARED_NAV_KEY}`, { value: own.value });
+    };
+    load().catch(() => setLayout(DEFAULT_LAYOUT));
+  }, [user, canEdit]);
 
   const move = (from: number, to: number) =>
     setEditing((cur) => {
@@ -87,7 +98,6 @@ export function Layout() {
       <aside className="flex w-56 shrink-0 flex-col border-r border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
         <div className="border-b border-neutral-200 px-4 py-4 dark:border-neutral-800">
           <div className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">ISCARIQ</div>
-          <div className="text-xs text-neutral-500 dark:text-neutral-400">Schaeffler Account</div>
         </div>
         {editing ? (
           <div className="flex-1 space-y-1 p-2">
@@ -210,9 +220,10 @@ export function Layout() {
               {canEdit ? "Admin" : "Viewer"}
             </span>
           </div>
-          {!editing && (
+          {!editing && canEdit && (
             <button
               onClick={() => setEditing(layout)}
+              title="Arrange the menu for all users"
               className="w-full rounded-lg px-3 py-1.5 text-left text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
             >
               Customize menu
