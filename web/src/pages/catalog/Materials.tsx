@@ -152,7 +152,7 @@ export function Materials() {
   }
 
   return (
-    <div className="max-w-3xl">
+    <div>
       <PageHeader title="Materials (ISO 513)" />
       <MaterialsGuide
         onOpenGrades={(g) => {
