@@ -21,6 +21,7 @@ const NAV = [
   { to: "/catalog/substrates", label: "Substrates" },
   { to: "/catalog/coatings", label: "Coatings" },
   { to: "/catalog/materials", label: "Materials" },
+  { to: "/catalog/tool-wear", label: "Tool Wear" },
   { to: "/catalog/teams", label: "Teams & Departments" },
 ];
 
