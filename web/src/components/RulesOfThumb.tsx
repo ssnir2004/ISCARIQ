@@ -1,6 +1,7 @@
 import { useState, type KeyboardEvent } from "react";
 import { api, ApiError } from "../lib/api";
 import { useResource } from "../lib/useResource";
+import { useCanEdit } from "../lib/auth";
 import type { Rule } from "../lib/types";
 import { Button, Card, Textarea } from "./ui";
 
@@ -26,6 +27,8 @@ export function RulesOfThumb({ scope }: { scope: string }) {
   const [editText, setEditText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Viewers see the rules but not the box for adding one.
+  const canEdit = useCanEdit();
 
   function toggle() {
     setOpen((o) => {
@@ -94,7 +97,7 @@ export function RulesOfThumb({ scope }: { scope: string }) {
       </button>
       {open && (
         <div className="mt-2 space-y-2">
-          {rules.length === 0 && <p className="text-sm text-neutral-500 dark:text-neutral-400">No rules yet. Add the first one below.</p>}
+          {rules.length === 0 && <p className="text-sm text-neutral-500 dark:text-neutral-400">No rules yet.{canEdit && " Add the first one below."}</p>}
           <ol className="space-y-1">
             {rules.map((rule, i) => (
               <li key={rule.id} className="group flex items-start gap-2 rounded-lg px-1 py-0.5 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
@@ -156,21 +159,23 @@ export function RulesOfThumb({ scope }: { scope: string }) {
               </li>
             ))}
           </ol>
-          <div className="flex items-start gap-2">
-            <Textarea
-              dir="auto"
-              rows={1}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={onEnter(add)}
-              placeholder="Add a rule (Enter to add, Shift+Enter for a new line)"
-              aria-label="New rule"
-              className="flex-1"
-            />
-            <Button type="button" onClick={add} disabled={busy || !draft.trim()}>
-              Add rule
-            </Button>
-          </div>
+          {canEdit && (
+            <div className="flex items-start gap-2">
+              <Textarea
+                dir="auto"
+                rows={1}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={onEnter(add)}
+                placeholder="Add a rule (Enter to add, Shift+Enter for a new line)"
+                aria-label="New rule"
+                className="flex-1"
+              />
+              <Button type="button" onClick={add} disabled={busy || !draft.trim()}>
+                Add rule
+              </Button>
+            </div>
+          )}
           {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
         </div>
       )}

@@ -11,6 +11,7 @@ import { ChangePassword } from "./pages/ChangePassword";
 import { Users } from "./pages/Users";
 import { CaseView } from "./pages/CaseView";
 import { Materials } from "./pages/catalog/Materials";
+import { ToolWear } from "./pages/catalog/ToolWear";
 import { Teams } from "./pages/catalog/Teams";
 import { Inserts } from "./pages/catalog/Inserts";
 import { TestReports } from "./pages/catalog/TestReports";
@@ -67,6 +68,7 @@ function AppRoutes() {
         <Route path="/change-password" element={<ChangePassword />} />
         <Route path="/users" element={<Users />} />
         <Route path="/catalog/materials" element={<Materials />} />
+        <Route path="/catalog/tool-wear" element={<ToolWear />} />
         <Route path="/catalog/teams" element={<Teams />} />
         <Route path="/catalog/inserts" element={<Inserts />} />
         <Route path="/catalog/test-reports" element={<TestReports />} />
