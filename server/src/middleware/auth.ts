@@ -61,10 +61,9 @@ export function requireAdmin(req: AuthedRequest, res: Response, next: NextFuncti
 }
 
 // Viewers may read everything but change nothing, except searching the
-// advisor (a POST that only reads) and saving their own menu layout.
+// advisor (a POST that only reads). The menu is shared and arranged by admins.
 export function viewersReadOnly(req: AuthedRequest, res: Response, next: NextFunction) {
   if (req.role === "admin" || ["GET", "HEAD", "OPTIONS"].includes(req.method)) return next();
   if (req.method === "POST" && req.path.replace(/\/+$/, "") === "/advisor") return next();
-  if (req.method === "PUT" && req.path === `/settings/nav.${req.userId?.toLowerCase()}`) return next();
   return res.status(403).json({ error: "View-only user: changes are not allowed" });
 }
