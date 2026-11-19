@@ -7,6 +7,7 @@ import type { GradeRecommendation, Iso513Group, Material } from "../../lib/types
 import { Button, Card, Input, Iso513Badge, Label, Modal, PageHeader, Select } from "../../components/ui";
 import { ClipboardImagePaste } from "../../components/npaKnowledge/ClipboardImagePaste";
 import { MaterialGrades, MaterialGradesSummary, recommendationsFor } from "./MaterialGrades";
+import { MaterialsGuide } from "./MaterialsGuide";
 
 const EMPTY_FORM = {
   iso513Group: "P" as Iso513Group,
@@ -153,6 +154,12 @@ export function Materials() {
   return (
     <div className="max-w-3xl">
       <PageHeader title="Materials (ISO 513)" />
+      <MaterialsGuide
+        onOpenGrades={(g) => {
+          const category = categoryOf(g);
+          if (category) setGradesOf({ material: category, title: `${g} — ${categoryName(g)}` });
+        }}
+      />
       <div ref={formRef} className="scroll-mt-4">
         <AddSection label="subcategory" editing={editing !== null} onCancelEdit={cancelEdit} openSignal={addSignal}>
           <Card className="mb-6 p-4">
