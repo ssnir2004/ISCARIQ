@@ -70,6 +70,10 @@ const same = (lines: string[]) => ({ metric: lines, inch: lines });
 // Formulas are TeX, shown at the top of each tab.
 const tex = String.raw;
 const KC_LINE = tex`k_c = k_{c1.1} \cdot h_m^{-m_c} \cdot \left(1 - \frac{\gamma}{100}\right)`;
+// kc1.1 is the force at a 1 mm chip, so in inch the chip thickness (in
+// inches) is turned into mm first; kc comes out in the unit of kc1.1 (psi).
+const KC_LINE_INCH = tex`k_c = k_{c1.1} \cdot (25.4 \cdot h_m)^{-m_c} \cdot \left(1 - \frac{\gamma}{100}\right)`;
+const KC_UNITS_INCH = tex`h_m\,[\text{in}] \times 25.4 = h_m\,[\text{mm}]`;
 const DIAMETER_TEX: Record<string, string> = { Dm: "D_m", Dc: "D_c", Dcap: tex`D_{\mathrm{cap}}` };
 
 const field = (key: string, symbol: string, label: string, dim: Dim, value: number, signed?: boolean): Field => ({ key, symbol, label, dim, value, signed });
@@ -153,7 +157,7 @@ const turning: CalculatorTab = {
           results: [kcResult, pcResult],
           formula: {
             metric: [tex`P_c = \frac{v_c \cdot a_p \cdot f_n \cdot k_c}{60 \cdot 10^3}`, KC_LINE, tex`h_m = f_n \cdot \sin(\mathrm{KAPR})`],
-            inch: [tex`P_c = \frac{v_c \cdot a_p \cdot f_n \cdot k_c}{33 \cdot 10^3}`, KC_LINE, tex`h_m = f_n \cdot \sin(\mathrm{KAPR})`],
+            inch: [tex`P_c = \frac{v_c \cdot a_p \cdot f_n \cdot k_c}{33 \cdot 10^3}`, KC_LINE_INCH, KC_UNITS_INCH, tex`h_m = f_n \cdot \sin(\mathrm{KAPR})`],
           },
           compute: (v) => {
             const kc = specificCuttingForce(v.kc1, v.mc, v.fn * sinDeg(v.kapr), v.rake);
@@ -171,7 +175,10 @@ const turning: CalculatorTab = {
           usesMaterial: true,
           inputs: [ap, fn, kapr, rake, kc1, mc],
           results: [kcResult, result("Ft", "Ft", "Tangential force", "force")],
-          formula: same([tex`F_t = k_c \cdot a_p \cdot f_n`, KC_LINE, tex`h_m = f_n \cdot \sin(\mathrm{KAPR})`]),
+          formula: {
+            metric: [tex`F_t = k_c \cdot a_p \cdot f_n`, KC_LINE, tex`h_m = f_n \cdot \sin(\mathrm{KAPR})`],
+            inch: [tex`F_t = k_c \cdot a_p \cdot f_n`, KC_LINE_INCH, KC_UNITS_INCH, tex`h_m = f_n \cdot \sin(\mathrm{KAPR})`],
+          },
           note: "With a boring bar, keep Ft below about 90% of the bar's maximum load.",
           compute: (v) => {
             const kc = specificCuttingForce(v.kc1, v.mc, v.fn * sinDeg(v.kapr), v.rake);
@@ -431,7 +438,7 @@ const milling: CalculatorTab = {
           results: [kcResult, pcResult, mcResult],
           formula: {
             metric: [tex`P_c = \frac{a_e \cdot a_p \cdot v_f \cdot k_c}{60 \cdot 10^6}`, tex`M_c = \frac{P_c \cdot 30 \cdot 10^3}{\pi \cdot n}`, tex`v_f = f_z \cdot n \cdot z_c`, KC_LINE, tex`h_m = \frac{f_z \cdot \sin(\mathrm{KAPR}) \cdot 2 \cdot a_e}{D_{\mathrm{cap}} \cdot \varphi}`, tex`\varphi = \arccos\left(1 - \frac{2 \cdot a_e}{D_{\mathrm{cap}}}\right)`],
-            inch: [tex`P_c = \frac{a_e \cdot a_p \cdot v_f \cdot k_c}{396 \cdot 10^3}`, tex`M_c = \frac{P_c \cdot 16501}{\pi \cdot n}`, tex`v_f = f_z \cdot n \cdot z_c`, KC_LINE, tex`h_m = \frac{f_z \cdot \sin(\mathrm{KAPR}) \cdot 2 \cdot a_e}{D_{\mathrm{cap}} \cdot \varphi}`, tex`\varphi = \arccos\left(1 - \frac{2 \cdot a_e}{D_{\mathrm{cap}}}\right)`],
+            inch: [tex`P_c = \frac{a_e \cdot a_p \cdot v_f \cdot k_c}{396 \cdot 10^3}`, tex`M_c = \frac{P_c \cdot 16501}{\pi \cdot n}`, tex`v_f = f_z \cdot n \cdot z_c`, KC_LINE_INCH, KC_UNITS_INCH, tex`h_m = \frac{f_z \cdot \sin(\mathrm{KAPR}) \cdot 2 \cdot a_e}{D_{\mathrm{cap}} \cdot \varphi}`, tex`\varphi = \arccos\left(1 - \frac{2 \cdot a_e}{D_{\mathrm{cap}}}\right)`],
           },
           compute: (v): Values => {
             if (v.ae > v.Dcap) return {};
@@ -522,7 +529,7 @@ const drilling: CalculatorTab = {
           results: [kcResult, pcResult, mcResult, result("Ff", "Ff", "Feed force", "force")],
           formula: {
             metric: [tex`P_c = \frac{f_n \cdot v_c \cdot D_c \cdot k_c}{240 \cdot 10^3}`, tex`M_c = \frac{P_c \cdot 30 \cdot 10^3}{\pi \cdot n}`, tex`F_f \approx 0.5 \cdot k_c \cdot \frac{D_c}{2} \cdot f_n \cdot \sin\kappa_r`, tex`k_c = k_{c1.1} \cdot (f_z \cdot \sin\kappa_r)^{-m_c} \cdot \left(1 - \frac{\gamma}{100}\right)`, tex`f_z = \frac{f_n}{z_c}`],
-            inch: [tex`P_c = \frac{f_n \cdot v_c \cdot D_c \cdot k_c}{132 \cdot 10^3}`, tex`M_c = \frac{P_c \cdot 16501}{\pi \cdot n}`, tex`F_f \approx 0.5 \cdot k_c \cdot \frac{D_c}{2} \cdot f_n \cdot \sin\kappa_r`, tex`k_c = k_{c1.1} \cdot (f_z \cdot \sin\kappa_r)^{-m_c} \cdot \left(1 - \frac{\gamma}{100}\right)`, tex`f_z = \frac{f_n}{z_c}`],
+            inch: [tex`P_c = \frac{f_n \cdot v_c \cdot D_c \cdot k_c}{132 \cdot 10^3}`, tex`M_c = \frac{P_c \cdot 16501}{\pi \cdot n}`, tex`F_f \approx 0.5 \cdot k_c \cdot \frac{D_c}{2} \cdot f_n \cdot \sin\kappa_r`, tex`k_c = k_{c1.1} \cdot (25.4 \cdot f_z \cdot \sin\kappa_r)^{-m_c} \cdot \left(1 - \frac{\gamma}{100}\right)`, tex`f_z\,[\text{in}] \times 25.4 = f_z\,[\text{mm}]`, tex`f_z = \frac{f_n}{z_c}`],
           },
           compute: (v) => {
             const sin = sinDeg(v.kapr);
@@ -553,7 +560,7 @@ const drilling: CalculatorTab = {
   ],
 };
 
-const boringPowerLines = [KC_LINE, tex`h_m = \frac{f_n}{z_c} \cdot \sin(\mathrm{KAPR})`];
+const boringPowerLines = (...kcLines: string[]) => [...kcLines, tex`h_m = \frac{f_n}{z_c} \cdot \sin(\mathrm{KAPR})`];
 
 const boring: CalculatorTab = {
   slug: "boring",
@@ -586,8 +593,8 @@ const boring: CalculatorTab = {
           inputs: [vc, ap, fn, field("Dc", "Dc", "Cutting diameter", "length", 60), field("zc", "zc", "Effective teeth", "none", 1), kapr, rake, kc1, mc],
           results: [kcResult, pcResult, mcResult],
           formula: {
-            metric: [tex`P_c = \frac{v_c \cdot a_p \cdot f_n \cdot k_c}{60 \cdot 10^3} \cdot \left(1 - \frac{a_p}{D_c}\right)`, tex`M_c = \frac{P_c \cdot 30 \cdot 10^3}{\pi \cdot n}`, ...boringPowerLines],
-            inch: [tex`P_c = \frac{v_c \cdot a_p \cdot f_n \cdot k_c}{33 \cdot 10^3} \cdot \left(1 - \frac{a_p}{D_c}\right)`, tex`M_c = \frac{P_c \cdot 16501}{\pi \cdot n}`, ...boringPowerLines],
+            metric: [tex`P_c = \frac{v_c \cdot a_p \cdot f_n \cdot k_c}{60 \cdot 10^3} \cdot \left(1 - \frac{a_p}{D_c}\right)`, tex`M_c = \frac{P_c \cdot 30 \cdot 10^3}{\pi \cdot n}`, ...boringPowerLines(KC_LINE)],
+            inch: [tex`P_c = \frac{v_c \cdot a_p \cdot f_n \cdot k_c}{33 \cdot 10^3} \cdot \left(1 - \frac{a_p}{D_c}\right)`, tex`M_c = \frac{P_c \cdot 16501}{\pi \cdot n}`, ...boringPowerLines(KC_LINE_INCH, KC_UNITS_INCH)],
           },
           compute: (v) => {
             const kc = specificCuttingForce(v.kc1, v.mc, (v.fn / v.zc) * sinDeg(v.kapr), v.rake);
