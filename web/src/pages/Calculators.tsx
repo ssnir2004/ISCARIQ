@@ -216,11 +216,10 @@ function FormulaPanel({ tab, units }: { tab: CalculatorTab; units: Units }) {
   );
 }
 
-// The card's own formula. Modes that only change the formula's subject
-// (n → vc, vc → n) share the first mode's formula.
+// The card's own formula: the chosen mode's, solved for what it calculates
+// (n → vc shows vc = …, vc → n shows n = …).
 function CardFormula({ calculator, index, units }: { calculator: Calculator; index: number; units: Units }) {
-  const mode = calculator.modes[index];
-  const lines = (mode.label?.includes("→") ? calculator.modes[0] : mode).formula[units];
+  const lines = calculator.modes[index].formula[units];
   if (lines.length === 0) return null;
   return (
     <div className="space-y-1.5 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-neutral-800 dark:border-neutral-700 dark:bg-neutral-800/50 dark:text-neutral-100" data-calculator-card-formula>
